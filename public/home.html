@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForananeoKitchen - Inicio</title>
+
+  <!-- Fuentes usadas en la interfaz -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <!-- Estilos de la pantalla principal -->
+  <link rel="stylesheet" href="css/home.css">
+</head>
+
+<body>
+
+  <div class="home-screen">
+
+    <!-- Encabezado con saludo -->
+    <header class="header-green">
+      <div class="greeting-section">
+        <h1 class="greeting">Hola <span id="user-name">Usuario</span> 👋</h1>
+        <p class="question">¿Qué vamos a cocinar hoy?</p>
+      </div>
+
+      <!-- Se muestra solo si el usuario es premium -->
+      <div class="premium-badge" id="premium-badge" style="display:none;">
+        <span class="crown">👑</span> Premium
+      </div>
+    </header>
+
+    <!-- Barra de búsqueda -->
+    <div class="search-wrapper">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Buscar recetas..." />
+      </div>
+    </div>
+
+    <!-- Filtros rápidos -->
+    <div class="filters-section">
+      <div class="filters-header">
+        <span class="filter-icon">▼</span> Filtros:
+      </div>
+      <div class="filter-tags">
+        <span class="tag">Económicas</span>
+        <span class="tag">Rápidas</span>
+        <span class="tag">Microondas</span>
+        <span class="tag">Menos de $30</span>
+      </div>
+    </div>
+
+    <!-- Formulario para publicar recetas -->
+    <div class="form-section">
+      <h2>Subir receta</h2>
+      <input id="titulo" placeholder="Título de la receta">
+      <input id="ingredientes" placeholder="Ingredientes (separados por coma)">
+      <textarea id="pasos" placeholder="Pasos de preparación" rows="5"></textarea>
+      <button onclick="subirReceta()">Publicar</button>
+    </div>
+
+    <!-- Contenedor donde se cargan las recetas -->
+    <h2 class="section-title">Recetas Disponibles</h2>
+    <div class="recipes-list" id="recetas"></div>
+
+    <button onclick="cerrarSesion()">Cerrar sesión</button>
+
+    <!-- Botón del chatbot (solo premium) -->
+    <button id="chat-boton" title="Chatbot (Premium)" style="display:none;">🍳</button>
+
+    <!-- Ventana del chatbot -->
+    <div id="chat-window" style="display:none;">
+      <div id="chat-header">
+        <span>ChefBot</span>
+        <button onclick="cerrarChat()">×</button>
+      </div>
+
+      <div id="chat-messages"></div>
+
+      <div id="chat-input-area">
+        <input id="chat-input" placeholder="¿Qué receta o ingrediente buscas?">
+        <button onclick="preguntar()">Enviar</button>
+      </div>
+    </div>
+
+    <!-- Navegación inferior -->
+    <nav class="bottom-nav">
+      <a href="#" class="nav-item active">
+        <span>🏠</span> Inicio
+      </a>
+      <a href="#" class="nav-item">
+        <span>📅</span> Planificador
+      </a>
+      <a href="#" class="nav-item">
+        <span>👥</span> Comunidad
+      </a>
+      <a href="#" class="nav-item">
+        <span>👤</span> Perfil
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+
+    // URL base del backend
+    const API = 'http://localhost:3000';
+
+    // Token guardado después del login
+    let token = localStorage.getItem('token');
+
+    // Información del usuario actual
+    let currentUser = null;
+
+
+    // Inicializa la pantalla y valida sesión
+    async function init() {
+
+      if (!token) return window.location.href = 'login.html';
+
+      try {
+
+        // Verifica que el token siga siendo válido
+        const res = await fetch(`${API}/api/recetas`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('Token inválido');
+
+        // Decodifica el token para obtener datos del usuario
+        const payload = JSON.parse(atob(token.split('.')[1]));
+
+        currentUser = {
+          username: payload.username,
+          esPremium: payload.esPremium
+        };
+
+        // Mostrar nombre del usuario
+        document.getElementById('user-name').textContent =
+          currentUser.username || 'Usuario';
+
+        // Activar funciones premium si corresponde
+        if (currentUser.esPremium) {
+          document.getElementById('premium-badge').style.display = 'flex';
+          document.getElementById('chat-boton').style.display = 'block';
+        }
+
+        cargarRecetas();
+
+      } catch (err) {
+
+        // Si el token falla se elimina y regresa al login
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+
+      }
+
+    }
+
+    init();
+
+
+    // Obtiene todas las recetas desde el backend
+    async function cargarRecetas() {
+
+      try {
+
+        const res = await fetch(`${API}/api/recetas`);
+        const recetas = await res.json();
+
+        const contenedor = document.getElementById('recetas');
+        contenedor.innerHTML = '';
+
+        // Crear una tarjeta por cada receta
+        recetas.forEach(r => {
+
+          const card = document.createElement('div');
+          card.className = 'recipe-card';
+
+          card.innerHTML = `
+            <div class="recipe-details">
+              <h3>${r.titulo}</h3>
+              <p><strong>Por:</strong> ${r.autor}</p>
+              <p><strong>Ingredientes:</strong> ${r.ingredientes}</p>
+              <p style="white-space: pre-line;">
+              <strong>Pasos:</strong><br>${r.pasos}</p>
+            </div>
+          `;
+
+          contenedor.appendChild(card);
+
+        });
+
+      } catch (err) {
+        console.error('Error cargando recetas', err);
+      }
+
+    }
+
+
+    // Publica una nueva receta
+    async function subirReceta() {
+
+      if (!token) return alert('Debes iniciar sesión');
+
+      const datos = {
+        titulo: document.getElementById('titulo').value.trim(),
+        ingredientes: document.getElementById('ingredientes').value.trim(),
+        pasos: document.getElementById('pasos').value.trim()
+      };
+
+      // Validación básica del formulario
+      if (!datos.titulo || !datos.ingredientes || !datos.pasos)
+        return alert('Completa todos los campos');
+
+      try {
+
+        const res = await fetch(`${API}/api/recetas`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(datos)
+        });
+
+        if (res.ok) {
+
+          alert('Receta publicada');
+
+          // Limpiar formulario
+          ['titulo', 'ingredientes', 'pasos']
+            .forEach(id => document.getElementById(id).value = '');
+
+          cargarRecetas();
+
+        } else {
+
+          const err = await res.json();
+          alert(err.error || 'Error al publicar');
+
+        }
+
+      } catch (err) {
+        alert('No se pudo conectar con el servidor');
+      }
+
+    }
+
+
+    // Cierra la sesión eliminando el token
+    function cerrarSesion() {
+      localStorage.removeItem('token');
+      window.location.href = 'login.html';
+    }
+
+
+    // Abrir chatbot
+    document.getElementById('chat-boton').onclick = () => {
+
+      document.getElementById('chat-window').style.display = 'flex';
+
+      agregarMensaje(
+        'bot',
+        '¡Hola! Soy ChefBot (solo para Premium). ¿Qué receta o ingrediente quieres ver?'
+      );
+
+    };
+
+
+    function cerrarChat() {
+      document.getElementById('chat-window').style.display = 'none';
+    }
+
+
+    // Agrega mensajes al chat
+    function agregarMensaje(tipo, texto) {
+
+      const area = document.getElementById('chat-messages');
+
+      const div = document.createElement('div');
+      div.className = `msg msg-${tipo}`;
+      div.textContent = texto;
+
+      area.appendChild(div);
+      area.scrollTop = area.scrollHeight;
+
+    }
+
+
+    // Búsqueda básica de recetas dentro del chatbot
+    async function preguntar() {
+
+      const input = document.getElementById('chat-input');
+      const pregunta = input.value.trim();
+
+      if (!pregunta) return;
+
+      agregarMensaje('user', pregunta);
+      input.value = '';
+
+      try {
+
+        const res = await fetch(`${API}/api/recetas`);
+        const recetas = await res.json();
+
+        let encontrado = '';
+        const lower = pregunta.toLowerCase();
+
+        recetas.forEach(r => {
+
+          if (
+            r.titulo.toLowerCase().includes(lower) ||
+            r.ingredientes.toLowerCase().includes(lower) ||
+            r.pasos.toLowerCase().includes(lower)
+          ) {
+
+            encontrado +=
+              `Título: ${r.titulo}\nAutor: ${r.autor}\nIngredientes: ${r.ingredientes}\nPasos: ${r.pasos}\n\n`;
+
+          }
+
+        });
+
+        const respuesta =
+          encontrado ||
+          `No encontré nada relacionado con "${pregunta}". Prueba con otro término.`;
+
+        agregarMensaje('bot', respuesta);
+
+      } catch (err) {
+
+        agregarMensaje('bot', 'Error al buscar recetas 😔');
+
+      }
+
+    }
+
+  </script>
+
+</body>
+
+</html>

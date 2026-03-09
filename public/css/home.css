@@ -1,0 +1,451 @@
+/* css/home.css - Diseño limpio, espacioso, moderno y responsive */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(to bottom, #f9fbf9, #e8f5e9);
+  color: #1a3c34;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+.home-screen {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Header - más aire y elegante */
+.header-green {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  padding: 40px 20px 32px;
+  color: white;
+  position: relative;
+  border-bottom-left-radius: 32px;
+  border-bottom-right-radius: 32px;
+  box-shadow: 0 8px 32px rgba(46, 125, 50, 0.25);
+}
+
+.greeting-section {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.greeting {
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.question {
+  font-size: clamp(1.25rem, 3.5vw, 1.6rem);
+  opacity: 0.92;
+  font-weight: 400;
+}
+
+.premium-badge {
+  position: absolute;
+  top: 32px;
+  right: 24px;
+  background: linear-gradient(90deg, #ffb300, #ffca28);
+  color: #1a3c34;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(255, 179, 0, 0.4);
+  transition: all 0.3s ease;
+}
+
+.premium-badge:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 24px rgba(255, 179, 0, 0.5);
+}
+
+/* Buscador - más ancho y elegante */
+.search-wrapper {
+  max-width: 900px;
+  margin: 32px auto;
+  padding: 0 20px;
+}
+
+.search-bar {
+  position: relative;
+  background: white;
+  border-radius: 60px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.search-bar:hover,
+.search-bar:focus-within {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.search-icon {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4caf50;
+  font-size: 1.5rem;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 20px 24px 20px 70px;
+  border: none;
+  font-size: 1.1rem;
+  background: transparent;
+  color: #1a3c34;
+}
+
+.search-bar input::placeholder {
+  color: #81c784;
+  opacity: 0.8;
+}
+
+/* Filtros - más aire y botones estilo tag */
+.filters-section {
+  max-width: 900px;
+  margin: 0 auto 40px;
+  padding: 0 20px;
+}
+
+.filters-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 16px;
+}
+
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.tag {
+  background: white;
+  color: #2e7d32;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 50px;
+  border: 2px solid #a5d6a7;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.tag:hover {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+/* Form Subir receta - espacioso y elegante */
+.form-section {
+  max-width: 900px;
+  margin: 0 auto 48px;
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.form-section h2 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.8rem;
+  color: #2e7d32;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.form-section input,
+.form-section textarea {
+  width: 100%;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  font-size: 1.05rem;
+  background: #fdfdfd;
+  transition: all 0.3s ease;
+}
+
+.form-section input:focus,
+.form-section textarea:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 5px rgba(76, 175, 80, 0.15);
+  background: white;
+}
+
+/* Botón Publicar - estilo premium */
+.form-section button {
+  background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
+  color: white;
+  width: 100%;
+  padding: 18px;
+  font-size: 1.2rem;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+}
+
+.form-section button:hover {
+  background: linear-gradient(90deg, #43a047 0%, #5cb75e 100%);
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
+  transform: translateY(-3px);
+}
+
+/* Recetas - grid espacioso */
+.section-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 2rem;
+  text-align: center;
+  margin: 48px 0 32px;
+  color: #1b5e20;
+}
+
+.recipes-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  margin-bottom: 60px;
+}
+
+.recipe-card {
+  background: white;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.recipe-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+}
+
+.recipe-details h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.5rem;
+  margin-bottom: 16px;
+  color: #2e7d32;
+}
+
+.recipe-details p {
+  font-size: 1.05rem;
+  margin-bottom: 16px;
+  color: #424242;
+}
+
+/* Cerrar sesión */
+button[onclick="cerrarSesion()"] {
+  background: linear-gradient(90deg, #ef5350, #e57373);
+  color: white;
+  font-size: 1.2rem;
+  padding: 18px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  margin: 40px auto;
+  display: block;
+  box-shadow: 0 6px 20px rgba(239, 83, 80, 0.3);
+}
+
+button[onclick="cerrarSesion()"]:hover {
+  background: linear-gradient(90deg, #e53935, #d32f2f);
+  box-shadow: 0 10px 30px rgba(239, 83, 80, 0.4);
+  transform: translateY(-3px);
+}
+
+/* Chatbot - ahora con mucho aire y estilo moderno */
+#chat-boton {
+  position: fixed;
+  bottom: 120px;
+  right: 32px;
+  background: linear-gradient(135deg, #ff7043, #ff5722);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  font-size: 32px;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(255, 87, 34, 0.4);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+#chat-boton:hover {
+  transform: scale(1.15) rotate(8deg);
+  box-shadow: 0 12px 40px rgba(255, 87, 34, 0.5);
+}
+
+#chat-window {
+  position: fixed;
+  bottom: 210px;
+  right: 32px;
+  width: min(420px, 90vw);
+  height: min(580px, 85vh);
+  background: white;
+  border-radius: 28px;
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  z-index: 999;
+}
+
+#chat-header {
+  background: linear-gradient(90deg, #ff7043, #ff5722);
+  color: white;
+  padding: 20px 24px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+}
+
+#chat-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2.2rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.3s;
+}
+
+#chat-close-btn:hover {
+  transform: rotate(90deg) scale(1.2);
+}
+
+#chat-messages {
+  flex: 1;
+  padding: 32px 24px;
+  overflow-y: auto;
+  background: linear-gradient(to bottom, #fffaf5, #fff5eb);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.msg {
+  max-width: 80%;
+  padding: 16px 22px;
+  border-radius: 24px;
+  font-size: 1rem;
+  line-height: 1.6;
+  word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.msg-user {
+  background: #ff7043;
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 8px;
+}
+
+.msg-bot {
+  background: #ffe0b2;
+  color: #1a3c34;
+  align-self: flex-start;
+  border-bottom-left-radius: 8px;
+}
+
+#chat-input-area {
+  padding: 20px 24px;
+  background: white;
+  border-top: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#chat-input {
+  flex: 1;
+  padding: 16px 24px;
+  border: 2px solid #ff7043;
+  border-radius: 50px;
+  font-size: 1.05rem;
+  transition: all 0.3s;
+}
+
+#chat-input:focus {
+  border-color: #ff5722;
+  box-shadow: 0 0 0 4px rgba(255, 87, 34, 0.2);
+  outline: none;
+}
+
+#chat-input-area button {
+  background: linear-gradient(90deg, #ff7043, #ff5722);
+  color: white;
+  padding: 16px 32px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1.05rem;
+  transition: all 0.3s;
+}
+
+#chat-input-area button:hover {
+  background: linear-gradient(90deg, #ff5722, #f4511e);
+  transform: scale(1.05);
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+  .recipes-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  #chat-window {
+    width: 480px;
+    height: 640px;
+    bottom: 60px;
+    right: 60px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .recipes-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .header-green {
+    padding: 60px 40px 40px;
+  }
+
+  .greeting {
+    font-size: 3.5rem;
+  }
+}

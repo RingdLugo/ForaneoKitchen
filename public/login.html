@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForananeoKitchen - Iniciar Sesión</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="css/login.css">
+</head>
+
+<body>
+
+  <div class="login-screen">
+    <div class="login-container">
+      <h1>ForananeoKitchen</h1>
+      <p class="tagline">Tu compañero de cocina estudiantil</p>
+
+      <div class="login-card" id="login-box">
+        <h2>Iniciar Sesión</h2>
+        <p class="welcome">¡Bienvenido de vuelta!</p>
+        <input id="login-user" placeholder="Usuario" autocomplete="off">
+        <input id="login-pass" type="password" placeholder="Contraseña">
+        <button onclick="login()">Iniciar Sesión →</button>
+        <p class="register-link">
+          ¿No tienes cuenta? <a href="#" onclick="mostrarRegistro()">Regístrate</a>
+        </p>
+      </div>
+
+      <div class="login-card" id="registro-box" style="display:none;">
+        <h2>Registrarse</h2>
+        <input id="reg-user" placeholder="Usuario">
+        <input id="reg-pass" type="password" placeholder="Contraseña">
+        <label style="display:block; margin:10px 0;">
+          <input type="checkbox" id="reg-premium"> Quiero ser Premium (acceso al chatbot)
+        </label>
+        <button onclick="registrar()">Crear cuenta →</button>
+        <p class="register-link">
+          <a href="#" onclick="mostrarLogin()">Volver a iniciar sesión</a>
+        </p>
+      </div>
+
+      <div class="guest-option">
+        <a href="home.html" class="btn-guest">Continuar como usuario gratuito</a>
+      </div>
+
+      <div class="premium-section">
+        <div class="premium-card">
+          <div class="premium-header">
+            <span class="crown">👑</span>
+            <h3>Beneficios Premium</h3>
+          </div>
+          <ul class="premium-benefits">
+            <li>✨ Acceso a recetas exclusivas</li>
+            <li>📅 Planificador semanal avanzado</li>
+            <li>🎥 Videos detallados paso a paso</li>
+            <li>💰 Ahorra hasta 30% mensual</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    // URL base del backend
+    const API = 'http://localhost:3000';
+
+    // Recupera el token si el usuario ya inició sesión antes
+    let token = localStorage.getItem('token');
+
+    // Muestra el formulario de registro
+    function mostrarRegistro() {
+      document.getElementById('login-box').style.display = 'none';
+      document.getElementById('registro-box').style.display = 'block';
+    }
+
+    // Regresa al formulario de login
+    function mostrarLogin() {
+      document.getElementById('registro-box').style.display = 'none';
+      document.getElementById('login-box').style.display = 'block';
+    }
+
+    // Registrar un nuevo usuario
+    async function registrar() {
+
+      // Obtener datos del formulario
+      const username = document.getElementById('reg-user').value.trim();
+      const password = document.getElementById('reg-pass').value.trim();
+      const esPremium = document.getElementById('reg-premium').checked;
+
+      // Validación simple
+      if (!username || !password) return alert('Completa usuario y contraseña');
+
+      try {
+
+        // Enviar datos al backend
+        const res = await fetch(`${API}/api/auth/registro`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, esPremium })
+        });
+
+        if (!res.ok) throw new Error((await res.json()).error || 'Error al registrar');
+
+        // Guardar token recibido
+        const data = await res.json();
+        localStorage.setItem('token', data.token);
+
+        // Redirigir al home
+        window.location.href = 'home.html';
+
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // Iniciar sesión
+    async function login() {
+
+      const username = document.getElementById('login-user').value.trim();
+      const password = document.getElementById('login-pass').value.trim();
+
+      try {
+
+        // Petición al backend para autenticar
+        const res = await fetch(`${API}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (!res.ok) throw new Error((await res.json()).error || 'Error al iniciar sesión');
+
+        // Guardar token
+        const data = await res.json();
+        localStorage.setItem('token', data.token);
+
+        // Ir a la pantalla principal
+        window.location.href = 'home.html';
+
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // Verifica si el token guardado sigue siendo válido
+    if (token) {
+      fetch(`${API}/api/recetas`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(res => {
+          if (!res.ok) {
+            localStorage.removeItem('token');
+          }
+        })
+        .catch(() => localStorage.removeItem('token'));
+    }
+
+  </script>
+
+</body>
+
+</html>
