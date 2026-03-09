@@ -1,9 +1,12 @@
-# ForananeoKitchen 🍳
+# ForaneoKitchen 🍳
 
 Aplicación web de recetas económicas pensada para estudiantes foráneos.
 Permite registrarse, iniciar sesión, publicar recetas y consultar recetas compartidas por otros usuarios.
 
 El sistema incluye autenticación con token, gestión de recetas y un pequeño chatbot disponible para usuarios premium.
+
+Repositorio del proyecto:
+https://github.com/RingdLugo/ForaneoKitchen.git
 
 ---
 
@@ -40,13 +43,13 @@ npm -v
 1. Clonar el repositorio
 
 ```
-git clone https://github.com/mota1299/demo.git
+git clone https://github.com/RingdLugo/ForaneoKitchen.git
 ```
 
 2. Entrar a la carpeta del proyecto
 
 ```
-cd demo
+cd ForaneoKitchen
 ```
 
 3. Instalar las dependencias del backend
@@ -61,7 +64,7 @@ Esto descargará todas las librerías necesarias para ejecutar el servidor.
 
 # Ejecutar el proyecto
 
-Para iniciar el servidor ejecuta:
+Para iniciar el servidor ejecutar:
 
 ```
 npm start
@@ -146,23 +149,112 @@ Si el usuario fue registrado como **premium**, también tendrá acceso al **chat
 
 ---
 
+# Capturas de la aplicación
+
+### Pantalla de inicio
+
+Aquí se muestra la pantalla principal donde el usuario puede comenzar a usar la aplicación.
+
+![Pantalla inicio](images/screenshot_inicio.png)
+
+---
+
+### Pantalla de inicio de sesión
+
+El usuario puede iniciar sesión o registrarse creando una nueva cuenta.
+
+![Login](images/screenshot_login.png)
+
+---
+
+### Pantalla principal
+
+Después de iniciar sesión, el usuario puede ver recetas disponibles y publicar nuevas.
+
+![Home](images/screenshot_home.png)
+
+---
+
+# Ejemplos de uso de la API
+
+La aplicación utiliza una **API REST** desarrollada con Node.js y Express.
+
+### Registro de usuario
+
+Endpoint:
+
+```
+POST /api/auth/registro
+```
+
+Ejemplo de cuerpo enviado:
+
+```json
+{
+  "username": "usuario1",
+  "password": "123456",
+  "esPremium": true
+}
+```
+
+---
+
+### Inicio de sesión
+
+Endpoint:
+
+```
+POST /api/auth/login
+```
+
+Ejemplo de solicitud:
+
+```json
+{
+  "username": "usuario1",
+  "password": "123456"
+}
+```
+
+Respuesta esperada:
+
+```json
+{
+  "token": "jwt_token_generado"
+}
+```
+
+---
+
+### Obtener recetas
+
+Endpoint:
+
+```
+GET /api/recetas
+```
+
+Este endpoint devuelve todas las recetas registradas en el sistema.
+
+---
+
 # Estructura del proyecto
 
 ```
-/project
+ForaneoKitchen
 │
 ├── index.html
 ├── login.html
 ├── home.html
 │
-├── css/
+├── css
 │   ├── style.css
 │   ├── login.css
 │   └── home.css
 │
-├── images/
+├── images
 │
-├── server/
+├── server
 │   └── backend Node.js
 │
 └── README.md
