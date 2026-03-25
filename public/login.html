@@ -5,13 +5,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ForananeoKitchen - Iniciar Sesión</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/login.css">
 </head>
 
@@ -67,101 +63,7 @@
     </div>
   </div>
 
-  <script>
-
-    // URL base del backend
-    const API = 'http://localhost:3000';
-
-    // Recupera el token si el usuario ya inició sesión antes
-    let token = localStorage.getItem('token');
-
-    // Muestra el formulario de registro
-    function mostrarRegistro() {
-      document.getElementById('login-box').style.display = 'none';
-      document.getElementById('registro-box').style.display = 'block';
-    }
-
-    // Regresa al formulario de login
-    function mostrarLogin() {
-      document.getElementById('registro-box').style.display = 'none';
-      document.getElementById('login-box').style.display = 'block';
-    }
-
-    // Registrar un nuevo usuario
-    async function registrar() {
-
-      // Obtener datos del formulario
-      const username = document.getElementById('reg-user').value.trim();
-      const password = document.getElementById('reg-pass').value.trim();
-      const esPremium = document.getElementById('reg-premium').checked;
-
-      // Validación simple
-      if (!username || !password) return alert('Completa usuario y contraseña');
-
-      try {
-
-        // Enviar datos al backend
-        const res = await fetch(`${API}/api/auth/registro`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, esPremium })
-        });
-
-        if (!res.ok) throw new Error((await res.json()).error || 'Error al registrar');
-
-        // Guardar token recibido
-        const data = await res.json();
-        localStorage.setItem('token', data.token);
-
-        // Redirigir al home
-        window.location.href = 'home.html';
-
-      } catch (err) {
-        alert(err.message);
-      }
-    }
-
-    // Iniciar sesión
-    async function login() {
-
-      const username = document.getElementById('login-user').value.trim();
-      const password = document.getElementById('login-pass').value.trim();
-
-      try {
-
-        // Petición al backend para autenticar
-        const res = await fetch(`${API}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-
-        if (!res.ok) throw new Error((await res.json()).error || 'Error al iniciar sesión');
-
-        // Guardar token
-        const data = await res.json();
-        localStorage.setItem('token', data.token);
-
-        // Ir a la pantalla principal
-        window.location.href = 'home.html';
-
-      } catch (err) {
-        alert(err.message);
-      }
-    }
-
-    // Verifica si el token guardado sigue siendo válido
-    if (token) {
-      fetch(`${API}/api/recetas`, { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => {
-          if (!res.ok) {
-            localStorage.removeItem('token');
-          }
-        })
-        .catch(() => localStorage.removeItem('token'));
-    }
-
-  </script>
+  <script src="js/login.js"></script>
 
 </body>
 

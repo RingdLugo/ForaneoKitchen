@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForananeoKitchen - Receta</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/receta.css">
+</head>
+
+<body>
+
+  <div class="receta-screen">
+    
+    <button class="back-btn" onclick="window.location.href='home.html'">
+      ← Volver a recetas
+    </button>
+
+    <div class="receta-container" id="receta-container">
+      <div class="receta-loading">
+        <div class="loading-spinner"></div>
+        <p>Cargando receta...</p>
+      </div>
+    </div>
+
+    <nav class="bottom-nav">
+      <a href="home.html" class="nav-item">
+        <span>🏠</span> Inicio
+      </a>
+      <a href="#" class="nav-item">
+        <span>📅</span> Planificador
+      </a>
+      <a href="#" class="nav-item">
+        <span>👥</span> Comunidad
+      </a>
+      <a href="#" class="nav-item">
+        <span>👤</span> Perfil
+      </a>
+    </nav>
+
+  </div>
+
+  <script src="js/receta.js"></script>
+
+</body>
+
+</html>

@@ -1,5 +1,3 @@
-/* css/home.css - Diseño limpio, espacioso, moderno y responsive */
-
 * {
   margin: 0;
   padding: 0;
@@ -17,10 +15,9 @@ body {
 .home-screen {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 20px 80px;
 }
 
-/* Header - más aire y elegante */
 .header-green {
   background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
   padding: 40px 20px 32px;
@@ -72,7 +69,6 @@ body {
   box-shadow: 0 8px 24px rgba(255, 179, 0, 0.5);
 }
 
-/* Buscador - más ancho y elegante */
 .search-wrapper {
   max-width: 900px;
   margin: 32px auto;
@@ -110,6 +106,7 @@ body {
   font-size: 1.1rem;
   background: transparent;
   color: #1a3c34;
+  outline: none;
 }
 
 .search-bar input::placeholder {
@@ -117,7 +114,6 @@ body {
   opacity: 0.8;
 }
 
-/* Filtros - más aire y botones estilo tag */
 .filters-section {
   max-width: 900px;
   margin: 0 auto 40px;
@@ -151,6 +147,7 @@ body {
   cursor: pointer;
   transition: all 0.25s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  font-family: inherit;
 }
 
 .tag:hover {
@@ -160,61 +157,14 @@ body {
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
 }
 
-/* Form Subir receta - espacioso y elegante */
-.form-section {
-  max-width: 900px;
-  margin: 0 auto 48px;
-  background: white;
-  border-radius: 24px;
-  padding: 40px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-}
-
-.form-section h2 {
-  font-family: 'Poppins', sans-serif;
-  font-size: 1.8rem;
-  color: #2e7d32;
-  margin-bottom: 32px;
-  text-align: center;
-}
-
-.form-section input,
-.form-section textarea {
-  width: 100%;
-  padding: 18px 20px;
-  margin-bottom: 24px;
-  border: 2px solid #e0e0e0;
-  border-radius: 16px;
-  font-size: 1.05rem;
-  background: #fdfdfd;
-  transition: all 0.3s ease;
-}
-
-.form-section input:focus,
-.form-section textarea:focus {
-  border-color: #4caf50;
-  box-shadow: 0 0 0 5px rgba(76, 175, 80, 0.15);
-  background: white;
-}
-
-/* Botón Publicar - estilo premium */
-.form-section button {
-  background: linear-gradient(90deg, #4caf50 0%, #66bb6a 100%);
+.tag.active-filter {
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
   color: white;
-  width: 100%;
-  padding: 18px;
-  font-size: 1.2rem;
-  border-radius: 16px;
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+  border-color: #2e7d32;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  transform: scale(1.05);
 }
 
-.form-section button:hover {
-  background: linear-gradient(90deg, #43a047 0%, #5cb75e 100%);
-  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
-  transform: translateY(-3px);
-}
-
-/* Recetas - grid espacioso */
 .section-title {
   font-family: 'Poppins', sans-serif;
   font-size: 2rem;
@@ -226,38 +176,161 @@ body {
 .recipes-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 32px;
+  gap: 24px;
   margin-bottom: 60px;
 }
 
 .recipe-card {
   background: white;
-  border-radius: 24px;
-  padding: 32px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  cursor: pointer;
+  animation: fadeInUp 0.4s ease-out;
 }
 
 .recipe-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
 }
 
-.recipe-details h3 {
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recipe-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: #f8f8f8;
+  position: relative;
+}
+
+.recipe-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.recipe-card:hover .recipe-image img {
+  transform: scale(1.03);
+}
+
+.recipe-content {
+  padding: 20px;
+}
+
+.recipe-content h3 {
   font-family: 'Poppins', sans-serif;
-  font-size: 1.5rem;
-  margin-bottom: 16px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a3c34;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.recipe-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.recipe-price {
+  font-weight: 500;
   color: #2e7d32;
+  font-size: 0.95rem;
 }
 
-.recipe-details p {
-  font-size: 1.05rem;
+.recipe-time {
+  font-weight: 500;
+  color: #ff9800;
+  font-size: 0.95rem;
+}
+
+.recipe-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 16px;
-  color: #424242;
 }
 
-/* Cerrar sesión */
-button[onclick="cerrarSesion()"] {
+.recipe-tag {
+  background: #f5f5f5;
+  color: #666;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: lowercase;
+}
+
+.btn-ver-mas {
+  background: transparent;
+  color: #4caf50;
+  border: 1.5px solid #4caf50;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: all 0.3s ease;
+  width: 100%;
+  font-family: inherit;
+}
+
+.btn-ver-mas:hover {
+  background: #4caf50;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.no-results {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 24px;
+  grid-column: 1 / -1;
+}
+
+.no-results-icon {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+.no-results p {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.no-results small {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.error-message {
+  text-align: center;
+  padding: 40px;
+  background: #ffebee;
+  border-radius: 24px;
+  color: #c62828;
+  grid-column: 1 / -1;
+}
+
+#cerrar-sesion-btn {
   background: linear-gradient(90deg, #ef5350, #e57373);
   color: white;
   font-size: 1.2rem;
@@ -267,16 +340,20 @@ button[onclick="cerrarSesion()"] {
   max-width: 400px;
   margin: 40px auto;
   display: block;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
   box-shadow: 0 6px 20px rgba(239, 83, 80, 0.3);
+  font-family: inherit;
+  font-weight: 600;
 }
 
-button[onclick="cerrarSesion()"]:hover {
+#cerrar-sesion-btn:hover {
   background: linear-gradient(90deg, #e53935, #d32f2f);
   box-shadow: 0 10px 30px rgba(239, 83, 80, 0.4);
   transform: translateY(-3px);
 }
 
-/* Chatbot - ahora con mucho aire y estilo moderno */
 #chat-boton {
   position: fixed;
   bottom: 120px;
@@ -328,17 +405,17 @@ button[onclick="cerrarSesion()"]:hover {
   border-top-right-radius: 28px;
 }
 
-#chat-close-btn {
+#cerrar-chat-btn {
   background: none;
   border: none;
   color: white;
-  font-size: 2.2rem;
+  font-size: 2rem;
   cursor: pointer;
   line-height: 1;
   transition: all 0.3s;
 }
 
-#chat-close-btn:hover {
+#cerrar-chat-btn:hover {
   transform: rotate(90deg) scale(1.2);
 }
 
@@ -392,6 +469,7 @@ button[onclick="cerrarSesion()"]:hover {
   border-radius: 50px;
   font-size: 1.05rem;
   transition: all 0.3s;
+  font-family: inherit;
 }
 
 #chat-input:focus {
@@ -400,7 +478,7 @@ button[onclick="cerrarSesion()"]:hover {
   outline: none;
 }
 
-#chat-input-area button {
+#enviar-chat-btn {
   background: linear-gradient(90deg, #ff7043, #ff5722);
   color: white;
   padding: 16px 32px;
@@ -410,42 +488,196 @@ button[onclick="cerrarSesion()"]:hover {
   font-weight: 600;
   font-size: 1.05rem;
   transition: all 0.3s;
+  font-family: inherit;
 }
 
-#chat-input-area button:hover {
+#enviar-chat-btn:hover {
   background: linear-gradient(90deg, #ff5722, #f4511e);
   transform: scale(1.05);
 }
 
-/* Responsive */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 20px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  z-index: 100;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #666;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.nav-item span:first-child {
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+
+.nav-item.active {
+  color: #4caf50;
+  transform: translateY(-2px);
+}
+
+.nav-item:hover {
+  color: #4caf50;
+}
+
+.temp-notification {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #4caf50;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.temp-notification.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.temp-notification.success {
+  background: linear-gradient(135deg, #4caf50, #45a049);
+}
+
+.temp-notification.error {
+  background: linear-gradient(135deg, #ff5252, #ff3838);
+}
+
+.temp-notification.info {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+}
+
 @media (min-width: 768px) {
   .recipes-list {
     grid-template-columns: repeat(2, 1fr);
-    gap: 40px;
+    gap: 24px;
   }
-
-  .bottom-nav {
-    display: none;
+  
+  .recipe-image {
+    height: 220px;
   }
-
+  
   #chat-window {
     width: 480px;
     height: 640px;
     bottom: 60px;
     right: 60px;
   }
+  
+  .temp-notification {
+    white-space: nowrap;
+  }
 }
 
 @media (min-width: 1024px) {
   .recipes-list {
     grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
   }
-
+  
+  .recipe-image {
+    height: 240px;
+  }
+  
+  .recipe-content h3 {
+    font-size: 1.3rem;
+  }
+  
   .header-green {
     padding: 60px 40px 40px;
   }
-
+  
   .greeting {
     font-size: 3.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-screen {
+    padding: 0 16px 80px;
+  }
+  
+  .recipe-image {
+    height: 180px;
+  }
+  
+  .recipe-content {
+    padding: 16px;
+  }
+  
+  .recipe-content h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+  
+  .recipe-meta {
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .recipe-price, .recipe-time {
+    font-size: 0.85rem;
+  }
+  
+  .recipe-tags {
+    margin-bottom: 12px;
+    gap: 6px;
+  }
+  
+  .recipe-tag {
+    font-size: 0.65rem;
+    padding: 3px 10px;
+  }
+  
+  .btn-ver-mas {
+    padding: 6px 16px;
+    font-size: 0.8rem;
+    margin-top: 12px;
+  }
+  
+  .temp-notification {
+    white-space: normal;
+    max-width: 90%;
+    text-align: center;
+    bottom: 80px;
+  }
+  
+  #chat-boton {
+    bottom: 100px;
+    right: 20px;
+    width: 55px;
+    height: 55px;
+    font-size: 26px;
+  }
+  
+  #chat-window {
+    bottom: 170px;
+    right: 20px;
+    width: 85vw;
+    height: 70vh;
   }
 }

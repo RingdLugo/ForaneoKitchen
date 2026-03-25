@@ -1,9 +1,9 @@
 # ForaneoKitchen 🍳
 
 Aplicación web de recetas económicas pensada para estudiantes foráneos.
-Permite registrarse, iniciar sesión, publicar recetas y consultar recetas compartidas por otros usuarios.
+Permite registrarse, iniciar sesión, publicar recetas con imágenes y consultar recetas compartidas por otros usuarios.
 
-El sistema incluye autenticación con token, gestión de recetas y un pequeño chatbot disponible para usuarios premium.
+El sistema incluye autenticación con token, gestión de recetas con validaciones, filtros inteligentes, búsqueda en tiempo real y un chatbot disponible para usuarios premium.
 
 Repositorio del proyecto:
 https://github.com/RingdLugo/ForaneoKitchen.git
@@ -19,6 +19,7 @@ https://github.com/RingdLugo/ForaneoKitchen.git
 * Express
 * API REST
 * JWT (JSON Web Token) para autenticación
+* bcryptjs para encriptación de contraseñas
 
 ---
 
@@ -88,13 +89,13 @@ http://localhost:3000
 
 Una vez que el servidor esté corriendo:
 
-1. Abrir el archivo:
+1. Abrir el navegador y entrar a:
 
 ```
-index.html
+http://localhost:3000
 ```
 
-También puedes abrirlo usando **Live Server** en Visual Studio Code para facilitar las pruebas.
+También puedes abrir el archivo `index.html` usando **Live Server** en Visual Studio Code para facilitar las pruebas.
 
 Desde ahí podrás acceder a la aplicación.
 
@@ -130,11 +131,51 @@ Después de iniciar sesión entrarás a la pantalla principal de la aplicación.
 
 Ahí podrás:
 
-* ver recetas disponibles
-* publicar nuevas recetas
-* navegar por las opciones de la aplicación
+* buscar recetas en tiempo real mientras escribes
+* filtrar recetas por categorías (Económicas, Rápidas, Microondas, Menos de $30)
+* ver todas las recetas disponibles en formato de tarjetas con imagen, precio y tiempo
+* ver receta completa haciendo clic en "Ver receta completa"
+* publicar nuevas recetas desde la opción "Subir" en la navegación inferior
 
 Si el usuario fue registrado como **premium**, también tendrá acceso al **chatbot de recetas**.
+
+---
+
+### Publicar una receta
+
+1. En la navegación inferior, haz clic en **"Subir"**.
+2. Completa todos los campos del formulario:
+   - **Título** (solo letras, números y espacios, mínimo 3 caracteres)
+   - **Costo** (solo números, se formatea automáticamente a $XX MXN)
+   - **Tiempo** (solo números, se formatea automáticamente a XX min)
+   - **Ingredientes** (separados por comas, mínimo 1, máximo 20)
+   - **Pasos** (puedes usar números 1., 2. o saltos de línea, mínimo 1 paso)
+   - **Imagen** (opcional, JPG, PNG o WEBP, máximo 5MB)
+3. Presiona **Publicar receta**.
+
+---
+
+### Ver detalle de receta
+
+Al hacer clic en "Ver receta completa" en cualquier receta, se mostrará una página con:
+
+* Imagen de la receta
+* Título y autor
+* Costo total y costo por porción
+* Tiempo de preparación
+* Lista completa de ingredientes
+* Pasos de preparación numerados
+* Etiquetas automáticas (económicas, rápidas, microondas, menos de $30)
+
+---
+
+### Chatbot (solo premium)
+
+Si el usuario fue registrado como premium:
+
+* Aparecerá un botón flotante 🍳 en la esquina inferior derecha
+* Al hacer clic se abre un chat donde puedes preguntar por recetas
+* El chatbot buscará en todas las recetas por título, ingredientes o pasos
 
 ---
 
@@ -142,10 +183,18 @@ Si el usuario fue registrado como **premium**, también tendrá acceso al **chat
 
 * Registro de usuarios
 * Inicio de sesión con autenticación JWT
-* Publicación de recetas
+* Publicación de recetas con imagen
+* Validaciones en todos los campos del formulario
+* Búsqueda en tiempo real (título, ingredientes, pasos, autor)
+* Filtros inteligentes (Económicas, Rápidas, Microondas, Menos de $30)
+* Etiquetas automáticas según contenido de la receta
 * Visualización de recetas disponibles
+* Página de detalle de receta
 * Diferenciación entre usuarios normales y premium
 * Chatbot básico para búsqueda de recetas (solo premium)
+* Navegación inferior (Inicio, Subir, Planificador, Comunidad, Perfil)
+* Notificaciones visuales para feedback al usuario
+* Diseño responsive
 
 ---
 
@@ -169,9 +218,25 @@ El usuario puede iniciar sesión o registrarse creando una nueva cuenta.
 
 ### Pantalla principal
 
-Después de iniciar sesión, el usuario puede ver recetas disponibles y publicar nuevas.
+Después de iniciar sesión, el usuario puede ver recetas disponibles y buscar por filtros.
 
 ![Home](images/screenshot_home.png)
+
+---
+
+### Pantalla de subir receta
+
+Formulario dedicado para publicar nuevas recetas con validaciones.
+
+![Subir receta](images/screenshot_subir.png)
+
+---
+
+### Pantalla de detalle de receta
+
+Vista completa de la receta con ingredientes y pasos de preparación.
+
+![Detalle receta](images/screenshot_detalle.png)
 
 ---
 
@@ -194,6 +259,18 @@ Ejemplo de cuerpo enviado:
   "username": "usuario1",
   "password": "123456",
   "esPremium": true
+}
+```
+
+Respuesta esperada:
+
+```json
+{
+  "token": "jwt_token_generado",
+  "user": {
+    "username": "usuario1",
+    "esPremium": true
+  }
 }
 ```
 
@@ -220,13 +297,17 @@ Respuesta esperada:
 
 ```json
 {
-  "token": "jwt_token_generado"
+  "token": "jwt_token_generado",
+  "user": {
+    "username": "usuario1",
+    "esPremium": true
+  }
 }
 ```
 
 ---
 
-### Obtener recetas
+### Obtener todas las recetas
 
 Endpoint:
 
@@ -238,26 +319,83 @@ Este endpoint devuelve todas las recetas registradas en el sistema.
 
 ---
 
+### Obtener una receta específica
+
+Endpoint:
+
+```
+GET /api/recetas/:id
+```
+
+Ejemplo:
+
+```
+GET /api/recetas/1
+```
+
+---
+
+### Crear una nueva receta
+
+Endpoint:
+
+```
+POST /api/recetas
+```
+
+Headers requeridos:
+
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+Ejemplo de cuerpo:
+
+```json
+{
+  "titulo": "Arroz con Huevo",
+  "ingredientes": "Arroz - 1 taza, Huevos - 2 unidades, Aceite - 1 cucharada",
+  "pasos": "1. Cocer el arroz.\n2. Freír los huevos.\n3. Mezclar.",
+  "precio": "$20 MXN",
+  "tiempo": "10 min",
+  "imagen": "data:image/jpeg;base64,..."
+}
+```
+
+---
+
 # Estructura del proyecto
 
 ```
-ForaneoKitchen
+ForaneoKitchen/
 │
-├── index.html
-├── login.html
-├── home.html
+├── public/
+│   ├── index.html              # Pantalla de bienvenida
+│   ├── login.html              # Pantalla de login/registro
+│   ├── home.html               # Pantalla principal (recetas)
+│   ├── receta.html             # Pantalla de detalle de receta
+│   ├── subir-receta.html       # Pantalla para publicar recetas
+│   │
+│   ├── css/
+│   │   ├── style.css           # Estilos página de bienvenida
+│   │   ├── login.css           # Estilos página de login
+│   │   ├── home.css            # Estilos página principal
+│   │   ├── receta.css          # Estilos página de detalle
+│   │   └── subir-receta.css    # Estilos página de subir receta
+│   │
+│   ├── js/
+│   │   ├── home.js             # Lógica página principal
+│   │   ├── login.js            # Lógica página de login
+│   │   ├── receta.js           # Lógica página de detalle
+│   │   └── subir-receta.js     # Lógica página de subir receta
+│   │
+│   └── images/                 # Imágenes del proyecto
 │
-├── css
-│   ├── style.css
-│   ├── login.css
-│   └── home.css
-│
-├── images
-│
-├── server
-│   └── backend Node.js
-│
-└── README.md
+├── server.js                   # Servidor backend (Node.js/Express)
+├── package.json                # Dependencias y scripts
+├── package-lock.json           # Bloqueo de versiones
+└── README.md                   # Documentación del proyecto
 ```
 
 ---
@@ -281,3 +419,4 @@ Estos aspectos se irán **corrigiendo y mejorando progresivamente** conforme ava
 # Autor
 
 Proyecto desarrollado con fines académicos.
+```

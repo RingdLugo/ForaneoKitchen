@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForananeoKitchen - Subir Receta</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/subir-receta.css">
+</head>
+
+<body>
+  <div class="subir-receta-screen">
+    <header class="header-subir">
+      <button class="back-btn" onclick="window.location.href='home.html'">
+        ← Volver a recetas
+      </button>
+      <h1>📝 Subir nueva receta</h1>
+      <p>Comparte tus creaciones culinarias con la comunidad</p>
+    </header>
+
+    <div class="form-container">
+      <div class="form-group">
+        <label for="titulo">🍽️ Título de la receta *</label>
+        <input id="titulo" type="text" placeholder="Ej: Pasta Alfredo Económica" maxlength="100">
+        <small class="input-hint">Mínimo 3 caracteres. Solo letras, números y espacios</small>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="precio">💰 Costo aproximado *</label>
+          <input id="precio" type="text" placeholder="Ej: 28 o $28 MXN">
+          <small class="input-hint">Solo números, se formateará automáticamente</small>
+        </div>
+        <div class="form-group">
+          <label for="tiempo">⏱️ Tiempo de preparación *</label>
+          <input id="tiempo" type="text" placeholder="Ej: 15 o 15 min">
+          <small class="input-hint">Solo números, se formateará automáticamente</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="ingredientes">🥘 Ingredientes *</label>
+        <textarea id="ingredientes" rows="5" placeholder="Ej: Pasta - 200g, Crema - 1/2 taza, Queso parmesano - 50g, Ajo - 2 dientes, Mantequilla - 1 cucharada"></textarea>
+        <small class="input-hint">Separa cada ingrediente con comas. Mínimo 1, máximo 20 ingredientes</small>
+      </div>
+
+      <div class="form-group">
+        <label for="pasos">📝 Pasos de preparación *</label>
+        <textarea id="pasos" rows="8" placeholder="Ej: 1. Hervir la pasta en agua con sal&#10;2. Derretir mantequilla y sofreír ajo&#10;3. Agregar crema y queso&#10;4. Mezclar con la pasta escurrida&#10;5. ¡Servir caliente!"></textarea>
+        <small class="input-hint">Puedes usar números (1., 2.) o saltos de línea. Mínimo 1 paso, máximo 20</small>
+      </div>
+
+      <div class="form-group">
+        <label>🖼️ Imagen de la receta (opcional)</label>
+        <div class="image-upload-area">
+          <label for="receta-imagen" class="image-upload-label">
+            <span class="upload-icon">📷</span>
+            <span>Haz clic para subir una imagen</span>
+            <span class="upload-hint">PNG, JPG o WEBP (máx. 5MB)</span>
+          </label>
+          <input type="file" id="receta-imagen" accept="image/*" style="display: none;">
+          <div id="image-preview" class="image-preview" style="display: none;">
+            <img id="preview-img" alt="Vista previa">
+            <button type="button" class="remove-image" id="remove-image-btn">✖</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-cancelar" onclick="window.location.href='home.html'">Cancelar</button>
+        <button type="button" class="btn-publicar" id="publicar-btn">Publicar receta →</button>
+      </div>
+
+    </div>
+
+    <nav class="bottom-nav">
+      <a href="home.html" class="nav-item">
+        <span>🏠</span> Inicio
+      </a>
+      <a href="subir-receta.html" class="nav-item active">
+        <span>📝</span> Subir
+      </a>
+      <a href="#" class="nav-item">
+        <span>📅</span> Planificador
+      </a>
+      <a href="#" class="nav-item">
+        <span>👥</span> Comunidad
+      </a>
+      <a href="#" class="nav-item">
+        <span>👤</span> Perfil
+      </a>
+    </nav>
+
+  </div>
+
+  <script src="js/subir-receta.js"></script>
+
+</body>
+
+</html>
