@@ -1,0 +1,265 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(to bottom, #f9fbf9, #e8f5e9);
+  color: #1a3c34;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+.lista-screen {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px 20px 80px;
+}
+
+.lista-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.back-btn {
+  background: transparent;
+  border: none;
+  color: #4caf50;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.back-btn:hover {
+  transform: translateX(-4px);
+  color: #2e7d32;
+}
+
+.lista-header h1 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2e7d32;
+  margin-bottom: 20px;
+}
+
+.progreso-container {
+  background: white;
+  border-radius: 20px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.progreso-texto {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.progreso-bar {
+  height: 8px;
+  background: #e8f5e9;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progreso-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #2e7d32);
+  border-radius: 10px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.acciones {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.btn-exportar, .btn-compartir {
+  background: white;
+  border: 2px solid #a5d6a7;
+  padding: 10px 24px;
+  border-radius: 40px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  color: #2e7d32;
+}
+
+.btn-exportar:hover, .btn-compartir:hover {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  transform: translateY(-2px);
+}
+
+.lista-contenido {
+  background: white;
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.categoria-grupo {
+  margin-bottom: 32px;
+}
+
+.categoria-grupo:last-child {
+  margin-bottom: 0;
+}
+
+.categoria-titulo {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e8f5e9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.items-lista {
+  list-style: none;
+  padding: 0;
+}
+
+.item-compra {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.item-compra:last-child {
+  border-bottom: none;
+}
+
+.item-checkbox {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #4caf50;
+}
+
+.item-contenido {
+  flex: 1;
+}
+
+.item-nombre {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #1a3c34;
+  margin-bottom: 4px;
+}
+
+.item-cantidad {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.item-compra.completado .item-nombre {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.vacio-mensaje {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.vacio-mensaje span {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 20px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  z-index: 100;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #666;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.nav-item span:first-child {
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+
+.nav-item.active {
+  color: #4caf50;
+  transform: translateY(-2px);
+}
+
+.nav-item:hover {
+  color: #4caf50;
+}
+
+@media (max-width: 768px) {
+  .lista-screen {
+    padding: 16px 16px 80px;
+  }
+  
+  .lista-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .acciones {
+    gap: 12px;
+  }
+  
+  .btn-exportar, .btn-compartir {
+    padding: 8px 20px;
+    font-size: 0.85rem;
+  }
+  
+  .lista-contenido {
+    padding: 20px;
+  }
+  
+  .categoria-titulo {
+    font-size: 1rem;
+  }
+  
+  .item-nombre {
+    font-size: 0.9rem;
+  }
+}

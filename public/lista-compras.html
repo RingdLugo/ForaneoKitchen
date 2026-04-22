@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForananeoKitchen - Lista de Compras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/lista-compras.css">
+</head>
+<body>
+  <div class="lista-screen">
+    <header class="lista-header">
+      <button class="back-btn" onclick="window.location.href='planificador.html'">← Volver al planificador</button>
+      <h1>📋 Lista de Compras</h1>
+      <div class="progreso-container">
+        <div class="progreso-texto" id="progreso-texto">0 de 0 completados</div>
+        <div class="progreso-bar">
+          <div class="progreso-fill" id="progreso-fill"></div>
+        </div>
+      </div>
+      <div class="acciones">
+        <button class="btn-exportar" id="exportar-btn">📄 Exportar</button>
+        <button class="btn-compartir" id="compartir-btn">🔗 Compartir</button>
+      </div>
+    </header>
+    <div class="lista-contenido" id="lista-contenido"></div>
+    <nav class="bottom-nav">
+      <a href="home.html" class="nav-item">
+        <span>🏠</span> Inicio
+      </a>
+      <a href="subir-receta.html" class="nav-item">
+        <span>📝</span> Subir
+      </a>
+      <a href="planificador.html" class="nav-item active">
+        <span>📅</span> Planificador
+      </a>
+      <a href="#" class="nav-item">
+        <span>👥</span> Comunidad
+      </a>
+      <a href="#" class="nav-item">
+        <span>👤</span> Perfil
+      </a>
+    </nav>
+  </div>
+  <script src="js/lista-compras.js"></script>
+</body>
+</html>

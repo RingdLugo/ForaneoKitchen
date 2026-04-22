@@ -1,22 +1,16 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ForananeoKitchen - Inicio</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="css/home.css">
 </head>
-
 <body>
-
   <div class="home-screen">
-
     <header class="header-green">
       <div class="greeting-section">
         <h1 class="greeting">Hola <span id="user-name">Usuario</span> 👋</h1>
@@ -26,14 +20,12 @@
         <span class="crown">👑</span> Premium
       </div>
     </header>
-
     <div class="search-wrapper">
       <div class="search-bar">
         <span class="search-icon">🔍</span>
         <input type="text" id="search-input" placeholder="Buscar recetas..." />
       </div>
     </div>
-
     <div class="filters-section">
       <div class="filters-header">
         <span class="filter-icon">▼</span> Filtros:
@@ -45,13 +37,10 @@
         <button class="tag" data-filter="menos30">Menos de $30</button>
       </div>
     </div>
-
     <h2 class="section-title">Recetas Disponibles</h2>
     <div class="recipes-list" id="recetas"></div>
-
     <button id="cerrar-sesion-btn">Cerrar sesión</button>
     <button id="chat-boton" title="Chatbot (Premium)" style="display:none;">🍳</button>
-
     <div id="chat-window" style="display:none;">
       <div id="chat-header">
         <span>ChefBot</span>
@@ -63,7 +52,6 @@
         <button id="enviar-chat-btn">Enviar</button>
       </div>
     </div>
-
     <nav class="bottom-nav">
       <a href="home.html" class="nav-item active">
         <span>🏠</span> Inicio
@@ -71,7 +59,7 @@
       <a href="subir-receta.html" class="nav-item">
         <span>📝</span> Subir
       </a>
-      <a href="#" class="nav-item">
+      <a href="planificador.html" class="nav-item">
         <span>📅</span> Planificador
       </a>
       <a href="#" class="nav-item">
@@ -81,11 +69,7 @@
         <span>👤</span> Perfil
       </a>
     </nav>
-
   </div>
-
   <script src="js/home.js"></script>
-
 </body>
-
 </html>

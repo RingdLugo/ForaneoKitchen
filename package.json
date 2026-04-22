@@ -8,7 +8,22 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^4.22.1",
-    "jsonwebtoken": "^9.0.3"
-  }
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^8.0.5"
+  },
+  "description": "Aplicación web de recetas económicas pensada para estudiantes foráneos.\r Permite registrarse, iniciar sesión, publicar recetas con imágenes y consultar recetas compartidas por otros usuarios.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RingdLugo/ForaneoKitchen.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/RingdLugo/ForaneoKitchen/issues"
+  },
+  "homepage": "https://github.com/RingdLugo/ForaneoKitchen#readme"
 }

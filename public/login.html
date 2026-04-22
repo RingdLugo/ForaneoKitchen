@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,7 +11,6 @@
 </head>
 
 <body>
-
   <div class="login-screen">
     <div class="login-container">
       <h1>ForananeoKitchen</h1>
@@ -31,15 +29,30 @@
 
       <div class="login-card" id="registro-box" style="display:none;">
         <h2>Registrarse</h2>
-        <input id="reg-user" placeholder="Usuario">
-        <input id="reg-pass" type="password" placeholder="Contraseña">
-        <label style="display:block; margin:10px 0;">
+        <input id="reg-nombre" placeholder="Nombre *" required>
+        <input id="reg-apellido" placeholder="Apellido *" required>
+        <input id="reg-email" type="email" placeholder="Email * (gmail/hotmail/etc)" required>
+        <input id="reg-user" placeholder="Username * (3-20 chars)" required>
+        <input id="reg-pass" type="password" placeholder="Contraseña * (8+ chars fuerte)" required>
+        <input id="reg-confirm" type="password" placeholder="Confirmar contraseña *" required>
+        <input id="reg-fecha" type="date" placeholder="Fecha nacimiento">
+        <label style="display:block; margin:20px 0;">
           <input type="checkbox" id="reg-premium"> Quiero ser Premium (acceso al chatbot)
         </label>
-        <button onclick="registrar()">Crear cuenta →</button>
+        <button onclick="registrar()">Crear Usuario →</button>
         <p class="register-link">
           <a href="#" onclick="mostrarLogin()">Volver a iniciar sesión</a>
         </p>
+      </div>
+
+      <div class="login-card" id="verify-box" style="display:none;">
+        <h2>Verificar Email</h2>
+        <p style="color:#4caf50; font-weight:500;">Código enviado a: <strong id="verify-email"></strong></p>
+        <input id="otp-input" type="text" maxlength="6" placeholder="123456" style="text-align:center; font-size:1.5rem; letter-spacing:5px;">
+        <br><br>
+        <button onclick="verificarOTP()" style="background:#4caf50; color:white; padding:15px;">✅ Verificar Código</button>
+        <br><br>
+        <button onclick="mostrarRegistro()" style="background:transparent; color:#2e7d32; border:2px solid #4caf50;">🔄 Cambiar Email</button>
       </div>
 
       <div class="guest-option">
@@ -64,7 +77,5 @@
   </div>
 
   <script src="js/login.js"></script>
-
 </body>
-
 </html>

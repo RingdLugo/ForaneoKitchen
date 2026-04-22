@@ -1,3 +1,5 @@
+/* css/subir-receta.css */
+
 * {
   margin: 0;
   padding: 0;
@@ -18,7 +20,6 @@ body {
   padding: 20px 20px 80px;
 }
 
-/* Header */
 .header-subir {
   text-align: center;
   margin-bottom: 32px;
@@ -59,7 +60,6 @@ body {
   font-size: 0.95rem;
 }
 
-/* Formulario */
 .form-container {
   background: white;
   border-radius: 32px;
@@ -120,7 +120,6 @@ body {
   gap: 16px;
 }
 
-/* Subir imagen */
 .image-upload-area {
   margin-top: 8px;
 }
@@ -194,7 +193,6 @@ body {
   transform: scale(1.1);
 }
 
-/* Botones de acción */
 .form-actions {
   display: flex;
   gap: 16px;
@@ -240,7 +238,12 @@ body {
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
-/* Navegación inferior */
+.btn-publicar:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -282,7 +285,6 @@ body {
   color: #4caf50;
 }
 
-/* Notificaciones */
 .temp-notification {
   position: fixed;
   bottom: 80px;
@@ -315,7 +317,6 @@ body {
   background: linear-gradient(135deg, #ff5252, #ff3838);
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .subir-receta-screen {
     padding: 16px 16px 80px;

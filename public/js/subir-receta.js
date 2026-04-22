@@ -1,3 +1,5 @@
+// public/js/subir-receta.js
+
 const API = 'http://localhost:3000';
 let token = localStorage.getItem('token');
 let imagenSeleccionada = null;
@@ -14,6 +16,10 @@ const DOM = {
   publicarBtn: document.getElementById('publicar-btn'),
   removeImageBtn: document.getElementById('remove-image-btn')
 };
+
+// ============================================
+// VALIDACIONES
+// ============================================
 
 function validarTitulo(titulo) {
   const regex = /^[a-zA-ZáéíóúñÑÁÉÍÓÚ\s0-9\-_,.!?()]+$/;
@@ -34,11 +40,11 @@ function validarTitulo(titulo) {
 
 function validarPrecio(precio) {
   if (!precio || precio.trim() === '') {
-    return { valido: true, valor: '$$' };
+    return { valido: false, mensaje: '❌ El costo es obligatorio' };
   }
   const numeros = precio.replace(/[^0-9]/g, '');
   if (numeros === '') {
-    return { valido: false, mensaje: '❌ El costo debe contener al menos un número' };
+    return { valido: false, mensaje: '❌ El costo debe contener al menos un número (ej: 25, 50, 100)' };
   }
   const valorNumerico = parseInt(numeros);
   if (valorNumerico < 0) {
@@ -47,16 +53,16 @@ function validarPrecio(precio) {
   if (valorNumerico > 999) {
     return { valido: false, mensaje: '❌ El costo no puede exceder los $999' };
   }
-  return { valido: true, valor: `$${valorNumerico} MXN` };
+  return { valido: true, valor: `$${valorNumerico} MXN`, valorNumerico: valorNumerico };
 }
 
 function validarTiempo(tiempo) {
   if (!tiempo || tiempo.trim() === '') {
-    return { valido: true, valor: '30 min' };
+    return { valido: false, mensaje: '❌ El tiempo es obligatorio' };
   }
   const numeros = tiempo.replace(/[^0-9]/g, '');
   if (numeros === '') {
-    return { valido: false, mensaje: '❌ El tiempo debe contener al menos un número' };
+    return { valido: false, mensaje: '❌ El tiempo debe contener al menos un número (ej: 10, 20, 30)' };
   }
   const valorNumerico = parseInt(numeros);
   if (valorNumerico < 1) {
@@ -65,7 +71,7 @@ function validarTiempo(tiempo) {
   if (valorNumerico > 180) {
     return { valido: false, mensaje: '❌ El tiempo no puede exceder los 180 minutos' };
   }
-  return { valido: true, valor: `${valorNumerico} min` };
+  return { valido: true, valor: `${valorNumerico} min`, valorNumerico: valorNumerico };
 }
 
 function validarIngredientes(ingredientes) {
@@ -150,24 +156,44 @@ function validarImagen(file) {
   return { valido: true };
 }
 
-function mostrarErrorCampo(campo, mensaje) {
-  campo.classList.add('error');
-  mostrarNotificacion(mensaje, 'error');
-  campo.focus();
-  setTimeout(() => {
-    campo.classList.remove('error');
-  }, 3000);
+// ============================================
+// GENERAR ETIQUETAS BASADAS EN DATOS NUMÉRICOS
+// ============================================
+
+function generarEtiquetasAutomaticas(titulo, ingredientes, pasos, precioNumerico, tiempoNumerico) {
+  const etiquetas = [];
+  const pasosLower = pasos.toLowerCase();
+  const ingredientesLower = ingredientes.toLowerCase();
+  const tituloLower = titulo.toLowerCase();
+  
+  // ECONÓMICAS: precio ≤ 35 MXN
+  if (precioNumerico > 0 && precioNumerico <= 35) {
+    etiquetas.push('economica');
+  }
+  
+  // RÁPIDAS: tiempo ≤ 20 minutos
+  if (tiempoNumerico > 0 && tiempoNumerico <= 20) {
+    etiquetas.push('rapida');
+  }
+  
+  // MICROONDAS: si contiene la palabra
+  if (pasosLower.includes('microondas') || 
+      ingredientesLower.includes('microondas') ||
+      tituloLower.includes('microondas')) {
+    etiquetas.push('microondas');
+  }
+  
+  // MENOS DE $30: precio ≤ 30 MXN
+  if (precioNumerico > 0 && precioNumerico <= 30) {
+    etiquetas.push('menos30');
+  }
+  
+  return etiquetas;
 }
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+// ============================================
+// UTILIDADES
+// ============================================
 
 function mostrarNotificacion(mensaje, tipo = 'info') {
   const notificacion = document.createElement('div');
@@ -229,6 +255,19 @@ function setupImageUpload() {
   }
 }
 
+function mostrarErrorCampo(campo, mensaje) {
+  campo.classList.add('error');
+  mostrarNotificacion(mensaje, 'error');
+  campo.focus();
+  setTimeout(() => {
+    campo.classList.remove('error');
+  }, 3000);
+}
+
+// ============================================
+// PUBLICAR RECETA
+// ============================================
+
 async function publicarReceta() {
   if (!token) {
     mostrarNotificacion('Debes iniciar sesión para publicar recetas', 'error');
@@ -281,6 +320,16 @@ async function publicarReceta() {
       return;
     }
   }
+
+  // Generar etiquetas basadas en DATOS NUMÉRICOS
+  const etiquetas = generarEtiquetasAutomaticas(
+    tituloValidacion.valor,
+    ingredientesValidacion.valor,
+    pasosValidacion.valor,
+    precioValidacion.valorNumerico,
+    tiempoValidacion.valorNumerico
+  );
+
   let imagenBase64 = null;
   if (imagenSeleccionada) {
     try {
@@ -297,9 +346,13 @@ async function publicarReceta() {
     ingredientes: ingredientesValidacion.valor,
     pasos: pasosValidacion.valor,
     precio: precioValidacion.valor,
+    precioNumerico: precioValidacion.valorNumerico,
     tiempo: tiempoValidacion.valor,
-    imagen: imagenBase64
+    tiempoNumerico: tiempoValidacion.valorNumerico,
+    imagen: imagenBase64,
+    etiquetas: etiquetas
   };
+
   DOM.publicarBtn.disabled = true;
   DOM.publicarBtn.textContent = 'Publicando...';
 
@@ -315,12 +368,14 @@ async function publicarReceta() {
 
     if (res.ok) {
       mostrarNotificacion('🎉 ¡Receta publicada exitosamente!', 'success');
+      
       DOM.titulo.value = '';
       DOM.ingredientes.value = '';
       DOM.pasos.value = '';
       DOM.precio.value = '';
       DOM.tiempo.value = '';
       eliminarImagen();
+      
       setTimeout(() => {
         window.location.href = 'home.html';
       }, 2000);
@@ -338,6 +393,10 @@ async function publicarReceta() {
   }
 }
 
+// ============================================
+// INICIALIZACIÓN
+// ============================================
+
 function init() {
   setupImageUpload();
   
@@ -345,7 +404,6 @@ function init() {
     DOM.publicarBtn.addEventListener('click', publicarReceta);
   }
   
-  // Evento Enter en los campos
   const inputs = [DOM.titulo, DOM.precio, DOM.tiempo];
   inputs.forEach(input => {
     if (input) {

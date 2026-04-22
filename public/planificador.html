@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForananeoKitchen - Planificador Semanal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/planificador.css">
+</head>
+<body>
+  <div class="planificador-screen">
+    <header class="planificador-header">
+      <h1>📅 Planificador Semanal</h1>
+      <p>Organiza tus comidas de la semana</p>
+    </header>
+    <div class="presupuesto-section">
+      <div class="presupuesto-card">
+        <span class="presupuesto-label">Presupuesto Semanal</span>
+        <div class="presupuesto-valor">
+          <span class="moneda">$</span>
+          <input type="number" id="presupuesto-input" value="500" step="50" min="0">
+          <span class="moneda">MXN</span>
+        </div>
+        <div class="presupuesto-gasto" id="gasto-total">Gasto total: $0 MXN</div>
+        <div class="presupuesto-restante" id="restante">Restante: $500 MXN</div>
+      </div>
+      <button class="lista-compras-btn" id="lista-compras-btn">📋 Lista de Compras</button>
+    </div>
+    <div class="dias-container" id="dias-container"></div>
+    <div id="modal-recetas" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Seleccionar receta</h3>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-search">
+          <input type="text" id="modal-search-input" placeholder="Buscar receta...">
+        </div>
+        <div class="modal-recetas-list" id="modal-recetas-list"></div>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <a href="home.html" class="nav-item">
+        <span>🏠</span> Inicio
+      </a>
+      <a href="subir-receta.html" class="nav-item">
+        <span>📝</span> Subir
+      </a>
+      <a href="planificador.html" class="nav-item active">
+        <span>📅</span> Planificador
+      </a>
+      <a href="#" class="nav-item">
+        <span>👥</span> Comunidad
+      </a>
+      <a href="#" class="nav-item">
+        <span>👤</span> Perfil
+      </a>
+    </nav>
+  </div>
+  <script src="js/planificador.js"></script>
+</body>
+</html>

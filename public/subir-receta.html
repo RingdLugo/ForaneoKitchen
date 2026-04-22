@@ -14,7 +14,9 @@
 </head>
 
 <body>
+
   <div class="subir-receta-screen">
+
     <header class="header-subir">
       <button class="back-btn" onclick="window.location.href='home.html'">
         ← Volver a recetas
@@ -24,6 +26,7 @@
     </header>
 
     <div class="form-container">
+      
       <div class="form-group">
         <label for="titulo">🍽️ Título de la receta *</label>
         <input id="titulo" type="text" placeholder="Ej: Pasta Alfredo Económica" maxlength="100">
@@ -34,12 +37,12 @@
         <div class="form-group">
           <label for="precio">💰 Costo aproximado *</label>
           <input id="precio" type="text" placeholder="Ej: 28 o $28 MXN">
-          <small class="input-hint">Solo números, se formateará automáticamente</small>
+          <small class="input-hint">Solo números (ej: 25, 50, 100). Los filtros usan este valor</small>
         </div>
         <div class="form-group">
           <label for="tiempo">⏱️ Tiempo de preparación *</label>
           <input id="tiempo" type="text" placeholder="Ej: 15 o 15 min">
-          <small class="input-hint">Solo números, se formateará automáticamente</small>
+          <small class="input-hint">Solo números en minutos (ej: 10, 20, 30). Los filtros usan este valor</small>
         </div>
       </div>
 
@@ -85,7 +88,7 @@
       <a href="subir-receta.html" class="nav-item active">
         <span>📝</span> Subir
       </a>
-      <a href="#" class="nav-item">
+      <a href="planificador.html" class="nav-item">
         <span>📅</span> Planificador
       </a>
       <a href="#" class="nav-item">

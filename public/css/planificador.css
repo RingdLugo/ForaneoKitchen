@@ -1,0 +1,507 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(to bottom, #f9fbf9, #e8f5e9);
+  color: #1a3c34;
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+.planificador-screen {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 20px 80px;
+}
+
+.planificador-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.planificador-header h1 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2e7d32;
+  margin-bottom: 8px;
+}
+
+.planificador-header p {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.presupuesto-section {
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.presupuesto-card {
+  flex: 1;
+}
+
+.presupuesto-label {
+  font-size: 0.85rem;
+  color: #666;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.presupuesto-valor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.presupuesto-valor .moneda {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.presupuesto-valor input {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2e7d32;
+  border: none;
+  background: transparent;
+  width: 120px;
+  font-family: 'Poppins', sans-serif;
+  outline: none;
+}
+
+.presupuesto-gasto {
+  font-size: 0.9rem;
+  color: #ff9800;
+  margin-bottom: 4px;
+}
+
+.presupuesto-restante {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4caf50;
+}
+
+.lista-compras-btn {
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 40px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.lista-compras-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.dias-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.dia-card {
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.dia-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+
+.dia-header {
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white;
+  padding: 16px 20px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.comidas-container {
+  padding: 16px;
+}
+
+.comida-item {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 16px;
+}
+
+.comida-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.comida-tipo {
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.receta-seleccionada {
+  background: #f8f9fa;
+  border-radius: 16px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.receta-seleccionada:hover {
+  background: #e8f5e9;
+  transform: translateX(4px);
+}
+
+.receta-seleccionada h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a3c34;
+  margin-bottom: 6px;
+  padding-right: 24px;
+}
+
+.receta-seleccionada .receta-info {
+  display: flex;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.receta-seleccionada .receta-precio {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.receta-seleccionada .receta-tiempo {
+  color: #ff9800;
+}
+
+.eliminar-receta {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px 8px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.eliminar-receta:hover {
+  color: #ff5252;
+  background: #ffebee;
+}
+
+.agregar-receta-btn {
+  width: 100%;
+  background: transparent;
+  border: 2px dashed #a5d6a7;
+  border-radius: 16px;
+  padding: 12px;
+  color: #4caf50;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  margin-top: 8px;
+}
+
+.agregar-receta-btn:hover {
+  background: #e8f5e9;
+  border-color: #4caf50;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 28px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.2rem;
+  color: #2e7d32;
+}
+
+.modal-close, .modal-close-lista {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover, .modal-close-lista:hover {
+  color: #ff5252;
+}
+
+.modal-search {
+  padding: 16px 24px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-search input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 40px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.modal-search input:focus {
+  border-color: #4caf50;
+}
+
+.modal-recetas-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.modal-receta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-receta-item:hover {
+  background: #e8f5e9;
+  transform: translateX(4px);
+}
+
+.modal-receta-info h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a3c34;
+  margin-bottom: 4px;
+}
+
+.modal-receta-info p {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.modal-receta-precio {
+  color: #2e7d32;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.lista-compras-modal {
+  max-width: 600px;
+}
+
+.lista-compras-contenido {
+  padding: 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.lista-compras-categoria {
+  margin-bottom: 24px;
+}
+
+.lista-compras-categoria h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2e7d32;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #e8f5e9;
+}
+
+.lista-compras-items {
+  list-style: none;
+  padding: 0;
+}
+
+.lista-compras-items li {
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.lista-compras-items li input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.lista-compras-items li label {
+  flex: 1;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #424242;
+}
+
+.lista-compras-items li input:checked + label {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.btn-copiar-lista {
+  margin: 16px 24px 24px;
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 40px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.btn-copiar-lista:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.vacio-mensaje {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 20px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  z-index: 100;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #666;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.nav-item span:first-child {
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+
+.nav-item.active {
+  color: #4caf50;
+  transform: translateY(-2px);
+}
+
+.nav-item:hover {
+  color: #4caf50;
+}
+
+@media (max-width: 768px) {
+  .planificador-screen {
+    padding: 16px 16px 80px;
+  }
+  
+  .planificador-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .presupuesto-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .lista-compras-btn {
+    width: 100%;
+  }
+  
+  .dias-container {
+    grid-template-columns: 1fr;
+  }
+}
