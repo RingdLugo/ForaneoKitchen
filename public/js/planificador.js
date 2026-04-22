@@ -14,8 +14,8 @@ let comidaActual = null;
 
 const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const comidas = ['desayuno', 'comida', 'cena'];
-const nombresDias = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
-const nombresComidas = { desayuno: '🌅 Desayuno', comida: '🍽️ Comida', cena: '🌙 Cena' };
+const nombresDias = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miercoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sabado', domingo: 'Domingo' };
+const nombresComidas = { desayuno: 'Desayuno', comida: 'Comida', cena: 'Cena' };
 
 let presupuesto = 500;
 
@@ -42,7 +42,7 @@ function calcularGastoTotal() {
     for (const comida of comidas) {
       const receta = planSemanal[dia][comida];
       if (receta) {
-        const precioNumerico = receta.precioNumerico || parseInt(receta.precio?.replace(/[^0-9]/g, '')) || 0;
+        const precioNumerico = receta.precio_numerico || parseInt(receta.precio?.replace(/[^0-9]/g, '')) || 0;
         total += precioNumerico;
       }
     }
@@ -91,7 +91,7 @@ function renderizarPlanificador() {
       const placeholder = document.querySelector(`#${dia}-${comida}`);
       if (placeholder) {
         if (receta) {
-          const precioNumerico = receta.precioNumerico || parseInt(receta.precio?.replace(/[^0-9]/g, '')) || 0;
+          const precioNumerico = receta.precio_numerico || parseInt(receta.precio?.replace(/[^0-9]/g, '')) || 0;
           placeholder.innerHTML = `
             <div class="receta-seleccionada" data-dia="${dia}" data-comida="${comida}">
               <h4>${escapeHTML(receta.titulo)}</h4>
@@ -153,7 +153,7 @@ function renderizarModalRecetas(recetas) {
     return;
   }
   container.innerHTML = recetas.map(receta => {
-    const precioNumerico = receta.precioNumerico || parseInt(receta.precio?.replace(/[^0-9]/g, '')) || 0;
+    const precioNumerico = receta.precio_numerico || parseInt(receta.precio?.replace(/[^0-9]/g, '')) || 0;
     return `
       <div class="modal-receta-item" data-id="${receta.id}">
         <div class="modal-receta-info">

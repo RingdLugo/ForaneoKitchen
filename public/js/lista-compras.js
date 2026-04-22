@@ -2,11 +2,11 @@ const API = 'http://localhost:3000';
 let todasLasRecetas = [];
 let itemsCompra = [];
 let categorias = {
-  'Abarrotes': ['arroz', 'pasta', 'frijol', 'lenteja', 'harina', 'azúcar', 'sal', 'aceite', 'pan'],
-  'Lácteos': ['leche', 'crema', 'queso', 'mantequilla', 'yogur', 'requesón'],
+  'Abarrotes': ['arroz', 'pasta', 'frijol', 'lenteja', 'harina', 'azucar', 'sal', 'aceite', 'pan'],
+  'Lacteos': ['leche', 'crema', 'queso', 'mantequilla', 'yogur', 'requeson'],
   'Verduras': ['cebolla', 'ajo', 'papa', 'tomate', 'lechuga', 'zanahoria', 'brocoli', 'espinaca'],
   'Frutas': ['manzana', 'platano', 'naranja', 'fresa', 'uva', 'pera'],
-  'Carnes': ['pollo', 'res', 'cerdo', 'pescado', 'atún', 'salchicha', 'huevo'],
+  'Carnes': ['pollo', 'res', 'cerdo', 'pescado', 'atun', 'salchicha', 'huevo'],
   'Otros': []
 };
 
@@ -130,7 +130,7 @@ function renderizarLista() {
     }
     itemsPorCategoria[item.categoria].push(item);
   }
-  const categoriasOrdenadas = ['Abarrotes', 'Lácteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
+  const categoriasOrdenadas = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
   let html = '';
   for (const categoria of categoriasOrdenadas) {
     const items = itemsPorCategoria[categoria];
@@ -138,7 +138,7 @@ function renderizarLista() {
       html += `
         <div class="categoria-grupo">
           <div class="categoria-titulo">
-            <span>${categoria === 'Abarrotes' ? '🛒' : categoria === 'Lácteos' ? '🥛' : categoria === 'Verduras' ? '🥬' : categoria === 'Frutas' ? '🍎' : categoria === 'Carnes' ? '🍗' : '📦'}</span>
+            <span>${categoria === 'Abarrotes' ? '🛒' : categoria === 'Lacteos' ? '🥛' : categoria === 'Verduras' ? '🥬' : categoria === 'Frutas' ? '🍎' : categoria === 'Carnes' ? '🍗' : '📦'}</span>
             ${categoria}
           </div>
           <ul class="items-lista">
@@ -169,7 +169,7 @@ function renderizarLista() {
 function exportarLista() {
   const completados = itemsCompra.filter(item => item.completado).length;
   const total = itemsCompra.length;
-  let texto = `📋 LISTA DE COMPRAS\n${completados} de ${total} completados\n\n`;
+  let texto = `LISTA DE COMPRAS\n${completados} de ${total} completados\n\n`;
   const itemsPorCategoria = {};
   for (const item of itemsCompra) {
     if (!itemsPorCategoria[item.categoria]) {
@@ -177,7 +177,7 @@ function exportarLista() {
     }
     itemsPorCategoria[item.categoria].push(item);
   }
-  const categoriasOrdenadas = ['Abarrotes', 'Lácteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
+  const categoriasOrdenadas = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
   for (const categoria of categoriasOrdenadas) {
     const items = itemsPorCategoria[categoria];
     if (items && items.length > 0) {
@@ -202,7 +202,7 @@ function exportarLista() {
 async function compartirLista() {
   const completados = itemsCompra.filter(item => item.completado).length;
   const total = itemsCompra.length;
-  let texto = `📋 LISTA DE COMPRAS\n${completados} de ${total} completados\n\n`;
+  let texto = `LISTA DE COMPRAS\n${completados} de ${total} completados\n\n`;
   const itemsPorCategoria = {};
   for (const item of itemsCompra) {
     if (!itemsPorCategoria[item.categoria]) {
@@ -210,7 +210,7 @@ async function compartirLista() {
     }
     itemsPorCategoria[item.categoria].push(item);
   }
-  const categoriasOrdenadas = ['Abarrotes', 'Lácteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
+  const categoriasOrdenadas = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
   for (const categoria of categoriasOrdenadas) {
     const items = itemsPorCategoria[categoria];
     if (items && items.length > 0) {
@@ -239,7 +239,7 @@ async function compartirLista() {
 
 function copiarAlPortapapeles(texto) {
   navigator.clipboard.writeText(texto).then(() => {
-    alert('📋 Lista copiada al portapapeles');
+    alert('Lista copiada al portapapeles');
   }).catch(() => {
     alert('No se pudo copiar la lista');
   });

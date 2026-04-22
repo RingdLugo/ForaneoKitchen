@@ -5,67 +5,100 @@ let currentEmail = '';
 let resetMode = false;
 
 function hideAll() {
-  document.getElementById('login-box').style.display = 'none';
-  document.getElementById('registro-box').style.display = 'none';
-  document.getElementById('forgot-box').style.display = 'none';
-  document.getElementById('verify-box').style.display = 'none';
-  document.getElementById('reset-box').style.display = 'none';
+  const loginBox = document.getElementById('login-box');
+  const registroBox = document.getElementById('registro-box');
+  const forgotBox = document.getElementById('forgot-box');
+  const verifyBox = document.getElementById('verify-box');
+  const resetBox = document.getElementById('reset-box');
+  
+  if (loginBox) loginBox.style.display = 'none';
+  if (registroBox) registroBox.style.display = 'none';
+  if (forgotBox) forgotBox.style.display = 'none';
+  if (verifyBox) verifyBox.style.display = 'none';
+  if (resetBox) resetBox.style.display = 'none';
 }
 
 function mostrarLogin() {
   hideAll();
   resetMode = false;
-  document.getElementById('login-box').style.display = 'block';
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
+  const loginBox = document.getElementById('login-box');
+  const loginUser = document.getElementById('login-user');
+  const loginPass = document.getElementById('login-pass');
+  if (loginBox) loginBox.style.display = 'block';
+  if (loginUser) loginUser.value = '';
+  if (loginPass) loginPass.value = '';
 }
 
 function mostrarRegistro() {
   hideAll();
   resetMode = false;
-  document.getElementById('registro-box').style.display = 'block';
-  document.getElementById('reg-nombre').value = '';
-  document.getElementById('reg-apellido').value = '';
-  document.getElementById('reg-email').value = '';
-  document.getElementById('reg-user').value = '';
-  document.getElementById('reg-pass').value = '';
-  document.getElementById('reg-confirm').value = '';
-  document.getElementById('reg-fecha').value = '';
-  document.getElementById('reg-premium').checked = false;
+  const registroBox = document.getElementById('registro-box');
+  const regNombre = document.getElementById('reg-nombre');
+  const regApellido = document.getElementById('reg-apellido');
+  const regEmail = document.getElementById('reg-email');
+  const regUser = document.getElementById('reg-user');
+  const regPass = document.getElementById('reg-pass');
+  const regConfirm = document.getElementById('reg-confirm');
+  const regFecha = document.getElementById('reg-fecha');
+  const regPremium = document.getElementById('reg-premium');
+  
+  if (registroBox) registroBox.style.display = 'block';
+  if (regNombre) regNombre.value = '';
+  if (regApellido) regApellido.value = '';
+  if (regEmail) regEmail.value = '';
+  if (regUser) regUser.value = '';
+  if (regPass) regPass.value = '';
+  if (regConfirm) regConfirm.value = '';
+  if (regFecha) regFecha.value = '';
+  if (regPremium) regPremium.checked = false;
 }
 
 function mostrarForgot(event) {
   if (event) event.preventDefault();
   hideAll();
   resetMode = true;
-  document.getElementById('forgot-box').style.display = 'block';
-  document.getElementById('forgot-email').value = '';
+  const forgotBox = document.getElementById('forgot-box');
+  const forgotEmail = document.getElementById('forgot-email');
+  if (forgotBox) forgotBox.style.display = 'block';
+  if (forgotEmail) forgotEmail.value = '';
 }
 
 function mostrarVerify(email, isReset = false) {
+  console.log('mostrarVerify llamada con email:', email);
   currentEmail = email;
   resetMode = isReset;
   hideAll();
-  document.getElementById('verify-box').style.display = 'block';
-  document.getElementById('verify-email').textContent = email;
-  document.getElementById('otp-input').value = '';
+  const verifyBox = document.getElementById('verify-box');
+  const verifyEmail = document.getElementById('verify-email');
+  const otpInput = document.getElementById('otp-input');
+  const verifyTitle = document.querySelector('#verify-box h2');
+  const verifyButton = document.querySelector('#verify-box button');
+  
+  if (verifyBox) verifyBox.style.display = 'block';
+  if (verifyEmail) verifyEmail.textContent = email;
+  if (otpInput) otpInput.value = '';
   
   if (isReset) {
-    document.querySelector('#verify-box h2').textContent = '🔐 Verificar Código';
-    document.querySelector('#verify-box button').textContent = 'Verificar Código';
+    if (verifyTitle) verifyTitle.textContent = 'Verificar Codigo';
+    if (verifyButton) verifyButton.textContent = 'Verificar Codigo';
   } else {
-    document.querySelector('#verify-box h2').textContent = '✅ Verificar Código';
-    document.querySelector('#verify-box button').textContent = 'Verificar y Continuar';
+    if (verifyTitle) verifyTitle.textContent = 'Verificar Codigo';
+    if (verifyButton) verifyButton.textContent = 'Verificar y Continuar';
   }
 }
 
 function mostrarResetPassword(email) {
   currentEmail = email;
   hideAll();
-  document.getElementById('reset-box').style.display = 'block';
-  document.getElementById('reset-email-display').textContent = email;
-  document.getElementById('reset-new-pass').value = '';
-  document.getElementById('reset-confirm-pass').value = '';
+  const resetBox = document.getElementById('reset-box');
+  const resetEmailDisplay = document.getElementById('reset-email-display');
+  const resetNewPass = document.getElementById('reset-new-pass');
+  const resetConfirmPass = document.getElementById('reset-confirm-pass');
+  
+  if (resetBox) resetBox.style.display = 'block';
+  if (resetEmailDisplay) resetEmailDisplay.textContent = email;
+  if (resetNewPass) resetNewPass.value = '';
+  if (resetConfirmPass) resetConfirmPass.value = '';
 }
 
 function mostrarMensaje(mensaje, esError = true) {
@@ -103,39 +136,39 @@ async function registrar() {
   const esPremium = document.getElementById('reg-premium').checked;
 
   if (!nombre || !apellido || !email || !username || !password || !confirmPassword) {
-    mostrarMensaje('❌ Todos los campos con * son obligatorios');
+    mostrarMensaje('Todos los campos con * son obligatorios');
     return;
   }
 
   if (nombre.length < 2 || nombre.length > 50) {
-    mostrarMensaje('❌ El nombre debe tener entre 2 y 50 caracteres');
+    mostrarMensaje('El nombre debe tener entre 2 y 50 caracteres');
     return;
   }
 
   if (apellido.length < 2 || apellido.length > 50) {
-    mostrarMensaje('❌ El apellido debe tener entre 2 y 50 caracteres');
+    mostrarMensaje('El apellido debe tener entre 2 y 50 caracteres');
     return;
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    mostrarMensaje('❌ Ingresa un email válido (ejemplo: usuario@gmail.com)');
+    mostrarMensaje('Ingresa un email valido');
     return;
   }
 
   const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
   if (!usernameRegex.test(username)) {
-    mostrarMensaje('❌ El username debe tener 3-20 caracteres y solo puede contener letras, números y guión bajo');
+    mostrarMensaje('El username debe tener 3-20 caracteres y solo puede contener letras, numeros y guion bajo');
     return;
   }
 
   if (password.length < 8) {
-    mostrarMensaje('❌ La contraseña debe tener al menos 8 caracteres');
+    mostrarMensaje('La contrasena debe tener al menos 8 caracteres');
     return;
   }
 
   if (password !== confirmPassword) {
-    mostrarMensaje('❌ Las contraseñas no coinciden');
+    mostrarMensaje('Las contrasenas no coinciden');
     return;
   }
 
@@ -149,14 +182,17 @@ async function registrar() {
     const data = await res.json();
 
     if (!res.ok) {
-      mostrarMensaje(data.error || '❌ Error en el registro');
+      mostrarMensaje(data.error || 'Error en el registro');
       return;
     }
 
-    mostrarMensaje('✅ Código enviado a tu correo', false);
+    console.log('Registro exitoso, email:', email);
+    mostrarMensaje('Codigo enviado a tu correo', false);
     mostrarVerify(email, false);
+    
   } catch (error) {
-    mostrarMensaje('❌ Error de conexión con el servidor');
+    console.error('Error en registro:', error);
+    mostrarMensaje('Error de conexion con el servidor');
   }
 }
 
@@ -164,7 +200,7 @@ async function verificarOTP() {
   const otp = document.getElementById('otp-input').value.trim();
 
   if (!otp || otp.length !== 6) {
-    mostrarMensaje('❌ Ingresa el código de 6 dígitos que recibiste en tu correo');
+    mostrarMensaje('Ingresa el codigo de 6 digitos que recibiste en tu correo');
     return;
   }
 
@@ -178,24 +214,27 @@ async function verificarOTP() {
     const data = await res.json();
 
     if (!res.ok) {
-      mostrarMensaje(data.error || '❌ Código incorrecto');
+      mostrarMensaje(data.error || 'Codigo incorrecto');
       return;
     }
 
     if (resetMode) {
-      mostrarMensaje('✅ Código verificado. Ahora crea tu nueva contraseña', false);
+      mostrarMensaje('Codigo verificado. Ahora crea tu nueva contrasena', false);
       mostrarResetPassword(currentEmail);
     } else {
       if (data.token) {
         localStorage.setItem('token', data.token);
-        mostrarMensaje('✅ ¡Registro exitoso! Redirigiendo...', false);
-        window.location.href = 'home.html';
+        mostrarMensaje('Registro exitoso. Redirigiendo...', false);
+        setTimeout(() => {
+          window.location.href = 'home.html';
+        }, 1000);
       } else {
-        mostrarMensaje('❌ No se recibió token del servidor');
+        mostrarMensaje('No se recibio token del servidor');
       }
     }
   } catch (error) {
-    mostrarMensaje('❌ Error de conexión con el servidor');
+    console.error('Error en verificarOTP:', error);
+    mostrarMensaje('Error de conexion con el servidor');
   }
 }
 
@@ -204,7 +243,7 @@ async function login() {
   const password = document.getElementById('login-pass').value.trim();
 
   if (!username || !password) {
-    mostrarMensaje('❌ Ingresa usuario y contraseña');
+    mostrarMensaje('Ingresa usuario y contrasena');
     return;
   }
 
@@ -218,19 +257,22 @@ async function login() {
     const data = await res.json();
 
     if (!res.ok) {
-      mostrarMensaje(data.error || '❌ Usuario o contraseña incorrectos');
+      mostrarMensaje(data.error || 'Usuario o contrasena incorrectos');
       return;
     }
 
     if (data.token) {
       localStorage.setItem('token', data.token);
-      mostrarMensaje('✅ ¡Bienvenido a ForananeoKitchen!', false);
-      window.location.href = 'home.html';
+      mostrarMensaje('Bienvenido a ForananeoKitchen', false);
+      setTimeout(() => {
+        window.location.href = 'home.html';
+      }, 500);
     } else {
-      mostrarMensaje('❌ No se recibió token del servidor');
+      mostrarMensaje('No se recibio token del servidor');
     }
   } catch (error) {
-    mostrarMensaje('❌ Error de conexión con el servidor');
+    console.error('Error en login:', error);
+    mostrarMensaje('Error de conexion con el servidor');
   }
 }
 
@@ -238,13 +280,13 @@ async function forgotPassword() {
   const email = document.getElementById('forgot-email').value.trim();
 
   if (!email) {
-    mostrarMensaje('❌ Ingresa tu email');
+    mostrarMensaje('Ingresa tu email');
     return;
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    mostrarMensaje('❌ Ingresa un email válido (ejemplo: usuario@gmail.com)');
+    mostrarMensaje('Ingresa un email valido');
     return;
   }
 
@@ -258,14 +300,15 @@ async function forgotPassword() {
     const data = await res.json();
 
     if (!res.ok) {
-      mostrarMensaje(data.error || '❌ Error al enviar el código');
+      mostrarMensaje(data.error || 'Error al enviar el codigo');
       return;
     }
 
-    mostrarMensaje('✅ Código enviado a tu correo', false);
+    mostrarMensaje('Codigo enviado a tu correo', false);
     mostrarVerify(email, true);
   } catch (error) {
-    mostrarMensaje('❌ Error de conexión con el servidor');
+    console.error('Error en forgotPassword:', error);
+    mostrarMensaje('Error de conexion con el servidor');
   }
 }
 
@@ -274,17 +317,17 @@ async function resetPassword() {
   const confirmNewPassword = document.getElementById('reset-confirm-pass').value;
 
   if (!newPassword || !confirmNewPassword) {
-    mostrarMensaje('❌ Ambos campos son obligatorios');
+    mostrarMensaje('Ambos campos son obligatorios');
     return;
   }
 
   if (newPassword.length < 8) {
-    mostrarMensaje('❌ La nueva contraseña debe tener al menos 8 caracteres');
+    mostrarMensaje('La nueva contrasena debe tener al menos 8 caracteres');
     return;
   }
 
   if (newPassword !== confirmNewPassword) {
-    mostrarMensaje('❌ Las contraseñas no coinciden');
+    mostrarMensaje('Las contrasenas no coinciden');
     return;
   }
 
@@ -302,14 +345,17 @@ async function resetPassword() {
     const data = await res.json();
 
     if (!res.ok) {
-      mostrarMensaje(data.error || '❌ Error al actualizar la contraseña');
+      mostrarMensaje(data.error || 'Error al actualizar la contrasena');
       return;
     }
 
-    mostrarMensaje('✅ ¡Contraseña actualizada correctamente! Redirigiendo...', false);
-    window.location.href = 'login.html';
+    mostrarMensaje('Contrasena actualizada correctamente. Redirigiendo...', false);
+    setTimeout(() => {
+      window.location.href = 'login.html';
+    }, 1500);
   } catch (error) {
-    mostrarMensaje('❌ Error de conexión con el servidor');
+    console.error('Error en resetPassword:', error);
+    mostrarMensaje('Error de conexion con el servidor');
   }
 }
 
