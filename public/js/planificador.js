@@ -197,7 +197,7 @@ function escapeHTML(str) {
 
 async function cargarRecetas() {
   try {
-    const res = await fetch(`${API}/api/recetas`);
+    const res = await fetch(`${API}/api/recipes`);
     todasLasRecetas = await res.json();
     renderizarModalRecetas(todasLasRecetas);
   } catch (err) {

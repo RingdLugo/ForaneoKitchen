@@ -189,7 +189,7 @@ async function cargarReceta() {
   }
   
   try {
-    const res = await fetch(`${API}/api/recetas/${id}`);
+    const res = await fetch(`${API}/api/recipes/${id}`); 
     
     if (!res.ok) {
       if (res.status === 404) {

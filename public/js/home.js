@@ -168,7 +168,7 @@ function renderizarRecetas(recetas) {
 
 async function cargarRecetas() {
   try {
-    const res = await fetch(`${API}/api/recetas`);
+    const res = await fetch(`${API}/api/recipes`);
     todasLasRecetas = await res.json();
     renderizarRecetas(todasLasRecetas);
   } catch (err) {
@@ -185,16 +185,22 @@ async function cargarRecetas() {
 }
 
 async function init() {
-  if (!token) return window.location.href = 'login.html';
+  token = localStorage.getItem('token');
+  if (!token) {
+    window.location.href = 'login.html';
+    return;
+  }
   try {
-    const res = await fetch(`${API}/api/recetas`, {
+    const res = await fetch(`${API}/api/auth/me`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('Token inválido');
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (!res.ok) {
+      throw new Error('Token inválido');
+    }
+    const userData = await res.json();
     currentUser = {
-      username: payload.username,
-      esPremium: payload.esPremium
+      username: userData.username,
+      esPremium: userData.esPremium
     };
     if (DOM.userName) DOM.userName.textContent = currentUser.username || 'Usuario';
     if (currentUser.esPremium) {
@@ -203,7 +209,9 @@ async function init() {
     }
     await cargarRecetas();
     setupEventListeners();
+    setupChatbot();
   } catch (err) {
+    console.error('Error en init:', err);
     localStorage.removeItem('token');
     window.location.href = 'login.html';
   }
@@ -345,5 +353,4 @@ function setupChatbot() {
   }
 }
 
-setupChatbot();
 init();

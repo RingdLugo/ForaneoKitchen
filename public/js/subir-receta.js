@@ -357,7 +357,7 @@ async function publicarReceta() {
   DOM.publicarBtn.textContent = 'Publicando...';
 
   try {
-    const res = await fetch(`${API}/api/recetas`, {
+    const res = await fetch(`${API}/api/recipes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
