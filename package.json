@@ -6,12 +6,15 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "@supabase/supabase-js": "^2.104.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.22.1",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^8.0.5"
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.6",
+    "web-push": "^3.6.7"
   },
   "description": "Aplicación web de recetas económicas pensada para estudiantes foráneos.\r Permite registrarse, iniciar sesión, publicar recetas con imágenes y consultar recetas compartidas por otros usuarios.",
   "repository": {

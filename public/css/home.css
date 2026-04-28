@@ -165,6 +165,12 @@ body {
   transform: scale(1.05);
 }
 
+.advanced-filters {
+  margin-top: 12px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 16px;
+}
+
 .section-title {
   font-family: 'Poppins', sans-serif;
   font-size: 2rem;
@@ -274,6 +280,12 @@ body {
   text-transform: lowercase;
 }
 
+.recipe-likes {
+  font-size: 0.8rem;
+  color: #ff5252;
+  margin-top: 8px;
+}
+
 .btn-ver-mas {
   background: transparent;
   color: #4caf50;
@@ -303,7 +315,7 @@ body {
   grid-column: 1 / -1;
 }
 
-.no-results-icon {
+.no-results span {
   font-size: 4rem;
   display: block;
   margin-bottom: 20px;
@@ -314,12 +326,6 @@ body {
   font-size: 1.2rem;
   color: #666;
   margin-bottom: 12px;
-  white-space: pre-line;
-}
-
-.no-results small {
-  color: #999;
-  font-size: 0.9rem;
 }
 
 .error-message {
@@ -454,6 +460,28 @@ body {
   border-bottom-left-radius: 8px;
 }
 
+.chat-receta-btn {
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+  color: #2e7d32;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+
+.chat-receta-btn:hover {
+  background: #4caf50;
+  color: white;
+  transform: translateX(4px);
+}
+
 #chat-input-area {
   padding: 20px 24px;
   background: white;
@@ -536,42 +564,6 @@ body {
   color: #4caf50;
 }
 
-.temp-notification {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  background: #4caf50;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 50px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 2000;
-  opacity: 0;
-  transition: all 0.3s ease;
-  pointer-events: none;
-  font-size: 0.9rem;
-  white-space: nowrap;
-}
-
-.temp-notification.show {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-}
-
-.temp-notification.success {
-  background: linear-gradient(135deg, #4caf50, #45a049);
-}
-
-.temp-notification.error {
-  background: linear-gradient(135deg, #ff5252, #ff3838);
-}
-
-.temp-notification.info {
-  background: linear-gradient(135deg, #2196f3, #1976d2);
-}
-
 @media (min-width: 768px) {
   .recipes-list {
     grid-template-columns: repeat(2, 1fr);
@@ -587,10 +579,6 @@ body {
     height: 640px;
     bottom: 60px;
     right: 60px;
-  }
-  
-  .temp-notification {
-    white-space: nowrap;
   }
 }
 
@@ -660,13 +648,6 @@ body {
     margin-top: 12px;
   }
   
-  .temp-notification {
-    white-space: normal;
-    max-width: 90%;
-    text-align: center;
-    bottom: 80px;
-  }
-  
   #chat-boton {
     bottom: 100px;
     right: 20px;
@@ -682,57 +663,45 @@ body {
     height: 70vh;
   }
 }
-.chat-receta-btn {
-  background: #e8f5e9;
-  border: 1px solid #4caf50;
-  color: #2e7d32;
-  padding: 10px 16px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  margin-bottom: 8px;
-}
 
-.chat-receta-btn:hover {
-  background: #4caf50;
-  color: white;
-  transform: translateX(4px);
-}
-
-.chat-ver-completa-btn {
-  background: #4caf50;
-  color: white;
+/* Dark Mode Toggle Button */
+.dark-mode-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
   cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.chat-ver-completa-btn:hover {
-  background: #2e7d32;
-  transform: scale(1.02);
-}
-
-.msg-bot .chat-receta-btn {
-  display: block;
-  margin: 6px 0;
-}
-
-.msg-bot {
+  font-size: 1.5rem;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
-.msg-bot .chat-ver-completa-btn {
-  margin-top: 8px;
+body.dark-mode .dark-mode-toggle {
+  background: rgba(30, 30, 30, 0.95);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+  .dark-mode-toggle {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
 }

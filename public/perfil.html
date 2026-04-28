@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForaneoKitchen – Mi Perfil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/perfil.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
+</head>
+<body>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+
+  <div class="perfil-screen">
+
+    <div class="perfil-header">
+      <h1>👤 Mi Perfil</h1>
+    </div>
+
+    <!-- Hero de perfil -->
+    <div class="perfil-info-card">
+      <div class="avatar-section">
+        <!-- Avatar -->
+        <div class="avatar-wrapper">
+          <img id="avatar-img" class="avatar-img"
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%234caf50'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='white' font-size='45'%3E👤%3C/text%3E%3C/svg%3E"
+            alt="Avatar">
+          <div class="avatar-overlay" id="avatar-overlay-btn" title="Cambiar foto">
+            <span>📷</span>
+          </div>
+        </div>
+        <input type="file" id="avatar-input" accept="image/*" style="display:none;">
+
+        <!-- Info principal -->
+        <div class="avatar-info">
+          <div class="perfil-username-display" id="display-username">@usuario</div>
+          <div class="perfil-nombre-display" id="display-nombre">Nombre completo</div>
+          <div class="perfil-bio-display" id="display-bio">Tu biografía aquí...</div>
+          <span class="perfil-badge" id="premium-badge" style="display:none;">👑 Premium</span>
+
+          <div class="stats-container">
+            <div class="stat">
+              <span class="stat-number" id="stats-recetas">0</span>
+              <span class="stat-label">Recetas</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number" id="stats-favoritos">0</span>
+              <span class="stat-label">Favoritos</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number" id="stats-visitas">0</span>
+              <span class="stat-label">Visitas</span>
+            </div>
+          </div>
+
+          <div class="perfil-acciones">
+            <button class="btn-editar-perfil" id="toggle-form-btn">✏️ Editar perfil</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario de edición (oculto por defecto) -->
+      <div class="perfil-form-section" id="perfil-form-section">
+        <div class="form-row">
+          <div class="form-group">
+            <label>📛 Nombre</label>
+            <input type="text" id="perfil-nombre" placeholder="Tu nombre">
+          </div>
+          <div class="form-group">
+            <label>📛 Apellido</label>
+            <input type="text" id="perfil-apellido" placeholder="Tu apellido">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>👤 Username</label>
+          <input type="text" id="perfil-username" disabled>
+        </div>
+        <div class="form-group">
+          <label>📧 Email</label>
+          <input type="email" id="perfil-email" disabled>
+        </div>
+        <div class="form-group">
+          <label>📝 Biografía</label>
+          <textarea id="perfil-bio" rows="3" placeholder="Cuéntanos sobre ti y tu cocina..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>🥗 Preferencias alimenticias</label>
+          <div class="preferencias-tags" id="preferencias-tags">
+            <span class="pref-tag" data-pref="vegetariano">🌱 Vegetariano</span>
+            <span class="pref-tag" data-pref="vegano">🌿 Vegano</span>
+            <span class="pref-tag" data-pref="sin gluten">🚫 Sin gluten</span>
+            <span class="pref-tag" data-pref="sin lactosa">🥛 Sin lactosa</span>
+            <span class="pref-tag" data-pref="bajo en carbos">🍚 Bajo en carbos</span>
+            <span class="pref-tag" data-pref="alto proteina">💪 Alto en proteína</span>
+            <span class="pref-tag" data-pref="keto">🥑 Keto</span>
+            <span class="pref-tag" data-pref="pescetariano">🐟 Pescetariano</span>
+          </div>
+        </div>
+        <div class="btn-form-row">
+          <button class="guardar-btn" id="guardar-perfil-btn">💾 Guardar cambios</button>
+          <button id="cerrar-sesion-btn">🚪 Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs de secciones -->
+    <div class="secciones-perfil">
+      <button class="seccion-btn active" id="btn-mis-recetas">📝 Mis recetas</button>
+      <button class="seccion-btn" id="btn-favoritos">⭐ Favoritos</button>
+      <button class="seccion-btn" id="btn-historial">👁️ Historial</button>
+    </div>
+
+    <!-- Grids -->
+    <div id="mis-recetas-grid"  class="recetas-grid"></div>
+    <div id="favoritos-grid"    class="recetas-grid" style="display:none;"></div>
+    <div id="historial-grid"    class="recetas-grid" style="display:none;"></div>
+
+  </div><!-- /perfil-screen -->
+
+  <nav class="bottom-nav">
+    <a href="home.html"         class="nav-item"><span>🏠</span><span>Inicio</span></a>
+    <a href="subir-receta.html" class="nav-item"><span>📝</span><span>Subir</span></a>
+    <a href="planificador.html" class="nav-item"><span>📅</span><span>Plan</span></a>
+    <a href="comunidad.html"    class="nav-item"><span>👥</span><span>Comunidad</span></a>
+    <a href="perfil.html"       class="nav-item active"><span>👤</span><span>Perfil</span></a>
+  </nav>
+
+  <div class="notification-toast" id="notif-toast"></div>
+
+  <script src="js/dark-mode.js"></script>
+  <script src="js/perfil.js"></script>
+</body>
+</html>

@@ -8,8 +8,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/lista-compras.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
 </head>
 <body>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  
   <div class="lista-screen">
     <header class="lista-header">
       <button class="back-btn" onclick="window.location.href='planificador.html'">← Volver al planificador</button>
@@ -25,7 +28,11 @@
         <button class="btn-compartir" id="compartir-btn">🔗 Compartir</button>
       </div>
     </header>
-    <div class="lista-contenido" id="lista-contenido"></div>
+    
+    <div class="lista-contenido" id="lista-contenido">
+      <div class="loading">Cargando lista...</div>
+    </div>
+    
     <nav class="bottom-nav">
       <a href="home.html" class="nav-item">
         <span>🏠</span> Inicio
@@ -36,14 +43,16 @@
       <a href="planificador.html" class="nav-item active">
         <span>📅</span> Planificador
       </a>
-      <a href="#" class="nav-item">
+      <a href="comunidad.html" class="nav-item">
         <span>👥</span> Comunidad
       </a>
-      <a href="#" class="nav-item">
+      <a href="perfil.html" class="nav-item">
         <span>👤</span> Perfil
       </a>
     </nav>
   </div>
+  
+  <script src="js/dark-mode.js"></script>
   <script src="js/lista-compras.js"></script>
 </body>
 </html>

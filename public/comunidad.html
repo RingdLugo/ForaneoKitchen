@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForananeoKitchen - Comunidad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/comunidad.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
+</head>
+<body>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  
+  <div class="comunidad-screen">
+    <div class="comunidad-header">
+      <h1>👥 Comunidad</h1>
+      <p>Descubre recetas de otros usuarios, dale like y comenta</p>
+    </div>
+
+    <div id="recetas-comunidad" class="recetas-comunidad">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <div id="modal-comentarios" class="modal-comentarios">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-comentarios-titulo">Comentarios</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div id="comentarios-lista" class="comentarios-lista"></div>
+        <div class="nuevo-comentario-area">
+          <textarea id="nuevo-comentario" placeholder="Escribe un comentario..." rows="2"></textarea>
+          <button id="enviar-comentario">Enviar</button>
+        </div>
+      </div>
+    </div>
+
+    <nav class="bottom-nav">
+      <a href="home.html" class="nav-item">
+        <span>🏠</span> Inicio
+      </a>
+      <a href="subir-receta.html" class="nav-item">
+        <span>📝</span> Subir
+      </a>
+      <a href="planificador.html" class="nav-item">
+        <span>📅</span> Planificador
+      </a>
+      <a href="comunidad.html" class="nav-item active">
+        <span>👥</span> Comunidad
+      </a>
+      <a href="perfil.html" class="nav-item">
+        <span>👤</span> Perfil
+      </a>
+    </nav>
+  </div>
+
+  <script src="js/dark-mode.js"></script>
+  <script src="js/comunidad.js"></script>
+</body>
+</html>

@@ -440,6 +440,5 @@ Esto significa que pueden existir algunos detalles como:
 Estos aspectos se irán corrigiendo y mejorando progresivamente conforme avance el desarrollo del proyecto.
 
 ## Autor
-
-Proyecto desarrollado con fines académicos.
 ```
+Proyecto desarrollado con fines académicos.```

@@ -2,63 +2,102 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>ForananeoKitchen - Planificador Semanal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/planificador.css">
 </head>
 <body>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" onclick="toggleDarkMode()">🌙</button>
+  
   <div class="planificador-screen">
-    <header class="planificador-header">
+    <div class="planificador-header">
       <h1>📅 Planificador Semanal</h1>
-      <p>Organiza tus comidas de la semana</p>
-    </header>
+      <p>Organiza tus comidas - Puedes agregar múltiples recetas por día</p>
+    </div>
+    
     <div class="presupuesto-section">
-      <div class="presupuesto-card">
-        <span class="presupuesto-label">Presupuesto Semanal</span>
+      <div class="presupuesto-info">
+        <div class="presupuesto-label">Presupuesto Semanal</div>
         <div class="presupuesto-valor">
           <span class="moneda">$</span>
           <input type="number" id="presupuesto-input" value="500" step="50" min="0">
           <span class="moneda">MXN</span>
         </div>
-        <div class="presupuesto-gasto" id="gasto-total">Gasto total: $0 MXN</div>
-        <div class="presupuesto-restante" id="restante">Restante: $500 MXN</div>
-      </div>
-      <button class="lista-compras-btn" id="lista-compras-btn">📋 Lista de Compras</button>
-    </div>
-    <div class="dias-container" id="dias-container"></div>
-    <div id="modal-recetas" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Seleccionar receta</h3>
-          <button class="modal-close">&times;</button>
+        <div class="presupuesto-stats">
+          <div class="stat">
+            <span class="stat-label">Gasto total</span>
+            <span class="stat-value gasto" id="gasto-total">$0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Restante</span>
+            <span class="stat-value restante" id="restante">$500</span>
+          </div>
         </div>
-        <div class="modal-search">
-          <input type="text" id="modal-search-input" placeholder="Buscar receta...">
-        </div>
-        <div class="modal-recetas-list" id="modal-recetas-list"></div>
+      </div>
+      <div class="acciones">
+        <button class="btn btn-danger" id="vaciar-plan-btn">🗑️ Vaciar Plan</button>
+        <button class="btn btn-secondary" id="exportar-plan-btn">📄 Exportar Plan</button>
+        <button class="btn btn-primary" id="lista-compras-btn">📋 Lista de Compras</button>
       </div>
     </div>
-    <nav class="bottom-nav">
-      <a href="home.html" class="nav-item">
-        <span>🏠</span> Inicio
-      </a>
-      <a href="subir-receta.html" class="nav-item">
-        <span>📝</span> Subir
-      </a>
-      <a href="planificador.html" class="nav-item active">
-        <span>📅</span> Planificador
-      </a>
-      <a href="#" class="nav-item">
-        <span>👥</span> Comunidad
-      </a>
-      <a href="#" class="nav-item">
-        <span>👤</span> Perfil
-      </a>
-    </nav>
+    
+    <div id="dias-container" class="dias-container"></div>
   </div>
+  
+  <div id="modal-recetas" class="modal-recetas">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📖 Seleccionar receta</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-search">
+        <input type="text" id="modal-search-input" placeholder="🔍 Buscar receta por nombre o ingrediente...">
+      </div>
+      <div id="modal-recetas-list" class="modal-recetas-list"></div>
+    </div>
+  </div>
+  
+  <nav class="bottom-nav">
+    <a href="home.html" class="nav-item">
+      <span>🏠</span>
+      <span>Inicio</span>
+    </a>
+    <a href="subir-receta.html" class="nav-item">
+      <span>📝</span>
+      <span>Subir</span>
+    </a>
+    <a href="planificador.html" class="nav-item active">
+      <span>📅</span>
+      <span>Plan</span>
+    </a>
+    <a href="comunidad.html" class="nav-item">
+      <span>👥</span>
+      <span>Comunidad</span>
+    </a>
+    <a href="perfil.html" class="nav-item">
+      <span>👤</span>
+      <span>Perfil</span>
+    </a>
+  </nav>
+  
+  <script>
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      localStorage.setItem('darkMode', isDark);
+      const btn = document.getElementById('dark-mode-toggle');
+      if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+    }
+    
+    const savedDark = localStorage.getItem('darkMode') === 'true';
+    if (savedDark) {
+      document.body.classList.add('dark-mode');
+      document.getElementById('dark-mode-toggle').textContent = '☀️';
+    }
+  </script>
   <script src="js/planificador.js"></script>
 </body>
 </html>

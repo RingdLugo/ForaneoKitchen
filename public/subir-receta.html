@@ -1,63 +1,170 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>ForananeoKitchen - Subir Receta</title>
-
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#4caf50">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="css/subir-receta.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
+  <style>
+    /* Estilos adicionales para la página */
+    .puntos-info {
+      background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+      padding: 12px 16px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-weight: 500;
+      color: #2e7d32;
+    }
+    
+    .puntos-info .puntos-valor {
+      background: #2e7d32;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-size: 1.1rem;
+    }
+    
+    .premium-badge-info {
+      background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+      padding: 12px 16px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+      color: #e65100;
+      border-left: 4px solid #ff9800;
+    }
+    
+    .premium-badge-info .icon {
+      font-size: 1.5rem;
+    }
+    
+    .checkbox-premium {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    
+    .checkbox-premium input {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    .video-input-hint {
+      display: block;
+      font-size: 0.7rem;
+      color: #999;
+      margin-top: 5px;
+    }
+    
+    .video-preview {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 12px;
+      display: none;
+    }
+    
+    .video-preview.active {
+      display: block;
+    }
+    
+    .video-preview iframe {
+      width: 100%;
+      border-radius: 12px;
+    }
+  </style>
 </head>
-
-<body>
+<body data-theme="light">
 
   <div class="subir-receta-screen">
-
+    
+    <button id="dark-mode-toggle" class="dark-mode-toggle">🌙</button>
+    
     <header class="header-subir">
-      <button class="back-btn" onclick="window.location.href='home.html'">
-        ← Volver a recetas
-      </button>
+      <button class="back-btn" onclick="window.location.href='home.html'">← Volver a recetas</button>
       <h1>📝 Subir nueva receta</h1>
-      <p>Comparte tus creaciones culinarias con la comunidad</p>
+      <p>Comparte tus creaciones culinarias con la comunidad y gana puntos</p>
     </header>
 
     <div class="form-container">
       
+      <!-- Sección de puntos del usuario -->
+      <div class="puntos-info" id="puntos-info">
+        <span>⭐ Tus puntos acumulados:</span>
+        <span class="puntos-valor" id="puntos-monto">0</span>
+        <span style="font-size: 0.8rem;">+15 pts por receta normal | +30 pts por receta Premium</span>
+      </div>
+      
+      <!-- Información de receta Premium -->
+      <div class="premium-badge-info">
+        <span class="icon">👑</span>
+        <span><strong>¿Quieres ganar más puntos?</strong> Marca tu receta como Premium y gana el doble de puntos + 3 días de Premium gratis</span>
+      </div>
+      
+      <!-- Campo: Título -->
       <div class="form-group">
         <label for="titulo">🍽️ Título de la receta *</label>
-        <input id="titulo" type="text" placeholder="Ej: Pasta Alfredo Económica" maxlength="100">
-        <small class="input-hint">Mínimo 3 caracteres. Solo letras, números y espacios</small>
+        <input id="titulo" type="text" placeholder="Ej: Pasta Alfredo Económica" maxlength="100" autocomplete="off">
+        <small class="input-hint">Mínimo 3 caracteres. Máximo 100 caracteres</small>
       </div>
 
+      <!-- Campos: Precio y Tiempo -->
       <div class="form-row">
         <div class="form-group">
           <label for="precio">💰 Costo aproximado *</label>
-          <input id="precio" type="text" placeholder="Ej: 28 o $28 MXN">
-          <small class="input-hint">Solo números (ej: 25, 50, 100). Los filtros usan este valor</small>
+          <input id="precio" type="text" placeholder="Ej: 28 o $28 MXN" autocomplete="off">
+          <small class="input-hint">Ingresa el costo total estimado de la receta</small>
         </div>
         <div class="form-group">
           <label for="tiempo">⏱️ Tiempo de preparación *</label>
-          <input id="tiempo" type="text" placeholder="Ej: 15 o 15 min">
-          <small class="input-hint">Solo números en minutos (ej: 10, 20, 30). Los filtros usan este valor</small>
+          <input id="tiempo" type="text" placeholder="Ej: 15 o 15 min" autocomplete="off">
+          <small class="input-hint">Solo números en minutos (ej: 10, 20, 30)</small>
         </div>
       </div>
 
+      <!-- Campo: Ingredientes -->
       <div class="form-group">
         <label for="ingredientes">🥘 Ingredientes *</label>
-        <textarea id="ingredientes" rows="5" placeholder="Ej: Pasta - 200g, Crema - 1/2 taza, Queso parmesano - 50g, Ajo - 2 dientes, Mantequilla - 1 cucharada"></textarea>
-        <small class="input-hint">Separa cada ingrediente con comas. Mínimo 1, máximo 20 ingredientes</small>
+        <textarea id="ingredientes" rows="5" placeholder="Ej: 2 huevos, 1 taza de leche, 3 piezas de pan, 100g de queso"></textarea>
+        <small class="input-hint">Separa cada ingrediente con comas. Incluye cantidades si es posible</small>
       </div>
 
+      <!-- Campo: Pasos -->
       <div class="form-group">
         <label for="pasos">📝 Pasos de preparación *</label>
         <textarea id="pasos" rows="8" placeholder="Ej: 1. Hervir la pasta en agua con sal&#10;2. Derretir mantequilla y sofreír ajo&#10;3. Agregar crema y queso&#10;4. Mezclar con la pasta escurrida&#10;5. ¡Servir caliente!"></textarea>
         <small class="input-hint">Puedes usar números (1., 2.) o saltos de línea. Mínimo 1 paso, máximo 20</small>
       </div>
 
+      <!-- Campo: Video de YouTube -->
+      <div class="form-group">
+        <label for="video">🎥 Video de la receta (opcional)</label>
+        <input id="video" type="text" placeholder="https://youtube.com/watch?v=... o https://youtu.be/..." autocomplete="off">
+        <small class="input-hint">📌 Solo usuarios <strong>Premium</strong> podrán ver el video. Pega el enlace completo de YouTube</small>
+        <div id="video-preview" class="video-preview"></div>
+      </div>
+
+      <!-- Campo: Imagen -->
       <div class="form-group">
         <label>🖼️ Imagen de la receta (opcional)</label>
         <div class="image-upload-area">
@@ -74,6 +181,16 @@
         </div>
       </div>
 
+      <!-- Checkbox: Receta Premium -->
+      <label class="checkbox-premium" id="premium-label">
+        <input type="checkbox" id="es-premium-receta">
+        <span>✨ <strong>Marcar como receta Premium</strong> (solo usuarios Premium podrán verla)</span>
+      </label>
+      <small class="input-hint" style="display: block; margin-top: -8px; margin-bottom: 16px;">
+        Las recetas Premium te dan <strong>30 puntos</strong> (vs 15 normales) y <strong>3 días de Premium gratis</strong>
+      </small>
+
+      <!-- Botones de acción -->
       <div class="form-actions">
         <button type="button" class="btn-cancelar" onclick="window.location.href='home.html'">Cancelar</button>
         <button type="button" class="btn-publicar" id="publicar-btn">Publicar receta →</button>
@@ -81,28 +198,89 @@
 
     </div>
 
+    <!-- Navegación inferior -->
     <nav class="bottom-nav">
       <a href="home.html" class="nav-item">
-        <span>🏠</span> Inicio
+        <span>🏠</span>
+        <span>Inicio</span>
       </a>
       <a href="subir-receta.html" class="nav-item active">
-        <span>📝</span> Subir
+        <span>📝</span>
+        <span>Subir</span>
       </a>
       <a href="planificador.html" class="nav-item">
-        <span>📅</span> Planificador
+        <span>📅</span>
+        <span>Plan</span>
       </a>
-      <a href="#" class="nav-item">
-        <span>👥</span> Comunidad
+      <a href="comunidad.html" class="nav-item">
+        <span>👥</span>
+        <span>Comunidad</span>
       </a>
-      <a href="#" class="nav-item">
-        <span>👤</span> Perfil
+      <a href="perfil.html" class="nav-item">
+        <span>👤</span>
+        <span>Perfil</span>
       </a>
     </nav>
 
   </div>
 
   <script src="js/subir-receta.js"></script>
-
+  <script>
+    // Configuración del modo oscuro
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    const toggleBtn = document.getElementById('dark-mode-toggle');
+    if (toggleBtn) {
+      toggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+      toggleBtn.addEventListener('click', () => {
+        const currentTheme = document.body.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        toggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        
+        // Sincronizar con dark-mode.js si existe
+        if (typeof window.toggleDarkMode === 'function') {
+          window.toggleDarkMode();
+        }
+      });
+    }
+    
+    // Vista previa de video en tiempo real
+    const videoInput = document.getElementById('video');
+    const videoPreview = document.getElementById('video-preview');
+    
+    function extractYouTubeId(url) {
+      if (!url) return null;
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
+    
+    if (videoInput) {
+      videoInput.addEventListener('input', function() {
+        const url = this.value.trim();
+        const videoId = extractYouTubeId(url);
+        
+        if (videoId && videoPreview) {
+          videoPreview.innerHTML = `
+            <iframe 
+              width="100%" 
+              height="180" 
+              src="https://www.youtube.com/embed/${videoId}" 
+              frameborder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen>
+            </iframe>
+            <small style="display: block; text-align: center; margin-top: 5px;">✅ Vista previa del video</small>
+          `;
+          videoPreview.classList.add('active');
+        } else if (videoPreview) {
+          videoPreview.innerHTML = '';
+          videoPreview.classList.remove('active');
+        }
+      });
+    }
+  </script>
 </body>
-
 </html>

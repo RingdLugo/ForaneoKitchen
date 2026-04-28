@@ -1,13 +1,27 @@
-const API = 'http://localhost:3000';
+// ================================================
+// subir-receta.js - ForaneoKitchen
+// ================================================
+
+const API = (() => {
+  if (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')) {
+    return 'http://localhost:3000';
+  }
+  return window.location.origin;
+})();
+
 let token = localStorage.getItem('token');
 let imagenSeleccionada = null;
 
+// Elementos del DOM
 const DOM = {
   titulo: document.getElementById('titulo'),
   ingredientes: document.getElementById('ingredientes'),
   pasos: document.getElementById('pasos'),
   precio: document.getElementById('precio'),
   tiempo: document.getElementById('tiempo'),
+  video: document.getElementById('video'),
+  esPremiumReceta: document.getElementById('es-premium-receta'),
+  puntosMonto: document.getElementById('puntos-monto'),
   imagenInput: document.getElementById('receta-imagen'),
   imagePreview: document.getElementById('image-preview'),
   previewImg: document.getElementById('preview-img'),
@@ -15,19 +29,69 @@ const DOM = {
   removeImageBtn: document.getElementById('remove-image-btn')
 };
 
+// ================================================
+// FUNCIONES UTILITARIAS
+// ================================================
+
+function mostrarNotificacion(mensaje, tipo = 'info') {
+  const notificacion = document.createElement('div');
+  notificacion.className = `temp-notification ${tipo}`;
+  notificacion.textContent = mensaje;
+  notificacion.style.cssText = `
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: ${tipo === 'error' ? '#ff5252' : tipo === 'success' ? '#4caf50' : '#2196f3'};
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  `;
+  document.body.appendChild(notificacion);
+  setTimeout(() => notificacion.style.transform = 'translateX(-50%) translateY(0)', 10);
+  setTimeout(() => notificacion.style.opacity = '1', 10);
+  setTimeout(() => {
+    notificacion.style.opacity = '0';
+    setTimeout(() => notificacion.remove(), 300);
+  }, 3000);
+}
+
+function extraerYouTubeId(url) {
+  if (!url || url.trim() === '') return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
+
+function convertirImagenABase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ================================================
+// VALIDACIONES
+// ================================================
+
 function validarTitulo(titulo) {
-  const regex = /^[a-zA-ZáéíóúñÑÁÉÍÓÚ\s0-9\-_,.!?()]+$/;
   if (!titulo || titulo.trim() === '') {
-    return { valido: false, mensaje: 'El titulo no puede estar vacio' };
-  }
-  if (!regex.test(titulo)) {
-    return { valido: false, mensaje: 'El titulo solo puede contener letras, numeros y espacios' };
+    return { valido: false, mensaje: 'El título no puede estar vacío' };
   }
   if (titulo.length < 3) {
-    return { valido: false, mensaje: 'El titulo debe tener al menos 3 caracteres' };
+    return { valido: false, mensaje: 'El título debe tener al menos 3 caracteres' };
   }
   if (titulo.length > 100) {
-    return { valido: false, mensaje: 'El titulo no puede exceder los 100 caracteres' };
+    return { valido: false, mensaje: 'El título no puede exceder los 100 caracteres' };
   }
   return { valido: true, valor: titulo.trim() };
 }
@@ -38,14 +102,14 @@ function validarPrecio(precio) {
   }
   const numeros = precio.replace(/[^0-9]/g, '');
   if (numeros === '') {
-    return { valido: false, mensaje: 'El costo debe contener al menos un numero' };
+    return { valido: false, mensaje: 'El costo debe contener al menos un número' };
   }
   const valorNumerico = parseInt(numeros);
   if (valorNumerico < 0) {
     return { valido: false, mensaje: 'El costo no puede ser negativo' };
   }
-  if (valorNumerico > 999) {
-    return { valido: false, mensaje: 'El costo no puede exceder los 999' };
+  if (valorNumerico > 9999) {
+    return { valido: false, mensaje: 'El costo no puede exceder los 9999' };
   }
   return { valido: true, valor: `$${valorNumerico} MXN`, valorNumerico: valorNumerico };
 }
@@ -56,14 +120,14 @@ function validarTiempo(tiempo) {
   }
   const numeros = tiempo.replace(/[^0-9]/g, '');
   if (numeros === '') {
-    return { valido: false, mensaje: 'El tiempo debe contener al menos un numero' };
+    return { valido: false, mensaje: 'El tiempo debe contener al menos un número' };
   }
   const valorNumerico = parseInt(numeros);
   if (valorNumerico < 1) {
     return { valido: false, mensaje: 'El tiempo debe ser mayor a 0 minutos' };
   }
-  if (valorNumerico > 180) {
-    return { valido: false, mensaje: 'El tiempo no puede exceder los 180 minutos' };
+  if (valorNumerico > 480) {
+    return { valido: false, mensaje: 'El tiempo no puede exceder los 480 minutos (8 horas)' };
   }
   return { valido: true, valor: `${valorNumerico} min`, valorNumerico: valorNumerico };
 }
@@ -76,8 +140,8 @@ function validarIngredientes(ingredientes) {
   if (items.length === 0) {
     return { valido: false, mensaje: 'Debes agregar al menos un ingrediente' };
   }
-  if (items.length > 20) {
-    return { valido: false, mensaje: 'No puedes agregar mas de 20 ingredientes' };
+  if (items.length > 30) {
+    return { valido: false, mensaje: 'No puedes agregar más de 30 ingredientes' };
   }
   for (let item of items) {
     if (item.length < 2) {
@@ -87,13 +151,12 @@ function validarIngredientes(ingredientes) {
       return { valido: false, mensaje: 'Un ingrediente no puede exceder los 100 caracteres' };
     }
   }
-  const ingredientesFormateados = items.join(', ');
-  return { valido: true, valor: ingredientesFormateados, lista: items };
+  return { valido: true, valor: ingredientes.trim(), lista: items };
 }
 
 function validarPasos(pasos) {
   if (!pasos || pasos.trim() === '') {
-    return { valido: false, mensaje: 'Los pasos de preparacion son obligatorios' };
+    return { valido: false, mensaje: 'Los pasos de preparación son obligatorios' };
   }
   let pasosLista = [];
   if (pasos.match(/\d+\./)) {
@@ -106,28 +169,37 @@ function validarPasos(pasos) {
   if (pasosLista.length === 0) {
     return { valido: false, mensaje: 'Debes agregar al menos un paso' };
   }
-  if (pasosLista.length > 20) {
-    return { valido: false, mensaje: 'No puedes agregar mas de 20 pasos' };
+  if (pasosLista.length > 30) {
+    return { valido: false, mensaje: 'No puedes agregar más de 30 pasos' };
   }
   for (let paso of pasosLista) {
-    if (paso.length < 5) {
-      return { valido: false, mensaje: 'Cada paso debe tener al menos 5 caracteres' };
+    if (paso.length < 3) {
+      return { valido: false, mensaje: 'Cada paso debe tener al menos 3 caracteres' };
     }
     if (paso.length > 500) {
       return { valido: false, mensaje: 'Un paso no puede exceder los 500 caracteres' };
     }
   }
-  const pasosFormateados = pasosLista.map((paso, index) => {
-    return `${index + 1}. ${paso}`;
-  }).join('\n');
+  const pasosFormateados = pasosLista.map((paso, index) => `${index + 1}. ${paso}`).join('\n');
   return { valido: true, valor: pasosFormateados, lista: pasosLista };
+}
+
+function validarVideo(url) {
+  if (!url || url.trim() === '') {
+    return { valido: true, valor: null };
+  }
+  const youtubeId = extraerYouTubeId(url);
+  if (!youtubeId) {
+    return { valido: false, mensaje: 'URL de YouTube no válida. Asegúrate de pegar el enlace correcto.' };
+  }
+  return { valido: true, valor: url, youtubeId: youtubeId };
 }
 
 function validarImagen(file) {
   if (!file) return { valido: true };
-  const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
   if (!tiposPermitidos.includes(file.type)) {
-    return { valido: false, mensaje: 'Solo se permiten imagenes JPG, PNG o WEBP' };
+    return { valido: false, mensaje: 'Solo se permiten imágenes JPG, PNG, WEBP o GIF' };
   }
   if (file.size > 5 * 1024 * 1024) {
     return { valido: false, mensaje: 'La imagen no puede exceder los 5MB' };
@@ -135,136 +207,89 @@ function validarImagen(file) {
   return { valido: true };
 }
 
-function generarEtiquetasAutomaticas(titulo, ingredientes, pasos, precioNumerico, tiempoNumerico) {
-  const etiquetas = [];
-  const pasosLower = pasos.toLowerCase();
-  const ingredientesLower = ingredientes.toLowerCase();
-  const tituloLower = titulo.toLowerCase();
-  if (precioNumerico > 0 && precioNumerico <= 35) {
-    etiquetas.push('economica');
-  }
-  if (tiempoNumerico > 0 && tiempoNumerico <= 20) {
-    etiquetas.push('rapida');
-  }
-  if (pasosLower.includes('microondas') || 
-      ingredientesLower.includes('microondas') ||
-      tituloLower.includes('microondas')) {
-    etiquetas.push('microondas');
-  }
-  if (precioNumerico > 0 && precioNumerico <= 30) {
-    etiquetas.push('menos30');
-  }
-  return etiquetas;
-}
+// ================================================
+// FUNCIONES DE CARGA Y PUNTOS
+// ================================================
 
-function mostrarNotificacion(mensaje, tipo = 'info') {
-  const notificacion = document.createElement('div');
-  notificacion.className = `temp-notification ${tipo}`;
-  notificacion.textContent = mensaje;
-  document.body.appendChild(notificacion);
-  setTimeout(() => notificacion.classList.add('show'), 10);
-  setTimeout(() => {
-    notificacion.classList.remove('show');
-    setTimeout(() => notificacion.remove(), 300);
-  }, 3000);
-}
-
-function convertirImagenABase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function eliminarImagen() {
-  imagenSeleccionada = null;
-  if (DOM.imagenInput) DOM.imagenInput.value = '';
-  if (DOM.imagePreview) DOM.imagePreview.style.display = 'none';
-  if (DOM.previewImg) DOM.previewImg.src = '';
-}
-
-function setupImageUpload() {
-  if (!DOM.imagenInput) return;
-  DOM.imagenInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const validacion = validarImagen(file);
-      if (!validacion.valido) {
-        mostrarNotificacion(validacion.mensaje, 'error');
-        DOM.imagenInput.value = '';
-        return;
+async function cargarPuntosUsuario() {
+  if (!token) return;
+  
+  try {
+    const res = await fetch(`${API}/api/auth/puntos`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (DOM.puntosMonto) {
+        DOM.puntosMonto.textContent = data.puntos || 0;
       }
-      imagenSeleccionada = file;
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        DOM.previewImg.src = event.target.result;
-        DOM.imagePreview.style.display = 'flex';
-      };
-      reader.readAsDataURL(file);
-    } else if (file) {
-      mostrarNotificacion('Por favor selecciona un archivo de imagen valido', 'error');
-      imagenSeleccionada = null;
     }
-  });
-  if (DOM.removeImageBtn) {
-    DOM.removeImageBtn.addEventListener('click', eliminarImagen);
+  } catch (err) {
+    console.error('Error cargando puntos:', err);
   }
 }
 
-function mostrarErrorCampo(campo, mensaje) {
-  campo.classList.add('error');
-  mostrarNotificacion(mensaje, 'error');
-  campo.focus();
-  setTimeout(() => {
-    campo.classList.remove('error');
-  }, 3000);
-}
+// ================================================
+// FUNCIÓN PRINCIPAL: PUBLICAR RECETA
+// ================================================
 
 async function publicarReceta() {
   const tokenActual = localStorage.getItem('token');
   if (!tokenActual) {
-    mostrarNotificacion('Debes iniciar sesion para publicar recetas', 'error');
-    setTimeout(() => {
-      window.location.href = 'login.html';
-    }, 2000);
+    mostrarNotificacion('Debes iniciar sesión para publicar recetas', 'error');
+    setTimeout(() => window.location.href = 'login.html', 2000);
     return;
   }
 
-  const tituloRaw = DOM.titulo.value;
-  const precioRaw = DOM.precio.value;
-  const tiempoRaw = DOM.tiempo.value;
-  const ingredientesRaw = DOM.ingredientes.value;
-  const pasosRaw = DOM.pasos.value;
+  // Obtener valores
+  const tituloRaw = DOM.titulo?.value || '';
+  const precioRaw = DOM.precio?.value || '';
+  const tiempoRaw = DOM.tiempo?.value || '';
+  const ingredientesRaw = DOM.ingredientes?.value || '';
+  const pasosRaw = DOM.pasos?.value || '';
+  const videoUrl = DOM.video?.value || '';
+  const esPremium = DOM.esPremiumReceta?.checked || false;
 
+  // Validaciones
   const tituloValidacion = validarTitulo(tituloRaw);
   if (!tituloValidacion.valido) {
-    mostrarErrorCampo(DOM.titulo, tituloValidacion.mensaje);
+    mostrarNotificacion(tituloValidacion.mensaje, 'error');
+    DOM.titulo?.focus();
     return;
   }
 
   const precioValidacion = validarPrecio(precioRaw);
   if (!precioValidacion.valido) {
-    mostrarErrorCampo(DOM.precio, precioValidacion.mensaje);
+    mostrarNotificacion(precioValidacion.mensaje, 'error');
+    DOM.precio?.focus();
     return;
   }
 
   const tiempoValidacion = validarTiempo(tiempoRaw);
   if (!tiempoValidacion.valido) {
-    mostrarErrorCampo(DOM.tiempo, tiempoValidacion.mensaje);
+    mostrarNotificacion(tiempoValidacion.mensaje, 'error');
+    DOM.tiempo?.focus();
     return;
   }
 
   const ingredientesValidacion = validarIngredientes(ingredientesRaw);
   if (!ingredientesValidacion.valido) {
-    mostrarErrorCampo(DOM.ingredientes, ingredientesValidacion.mensaje);
+    mostrarNotificacion(ingredientesValidacion.mensaje, 'error');
+    DOM.ingredientes?.focus();
     return;
   }
 
   const pasosValidacion = validarPasos(pasosRaw);
   if (!pasosValidacion.valido) {
-    mostrarErrorCampo(DOM.pasos, pasosValidacion.mensaje);
+    mostrarNotificacion(pasosValidacion.mensaje, 'error');
+    DOM.pasos?.focus();
+    return;
+  }
+
+  const videoValidacion = validarVideo(videoUrl);
+  if (!videoValidacion.valido) {
+    mostrarNotificacion(videoValidacion.mensaje, 'error');
+    DOM.video?.focus();
     return;
   }
 
@@ -276,14 +301,7 @@ async function publicarReceta() {
     }
   }
 
-  const etiquetas = generarEtiquetasAutomaticas(
-    tituloValidacion.valor,
-    ingredientesValidacion.valor,
-    pasosValidacion.valor,
-    precioValidacion.valorNumerico,
-    tiempoValidacion.valorNumerico
-  );
-
+  // Convertir imagen a Base64
   let imagenBase64 = null;
   if (imagenSeleccionada) {
     try {
@@ -295,6 +313,9 @@ async function publicarReceta() {
     }
   }
 
+  // Datos a enviar
+  const puntosGanados = esPremium ? 30 : 15;
+  
   const datos = {
     titulo: tituloValidacion.valor,
     ingredientes: ingredientesValidacion.valor,
@@ -304,11 +325,16 @@ async function publicarReceta() {
     tiempo: tiempoValidacion.valor,
     tiempoNumerico: tiempoValidacion.valorNumerico,
     imagen: imagenBase64,
-    etiquetas: etiquetas
+    video_url: videoValidacion.valor,
+    es_premium_receta: esPremium,
+    etiquetas: []
   };
 
-  DOM.publicarBtn.disabled = true;
-  DOM.publicarBtn.textContent = 'Publicando...';
+  // Deshabilitar botón durante el envío
+  if (DOM.publicarBtn) {
+    DOM.publicarBtn.disabled = true;
+    DOM.publicarBtn.textContent = 'Publicando...';
+  }
 
   try {
     const res = await fetch(`${API}/api/recipes`, {
@@ -320,51 +346,178 @@ async function publicarReceta() {
       body: JSON.stringify(datos)
     });
 
+    const data = await res.json();
+
     if (res.ok) {
-      mostrarNotificacion('Receta publicada exitosamente', 'success');
-      DOM.titulo.value = '';
-      DOM.ingredientes.value = '';
-      DOM.pasos.value = '';
-      DOM.precio.value = '';
-      DOM.tiempo.value = '';
-      eliminarImagen();
+      mostrarNotificacion(
+        `¡Receta publicada! Ganaste ${puntosGanados} puntos ${esPremium ? '✨ (Premium)' : ''} 🎁`,
+        'success'
+      );
+      
+      // Limpiar formulario
+      if (DOM.titulo) DOM.titulo.value = '';
+      if (DOM.ingredientes) DOM.ingredientes.value = '';
+      if (DOM.pasos) DOM.pasos.value = '';
+      if (DOM.precio) DOM.precio.value = '';
+      if (DOM.tiempo) DOM.tiempo.value = '';
+      if (DOM.video) DOM.video.value = '';
+      if (DOM.esPremiumReceta) DOM.esPremiumReceta.checked = false;
+      if (DOM.imagenInput) DOM.imagenInput.value = '';
+      if (DOM.imagePreview) DOM.imagePreview.style.display = 'none';
+      if (DOM.previewImg) DOM.previewImg.src = '';
+      imagenSeleccionada = null;
+      
+      // Limpiar vista previa de video
+      const videoPreview = document.getElementById('video-preview');
+      if (videoPreview) {
+        videoPreview.innerHTML = '';
+        videoPreview.classList.remove('active');
+      }
+      
+      // Recargar puntos
+      await cargarPuntosUsuario();
+      
+      // Redirigir después de 2 segundos
       setTimeout(() => {
         window.location.href = 'home.html';
-      }, 2000);
+      }, 2500);
     } else {
-      const err = await res.json();
-      mostrarNotificacion(err.error || 'Error al publicar', 'error');
+      mostrarNotificacion(data.error || 'Error al publicar la receta', 'error');
     }
   } catch (err) {
-    console.error('Error:', err);
-    mostrarNotificacion('No se pudo conectar con el servidor', 'error');
+    console.error('Error en la petición:', err);
+    mostrarNotificacion('No se pudo conectar con el servidor. Verifica que el servidor esté corriendo.', 'error');
   } finally {
-    DOM.publicarBtn.disabled = false;
-    DOM.publicarBtn.textContent = 'Publicar receta';
+    if (DOM.publicarBtn) {
+      DOM.publicarBtn.disabled = false;
+      DOM.publicarBtn.textContent = 'Publicar receta →';
+    }
   }
 }
 
-function init() {
+// ================================================
+// CONFIGURACIÓN DE IMAGEN
+// ================================================
+
+function setupImageUpload() {
+  if (!DOM.imagenInput) return;
+  
+  DOM.imagenInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const validacion = validarImagen(file);
+      if (!validacion.valido) {
+        mostrarNotificacion(validacion.mensaje, 'error');
+        DOM.imagenInput.value = '';
+        return;
+      }
+      
+      imagenSeleccionada = file;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        if (DOM.previewImg) DOM.previewImg.src = event.target.result;
+        if (DOM.imagePreview) DOM.imagePreview.style.display = 'flex';
+        mostrarNotificacion('Imagen cargada correctamente', 'success');
+      };
+      reader.readAsDataURL(file);
+    } else if (file) {
+      mostrarNotificacion('Por favor selecciona un archivo de imagen válido', 'error');
+      imagenSeleccionada = null;
+    }
+  });
+  
+  if (DOM.removeImageBtn) {
+    DOM.removeImageBtn.addEventListener('click', () => {
+      imagenSeleccionada = null;
+      if (DOM.imagenInput) DOM.imagenInput.value = '';
+      if (DOM.imagePreview) DOM.imagePreview.style.display = 'none';
+      if (DOM.previewImg) DOM.previewImg.src = '';
+      mostrarNotificacion('Imagen eliminada', 'info');
+    });
+  }
+}
+
+// ================================================
+// VALIDACIÓN EN TIEMPO REAL
+// ================================================
+
+function setupValidacionTiempoReal() {
+  // Validar título mientras se escribe
+  if (DOM.titulo) {
+    DOM.titulo.addEventListener('input', () => {
+      if (DOM.titulo.value.length > 0 && DOM.titulo.value.length < 3) {
+        DOM.titulo.style.borderColor = '#ff9800';
+      } else if (DOM.titulo.value.length >= 3) {
+        DOM.titulo.style.borderColor = '#4caf50';
+      } else {
+        DOM.titulo.style.borderColor = '#e0e0e0';
+      }
+    });
+  }
+  
+  // Mostrar puntos según selección Premium
+  if (DOM.esPremiumReceta) {
+    DOM.esPremiumReceta.addEventListener('change', () => {
+      const puntosInfo = document.querySelector('.puntos-info');
+      if (DOM.esPremiumReceta.checked) {
+        if (puntosInfo) {
+          puntosInfo.style.background = 'linear-gradient(135deg, #fff3e0, #ffe0b2)';
+        }
+        mostrarNotificacion('✨ Receta Premium: Ganarás 30 puntos + 3 días Premium gratis', 'success');
+      } else {
+        if (puntosInfo) {
+          puntosInfo.style.background = 'linear-gradient(135deg, #e8f5e9, #c8e6c9)';
+        }
+      }
+    });
+  }
+}
+
+// ================================================
+// INICIALIZACIÓN
+// ================================================
+
+async function init() {
+  // Verificar autenticación
+  token = localStorage.getItem('token');
+  if (!token) {
+    mostrarNotificacion('Debes iniciar sesión para publicar recetas', 'error');
+    setTimeout(() => {
+      window.location.href = 'login.html';
+    }, 2000);
+    return;
+  }
+  
+  // Cargar puntos del usuario
+  await cargarPuntosUsuario();
+  
+  // Configurar eventos
   setupImageUpload();
+  setupValidacionTiempoReal();
+  
   if (DOM.publicarBtn) {
     DOM.publicarBtn.addEventListener('click', publicarReceta);
   }
-  const inputs = [DOM.titulo, DOM.precio, DOM.tiempo];
-  inputs.forEach(input => {
-    if (input) {
-      input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
+  
+  // Permitir enviar con Ctrl+Enter
+  const textareas = [DOM.ingredientes, DOM.pasos];
+  textareas.forEach(textarea => {
+    if (textarea) {
+      textarea.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
           e.preventDefault();
-          const nextInput = inputs[inputs.indexOf(input) + 1];
-          if (nextInput) {
-            nextInput.focus();
-          } else {
-            DOM.ingredientes.focus();
-          }
+          publicarReceta();
         }
       });
     }
   });
+  
+  console.log('✅ subir-receta.js inicializado correctamente');
 }
 
-init();
+// Iniciar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

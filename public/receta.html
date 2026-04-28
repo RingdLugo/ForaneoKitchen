@@ -5,17 +5,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ForananeoKitchen - Receta</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#4caf50">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/receta.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
 </head>
 
-<body>
+<body data-theme="light">
 
   <div class="receta-screen">
+    
+    <button id="dark-mode-toggle" class="dark-mode-toggle">🌙</button>
     
     <button class="back-btn" onclick="window.location.href='home.html'">
       ← Volver a recetas
@@ -32,13 +37,16 @@
       <a href="home.html" class="nav-item">
         <span>🏠</span> Inicio
       </a>
-      <a href="#" class="nav-item">
+      <a href="subir-receta.html" class="nav-item">
+        <span>📝</span> Subir
+      </a>
+      <a href="planificador.html" class="nav-item">
         <span>📅</span> Planificador
       </a>
-      <a href="#" class="nav-item">
+      <a href="comunidad.html" class="nav-item">
         <span>👥</span> Comunidad
       </a>
-      <a href="#" class="nav-item">
+      <a href="perfil.html" class="nav-item">
         <span>👤</span> Perfil
       </a>
     </nav>
@@ -46,7 +54,22 @@
   </div>
 
   <script src="js/receta.js"></script>
-
+  <script>
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    const toggleBtn = document.getElementById('dark-mode-toggle');
+    if (toggleBtn) {
+      toggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+      toggleBtn.addEventListener('click', () => {
+        const currentTheme = document.body.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        toggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+      });
+    }
+  </script>
+<script src="js/api-config.js"></script>
 </body>
 
 </html>
