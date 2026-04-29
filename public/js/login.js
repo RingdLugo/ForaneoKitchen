@@ -1,380 +1,204 @@
-const API = 'http://localhost:3000';
+// login.js — ForaneoKitchen (CORREGIDO)
+const API_BASE = (() => {
+  const origin = window.location.origin;
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    return 'http://localhost:3000/api';
+  }
+  return origin + '/api';
+})();
 
-let token = localStorage.getItem('token');
-let currentEmail = '';
-let resetMode = false;
+// ── DOM ──────────────────────────────────────────────────────
+const loginBox    = document.getElementById('login-box');
+const registroBox = document.getElementById('registro-box');
+const loginBtn    = document.getElementById('login-btn');
+const registerBtn = document.getElementById('register-btn');
+const showRegisterLink = document.getElementById('show-register');
+const showLoginLink    = document.getElementById('show-login');
 
-function hideAll() {
-  const loginBox = document.getElementById('login-box');
-  const registroBox = document.getElementById('registro-box');
-  const forgotBox = document.getElementById('forgot-box');
-  const verifyBox = document.getElementById('verify-box');
-  const resetBox = document.getElementById('reset-box');
+let currentAction = 'login';
+
+// ── Toast ─────────────────────────────────────────────────────
+function showToast(message, type = 'error') {
+  const existing = document.querySelector('.custom-toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = `custom-toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
+// ── Alternar vistas ───────────────────────────────────────────
+function showLoginBox() {
+  loginBox.style.display    = 'block';
+  registroBox.style.display = 'none';
+  currentAction = 'login';
+}
+function showRegistroBox() {
+  loginBox.style.display    = 'none';
+  registroBox.style.display = 'block';
+  currentAction = 'register';
+}
+
+showRegisterLink?.addEventListener('click', e => { e.preventDefault(); showRegistroBox(); });
+showLoginLink?.addEventListener('click',    e => { e.preventDefault(); showLoginBox(); });
+
+function guardarSesion(id, username, rol, esPremium, puntos, token) {
+  localStorage.setItem('token', token);
+  localStorage.setItem('userId', id);
+  localStorage.setItem('userName', username);
+  localStorage.setItem('userRol', rol);
+  localStorage.setItem('userPremium', esPremium);
+  localStorage.setItem('userPuntos', puntos || 0);
   
-  if (loginBox) loginBox.style.display = 'none';
-  if (registroBox) registroBox.style.display = 'none';
-  if (forgotBox) forgotBox.style.display = 'none';
-  if (verifyBox) verifyBox.style.display = 'none';
-  if (resetBox) resetBox.style.display = 'none';
+  console.log('✅ Sesión guardada:', { id, username, rol, token: token?.substring(0, 20) + '...' });
 }
 
-function mostrarLogin() {
-  hideAll();
-  resetMode = false;
-  const loginBox = document.getElementById('login-box');
-  const loginUser = document.getElementById('login-user');
-  const loginPass = document.getElementById('login-pass');
-  if (loginBox) loginBox.style.display = 'block';
-  if (loginUser) loginUser.value = '';
-  if (loginPass) loginPass.value = '';
-}
+// ── REGISTRO ──────────────────────────────────────────────────
+async function registerUser() {
+  const nombre    = document.getElementById('reg-nombre')?.value.trim();
+  const apellido  = document.getElementById('reg-apellido')?.value.trim();
+  const email     = document.getElementById('reg-email')?.value.trim();
+  const username  = document.getElementById('reg-username')?.value.trim();
+  const password  = document.getElementById('reg-password')?.value;
+  const confirm   = document.getElementById('reg-confirm')?.value;
+  const esPremium = document.getElementById('reg-premium')?.checked || false;
 
-function mostrarRegistro() {
-  hideAll();
-  resetMode = false;
-  const registroBox = document.getElementById('registro-box');
-  const regNombre = document.getElementById('reg-nombre');
-  const regApellido = document.getElementById('reg-apellido');
-  const regEmail = document.getElementById('reg-email');
-  const regUser = document.getElementById('reg-user');
-  const regPass = document.getElementById('reg-pass');
-  const regConfirm = document.getElementById('reg-confirm');
-  const regFecha = document.getElementById('reg-fecha');
-  const regPremium = document.getElementById('reg-premium');
-  
-  if (registroBox) registroBox.style.display = 'block';
-  if (regNombre) regNombre.value = '';
-  if (regApellido) regApellido.value = '';
-  if (regEmail) regEmail.value = '';
-  if (regUser) regUser.value = '';
-  if (regPass) regPass.value = '';
-  if (regConfirm) regConfirm.value = '';
-  if (regFecha) regFecha.value = '';
-  if (regPremium) regPremium.checked = false;
-}
-
-function mostrarForgot(event) {
-  if (event) event.preventDefault();
-  hideAll();
-  resetMode = true;
-  const forgotBox = document.getElementById('forgot-box');
-  const forgotEmail = document.getElementById('forgot-email');
-  if (forgotBox) forgotBox.style.display = 'block';
-  if (forgotEmail) forgotEmail.value = '';
-}
-
-function mostrarVerify(email, isReset = false) {
-  console.log('mostrarVerify llamada con email:', email);
-  currentEmail = email;
-  resetMode = isReset;
-  hideAll();
-  const verifyBox = document.getElementById('verify-box');
-  const verifyEmail = document.getElementById('verify-email');
-  const otpInput = document.getElementById('otp-input');
-  const verifyTitle = document.querySelector('#verify-box h2');
-  const verifyButton = document.querySelector('#verify-box button');
-  
-  if (verifyBox) verifyBox.style.display = 'block';
-  if (verifyEmail) verifyEmail.textContent = email;
-  if (otpInput) otpInput.value = '';
-  
-  if (isReset) {
-    if (verifyTitle) verifyTitle.textContent = 'Verificar Codigo';
-    if (verifyButton) verifyButton.textContent = 'Verificar Codigo';
-  } else {
-    if (verifyTitle) verifyTitle.textContent = 'Verificar Codigo';
-    if (verifyButton) verifyButton.textContent = 'Verificar y Continuar';
+  if (!nombre || !apellido || !email || !username || !password || !confirm) {
+    showToast('Todos los campos son obligatorios', 'error'); return;
   }
-}
-
-function mostrarResetPassword(email) {
-  currentEmail = email;
-  hideAll();
-  const resetBox = document.getElementById('reset-box');
-  const resetEmailDisplay = document.getElementById('reset-email-display');
-  const resetNewPass = document.getElementById('reset-new-pass');
-  const resetConfirmPass = document.getElementById('reset-confirm-pass');
-  
-  if (resetBox) resetBox.style.display = 'block';
-  if (resetEmailDisplay) resetEmailDisplay.textContent = email;
-  if (resetNewPass) resetNewPass.value = '';
-  if (resetConfirmPass) resetConfirmPass.value = '';
-}
-
-function mostrarMensaje(mensaje, esError = true) {
-  const existingAlert = document.querySelector('.custom-alert');
-  if (existingAlert) existingAlert.remove();
-
-  const alertDiv = document.createElement('div');
-  alertDiv.className = 'custom-alert';
-  alertDiv.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 20px;
-    border-radius: 8px;
-    color: white;
-    font-weight: 500;
-    z-index: 10000;
-    animation: slideIn 0.3s ease;
-    background-color: ${esError ? '#f44336' : '#4caf50'};
-    max-width: 350px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  `;
-  alertDiv.textContent = mensaje;
-  document.body.appendChild(alertDiv);
-  setTimeout(() => alertDiv.remove(), 4000);
-}
-
-async function registrar() {
-  const nombre = document.getElementById('reg-nombre').value.trim();
-  const apellido = document.getElementById('reg-apellido').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const username = document.getElementById('reg-user').value.trim();
-  const password = document.getElementById('reg-pass').value;
-  const confirmPassword = document.getElementById('reg-confirm').value;
-  const esPremium = document.getElementById('reg-premium').checked;
-
-  if (!nombre || !apellido || !email || !username || !password || !confirmPassword) {
-    mostrarMensaje('Todos los campos con * son obligatorios');
-    return;
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+    showToast('Username: solo letras, números y _ (3-20 caracteres)', 'error'); return;
   }
-
-  if (nombre.length < 2 || nombre.length > 50) {
-    mostrarMensaje('El nombre debe tener entre 2 y 50 caracteres');
-    return;
+  if (password !== confirm) {
+    showToast('Las contraseñas no coinciden', 'error'); return;
   }
-
-  if (apellido.length < 2 || apellido.length > 50) {
-    mostrarMensaje('El apellido debe tener entre 2 y 50 caracteres');
-    return;
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    mostrarMensaje('Ingresa un email valido');
-    return;
-  }
-
-  const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-  if (!usernameRegex.test(username)) {
-    mostrarMensaje('El username debe tener 3-20 caracteres y solo puede contener letras, numeros y guion bajo');
-    return;
-  }
-
   if (password.length < 8) {
-    mostrarMensaje('La contrasena debe tener al menos 8 caracteres');
-    return;
+    showToast('La contraseña debe tener al menos 8 caracteres', 'error'); return;
   }
 
-  if (password !== confirmPassword) {
-    mostrarMensaje('Las contrasenas no coinciden');
-    return;
-  }
+  if (registerBtn) { registerBtn.disabled = true; registerBtn.textContent = 'Enviando código...'; }
 
   try {
-    const res = await fetch(`${API}/api/auth/registro`, {
+    const res  = await fetch(`${API_BASE}/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, apellido, email, username, password, confirmPassword, esPremium })
+      body: JSON.stringify({ nombre, apellido, email, username, password, confirmPassword: confirm, esPremium })
     });
-
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al registrar');
 
-    if (!res.ok) {
-      mostrarMensaje(data.error || 'Error en el registro');
-      return;
-    }
+    showToast(`✅ Código enviado a ${email}`, 'success');
+    localStorage.setItem('verifyEmail', email);
+    setTimeout(() => { window.location.href = 'verificar.html'; }, 1500);
 
-    console.log('Registro exitoso, email:', email);
-    mostrarMensaje('Codigo enviado a tu correo', false);
-    mostrarVerify(email, false);
-    
-  } catch (error) {
-    console.error('Error en registro:', error);
-    mostrarMensaje('Error de conexion con el servidor');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = 'Crear Cuenta →'; }
   }
 }
 
-async function verificarOTP() {
-  const otp = document.getElementById('otp-input').value.trim();
-
-  if (!otp || otp.length !== 6) {
-    mostrarMensaje('Ingresa el codigo de 6 digitos que recibiste en tu correo');
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API}/api/auth/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: currentEmail, otp })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      mostrarMensaje(data.error || 'Codigo incorrecto');
-      return;
-    }
-
-    if (resetMode) {
-      mostrarMensaje('Codigo verificado. Ahora crea tu nueva contrasena', false);
-      mostrarResetPassword(currentEmail);
-    } else {
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        mostrarMensaje('Registro exitoso. Redirigiendo...', false);
-        setTimeout(() => {
-          window.location.href = 'home.html';
-        }, 1000);
-      } else {
-        mostrarMensaje('No se recibio token del servidor');
-      }
-    }
-  } catch (error) {
-    console.error('Error en verificarOTP:', error);
-    mostrarMensaje('Error de conexion con el servidor');
-  }
-}
-
-async function login() {
-  const username = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value.trim();
+// ── LOGIN (CORREGIDO) ─────────────────────────────────────────
+async function loginUser() {
+  const username = document.getElementById('login-username')?.value.trim();
+  const password = document.getElementById('login-password')?.value;
 
   if (!username || !password) {
-    mostrarMensaje('Ingresa usuario y contrasena');
+    showToast('Ingresa usuario y contraseña', 'error'); 
     return;
   }
 
+  if (loginBtn) { 
+    loginBtn.disabled = true; 
+    loginBtn.textContent = 'Iniciando...'; 
+  }
+
   try {
-    const res = await fetch(`${API}/api/auth/login`, {
+    console.log('📡 Intentando login con:', { username });
+    
+    const res  = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-
+    
     const data = await res.json();
+    console.log('📡 Respuesta del servidor:', data);
+    
+    if (!res.ok) throw new Error(data.error || 'Usuario o contraseña incorrectos');
 
-    if (!res.ok) {
-      mostrarMensaje(data.error || 'Usuario o contrasena incorrectos');
-      return;
+    // Verificar que el token existe
+    if (!data.token) {
+      console.error('❌ El servidor no devolvió token');
+      throw new Error('Error en el servidor: token no recibido');
     }
 
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      mostrarMensaje('Bienvenido a ForananeoKitchen', false);
-      setTimeout(() => {
+    // Guardar sesión correctamente
+    guardarSesion(
+      data.user.id, 
+      data.user.username, 
+      data.user.rol, 
+      data.user.esPremium, 
+      data.user.puntos,
+      data.token
+    );
+
+    showToast(`¡Bienvenido, ${data.user.username}!`, 'success');
+    console.log('✅ Login exitoso, redirigiendo a home...');
+    
+    setTimeout(() => { 
+      window.location.href = 'home.html'; 
+    }, 500);
+
+  } catch (err) {
+    console.error('❌ Error en login:', err);
+    showToast(err.message, 'error');
+  } finally {
+    if (loginBtn) { 
+      loginBtn.disabled = false; 
+      loginBtn.textContent = 'Iniciar Sesión →'; 
+    }
+  }
+}
+
+// ── Event listeners ───────────────────────────────────────────
+loginBtn?.addEventListener('click', loginUser);
+registerBtn?.addEventListener('click', registerUser);
+
+document.querySelectorAll('input').forEach(inp => {
+  inp.addEventListener('keypress', e => {
+    if (e.key === 'Enter') {
+      currentAction === 'login' ? loginUser() : registerUser();
+    }
+  });
+});
+
+// ── Verificar si ya hay sesión activa ─────────────────────────
+async function checkSession() {
+  const token = localStorage.getItem('token');
+  const userId = localStorage.getItem('userId');
+  
+  console.log('🔍 Verificando sesión existente - token:', token ? '✅' : '❌', 'userId:', userId);
+  
+  if (token && userId) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        console.log('✅ Sesión válida, redirigiendo a home');
         window.location.href = 'home.html';
-      }, 500);
-    } else {
-      mostrarMensaje('No se recibio token del servidor');
+      } else {
+        console.log('⚠️ Sesión inválida, limpiando localStorage');
+        localStorage.clear();
+      }
+    } catch (err) {
+      console.log('⚠️ Error verificando sesión:', err.message);
+      localStorage.clear();
     }
-  } catch (error) {
-    console.error('Error en login:', error);
-    mostrarMensaje('Error de conexion con el servidor');
   }
 }
 
-async function forgotPassword() {
-  const email = document.getElementById('forgot-email').value.trim();
-
-  if (!email) {
-    mostrarMensaje('Ingresa tu email');
-    return;
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    mostrarMensaje('Ingresa un email valido');
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API}/api/auth/forgot-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      mostrarMensaje(data.error || 'Error al enviar el codigo');
-      return;
-    }
-
-    mostrarMensaje('Codigo enviado a tu correo', false);
-    mostrarVerify(email, true);
-  } catch (error) {
-    console.error('Error en forgotPassword:', error);
-    mostrarMensaje('Error de conexion con el servidor');
-  }
-}
-
-async function resetPassword() {
-  const newPassword = document.getElementById('reset-new-pass').value;
-  const confirmNewPassword = document.getElementById('reset-confirm-pass').value;
-
-  if (!newPassword || !confirmNewPassword) {
-    mostrarMensaje('Ambos campos son obligatorios');
-    return;
-  }
-
-  if (newPassword.length < 8) {
-    mostrarMensaje('La nueva contrasena debe tener al menos 8 caracteres');
-    return;
-  }
-
-  if (newPassword !== confirmNewPassword) {
-    mostrarMensaje('Las contrasenas no coinciden');
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API}/api/auth/reset-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email: currentEmail, 
-        newPassword: newPassword,
-        confirmNewPassword: confirmNewPassword
-      })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      mostrarMensaje(data.error || 'Error al actualizar la contrasena');
-      return;
-    }
-
-    mostrarMensaje('Contrasena actualizada correctamente. Redirigiendo...', false);
-    setTimeout(() => {
-      window.location.href = 'login.html';
-    }, 1500);
-  } catch (error) {
-    console.error('Error en resetPassword:', error);
-    mostrarMensaje('Error de conexion con el servidor');
-  }
-}
-
-async function continuarInvitado() {
-  localStorage.removeItem('token');
-  window.location.href = 'home.html';
-}
-
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideIn {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-`;
-document.head.appendChild(style);
+// ── Iniciar ───────────────────────────────────────────────────
+checkSession();

@@ -1,15 +1,54 @@
-const API = 'http://localhost:3000';
-let itemsCompra = [];
+// lista-compras.js - Lista de compras con Supabase
+import { supabase } from './supabaseClient.js';
 
-let categorias = {
+// Estado
+let itemsCompra = [];
+let currentUser = null;
+let planSemanal = {};
+
+// Categorías de ingredientes
+const categorias = {
   'Abarrotes': ['arroz', 'pasta', 'frijol', 'lenteja', 'harina', 'azucar', 'sal', 'aceite', 'pan', 'maiz', 'trigo', 'cereal', 'galleta', 'sopa', 'fideos', 'espagueti', 'garbanzo'],
-  'Lacteos': ['leche', 'crema', 'queso', 'mantequilla', 'yogur', 'requeson', 'yoghurt', 'mantequilla', 'media crema'],
+  'Lacteos': ['leche', 'crema', 'queso', 'mantequilla', 'yogur', 'requeson', 'yoghurt', 'media crema'],
   'Verduras': ['cebolla', 'ajo', 'papa', 'tomate', 'lechuga', 'zanahoria', 'brocoli', 'espinaca', 'cilantro', 'perejil', 'chile', 'jitomate', 'calabaza', 'elote'],
   'Frutas': ['manzana', 'platano', 'naranja', 'fresa', 'uva', 'pera', 'mango', 'piña', 'sandia', 'melon', 'kiwi', 'papaya'],
   'Carnes': ['pollo', 'res', 'cerdo', 'pescado', 'atun', 'salchicha', 'huevo', 'carne', 'salmon', 'camaron', 'tocino', 'jamón'],
   'Otros': []
 };
 
+// Cargar usuario (usa JWT propio, no Supabase auth)
+async function cargarUsuario() {
+  const userId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
+  if (userId && token) {
+    currentUser = {
+      id: parseInt(userId),
+      es_premium: localStorage.getItem('userPremium') === 'true',
+      puntos: parseInt(localStorage.getItem('userPuntos') || 0),
+      username: localStorage.getItem('userName')
+    };
+  }
+}
+
+// Cargar plan semanal desde Supabase
+async function cargarPlanSemanal() {
+  if (!currentUser) return null;
+  
+  const { data, error } = await supabase
+    .from('planes_semanales')
+    .select('plan')
+    .eq('usuario_id', currentUser.id)
+    .maybeSingle();
+  
+  if (error) {
+    console.error('Error al cargar plan:', error);
+    return null;
+  }
+  
+  return data?.plan || null;
+}
+
+// Extraer cantidad del ingrediente
 function extraerCantidad(nombreIngrediente) {
   const regex = /^(\d+(?:\.\d+)?(?:\s*(?:g|kg|ml|l|taza|cucharada|cucharadita|unidad|pieza|pizca|cdita|cdta|cda|gr|kilo|litro))?)\s+(.+)$/i;
   const match = nombreIngrediente.match(regex);
@@ -19,6 +58,7 @@ function extraerCantidad(nombreIngrediente) {
   return { cantidad: '', nombre: nombreIngrediente.trim() };
 }
 
+// Combinar cantidades
 function combinarCantidades(cant1, cant2) {
   if (!cant1 && !cant2) return '';
   if (!cant1) return cant2;
@@ -37,6 +77,7 @@ function combinarCantidades(cant1, cant2) {
   return `${cant1} + ${cant2}`;
 }
 
+// Obtener categoría del ingrediente
 function obtenerCategoria(ingrediente) {
   const lower = ingrediente.toLowerCase();
   for (const [categoria, palabras] of Object.entries(categorias)) {
@@ -49,16 +90,9 @@ function obtenerCategoria(ingrediente) {
   return 'Otros';
 }
 
-function cargarPlanDesdeLocalStorage() {
-  const guardado = localStorage.getItem('planSemanal');
-  if (guardado) {
-    return JSON.parse(guardado);
-  }
-  return null;
-}
-
-function generarListaCompras() {
-  const plan = cargarPlanDesdeLocalStorage();
+// Generar lista de compras desde el plan semanal
+async function generarListaCompras() {
+  const plan = await cargarPlanSemanal();
   if (!plan) return [];
   
   const ingredientesMap = new Map();
@@ -69,7 +103,6 @@ function generarListaCompras() {
     if (!plan[dia]) continue;
     for (const comida of comidas) {
       let recetas = plan[dia][comida];
-      
       if (recetas && !Array.isArray(recetas)) {
         recetas = [recetas];
       }
@@ -91,12 +124,13 @@ function generarListaCompras() {
                 }
               } else {
                 ingredientesMap.set(key, {
-                  original: item,
+                  id: Date.now() + Math.random() * 10000,
                   nombre: nombre,
                   cantidad: cantidad,
                   count: 1,
                   categoria: obtenerCategoria(nombre),
-                  recetas: [receta.titulo]
+                  recetas: [receta.titulo],
+                  completado: false
                 });
               }
             }
@@ -106,113 +140,115 @@ function generarListaCompras() {
     }
   }
   
-  const items = Array.from(ingredientesMap.values()).map((item, index) => ({
-    id: Date.now() + index + Math.random() * 10000,
-    nombre: item.nombre,
-    cantidad: item.cantidad,
-    original: item.original,
-    completado: false,
-    categoria: item.categoria,
-    recetas: item.recetas,
-    manual: false
-  }));
-  
+  const items = Array.from(ingredientesMap.values());
   return items.sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
-function guardarItemsEnLocalStorage() {
-  localStorage.setItem('listaComprasItems', JSON.stringify(itemsCompra));
+// Cargar items guardados desde Supabase
+async function cargarItemsDesdeSupabase() {
+  if (!currentUser) return [];
+  
+  const { data, error } = await supabase
+    .from('lista_compras')
+    .select('items')
+    .eq('usuario_id', currentUser.id)
+    .maybeSingle();
+  
+  if (error) {
+    console.error('Error al cargar lista:', error);
+    return [];
+  }
+  
+  if (data && data.items && data.items.length > 0) {
+    return data.items;
+  }
+  
+  // Si no hay lista guardada, generar desde plan
+  const nuevosItems = await generarListaCompras();
+  await guardarItemsEnSupabase(nuevosItems);
+  return nuevosItems;
 }
 
-function cargarItemsDesdeLocalStorage() {
-  const guardado = localStorage.getItem('listaComprasItems');
-  if (guardado && JSON.parse(guardado).length > 0) {
-    itemsCompra = JSON.parse(guardado);
-  } else {
-    itemsCompra = generarListaCompras();
-    guardarItemsEnLocalStorage();
+// Guardar items en Supabase
+async function guardarItemsEnSupabase(items) {
+  if (!currentUser) return;
+  
+  const { error } = await supabase
+    .from('lista_compras')
+    .upsert({
+      usuario_id: currentUser.id,
+      items: items,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'usuario_id' });
+  
+  if (error) {
+    console.error('Error al guardar lista:', error);
   }
 }
 
-function actualizarDesdePlanificador() {
-  console.log('Actualizando lista desde planificador...');
-  const nuevosItems = generarListaCompras();
-  
+// Sincronizar con planificador
+async function sincronizarConPlanificador() {
+  const nuevosItems = await generarListaCompras();
   const nuevosItemsMap = new Map();
+  
   for (const item of nuevosItems) {
     nuevosItemsMap.set(item.nombre.toLowerCase(), item);
   }
   
+  // Mantener estado de completado de items existentes
   for (const item of itemsCompra) {
-    if (!item.manual && nuevosItemsMap.has(item.nombre.toLowerCase())) {
+    if (nuevosItemsMap.has(item.nombre.toLowerCase())) {
       const nuevoItem = nuevosItemsMap.get(item.nombre.toLowerCase());
       nuevoItem.completado = item.completado;
+      nuevoItem.id = item.id;
       nuevosItemsMap.set(item.nombre.toLowerCase(), nuevoItem);
-    } else if (!item.manual) {
-      nuevosItemsMap.set(item.nombre.toLowerCase(), { ...item, completado: item.completado });
-    } else if (item.manual) {
-      nuevosItemsMap.set(`manual_${item.id}`, item);
     }
   }
   
   itemsCompra = Array.from(nuevosItemsMap.values());
-  guardarItemsEnLocalStorage();
+  await guardarItemsEnSupabase(itemsCompra);
   renderizarLista();
   actualizarProgreso();
+  mostrarNotificacion('Lista sincronizada con el planificador');
 }
 
-function toggleCompletado(id) {
+// Marcar item como completado
+async function toggleCompletado(id) {
   const item = itemsCompra.find(i => i.id === id);
   if (item) {
     item.completado = !item.completado;
-    guardarItemsEnLocalStorage();
+    await guardarItemsEnSupabase(itemsCompra);
     renderizarLista();
     actualizarProgreso();
   }
 }
 
-function editarCantidad(id) {
+// Editar cantidad
+async function editarCantidad(id) {
   const item = itemsCompra.find(i => i.id === id);
   if (!item) return;
+  
   const nuevaCantidad = prompt('Editar cantidad (ej: 200g, 1kg, 2 piezas):', item.cantidad || '');
   if (nuevaCantidad !== null) {
     item.cantidad = nuevaCantidad;
-    guardarItemsEnLocalStorage();
+    await guardarItemsEnSupabase(itemsCompra);
     renderizarLista();
     mostrarNotificacion('Cantidad actualizada');
   }
 }
 
-function agregarProductoManual() {
-  const nombre = prompt('Nombre del producto:');
-  if (!nombre || nombre.trim() === '') return;
-  
-  const cantidad = prompt('Cantidad (opcional, ej: 200g, 1kg, 2 piezas):');
-  const nuevoItem = {
-    id: Date.now(),
-    nombre: nombre.trim(),
-    cantidad: cantidad || '',
-    original: nombre.trim(),
-    completado: false,
-    categoria: obtenerCategoria(nombre),
-    manual: true,
-    recetas: ['Manual']
-  };
-  itemsCompra.push(nuevoItem);
-  guardarItemsEnLocalStorage();
-  renderizarLista();
-  mostrarNotificacion(`"${nombre}" agregado a la lista`);
-}
-
-function eliminarProductoManual(id) {
+// Eliminar item manual
+async function eliminarItem(id) {
   if (confirm('¿Eliminar este producto de la lista?')) {
     itemsCompra = itemsCompra.filter(i => i.id !== id);
-    guardarItemsEnLocalStorage();
+    await guardarItemsEnSupabase(itemsCompra);
     renderizarLista();
+    actualizarProgreso();
     mostrarNotificacion('Producto eliminado');
   }
 }
 
+// Actualizar barra de progreso
 function actualizarProgreso() {
   const total = itemsCompra.length;
   const completados = itemsCompra.filter(item => item.completado).length;
@@ -225,14 +261,27 @@ function actualizarProgreso() {
   if (fillProgreso) fillProgreso.style.width = `${porcentaje}%`;
 }
 
-function exportarLista() {
+// Exportar a PDF
+async function exportarPDF() {
+  const { jsPDF } = window.jspdf;
+  
+  const pdfContent = document.createElement('div');
+  pdfContent.style.padding = '20px';
+  pdfContent.style.fontFamily = 'Arial, sans-serif';
+  pdfContent.style.backgroundColor = 'white';
+  
   const completados = itemsCompra.filter(item => item.completado).length;
   const total = itemsCompra.length;
-  let texto = `🛒 LISTA DE COMPRAS\n`;
-  texto += `📅 ${new Date().toLocaleDateString()}\n`;
-  texto += `✅ ${completados} de ${total} completados\n`;
-  texto += '='.repeat(50) + '\n\n';
   
+  let html = `
+    <div style="text-align: center; margin-bottom: 30px;">
+      <h1 style="color: #2e7d32;">🛒 Lista de Compras</h1>
+      <p style="color: #666;">Fecha: ${new Date().toLocaleDateString()}</p>
+      <p style="color: #666;">✅ ${completados} de ${total} completados</p>
+    </div>
+  `;
+  
+  // Agrupar por categoría
   const itemsPorCategoria = {};
   for (const item of itemsCompra) {
     if (!itemsPorCategoria[item.categoria]) itemsPorCategoria[item.categoria] = [];
@@ -240,73 +289,56 @@ function exportarLista() {
   }
   
   const categoriasOrdenadas = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
+  
   for (const categoria of categoriasOrdenadas) {
     const items = itemsPorCategoria[categoria];
     if (items && items.length > 0) {
-      texto += `\n📦 ${categoria.toUpperCase()}\n`;
-      texto += '-'.repeat(30) + '\n';
+      const icono = categoria === 'Abarrotes' ? '🛒' : categoria === 'Lacteos' ? '🥛' : categoria === 'Verduras' ? '🥬' : categoria === 'Frutas' ? '🍎' : categoria === 'Carnes' ? '🍗' : '📦';
+      html += `
+        <div style="margin-bottom: 20px;">
+          <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px;">
+            <h3 style="color: #2e7d32; margin: 0;">${icono} ${categoria}</h3>
+          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+      `;
+      
       for (const item of items) {
         const check = item.completado ? '✓' : '○';
-        texto += `${check} ${item.nombre}${item.cantidad ? ` - ${item.cantidad}` : ''}\n`;
+        html += `
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 8px; width: 30px;">${check}</td>
+            <td style="padding: 8px;"><strong>${escapeHTML(item.nombre)}</strong></td>
+            <td style="padding: 8px; text-align: right;">${item.cantidad ? escapeHTML(item.cantidad) : ''}</td>
+          </tr>
+        `;
       }
+      
+      html += `</table></div>`;
     }
   }
   
-  const blob = new Blob([texto], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `lista-compras-${new Date().toISOString().slice(0, 10)}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  mostrarNotificacion('Lista exportada');
-}
-
-async function compartirLista() {
-  const completados = itemsCompra.filter(item => item.completado).length;
-  const total = itemsCompra.length;
-  let texto = `🛒 LISTA DE COMPRAS\n${completados} de ${total} completados\n\n`;
+  pdfContent.innerHTML = html;
+  document.body.appendChild(pdfContent);
   
-  const itemsPorCategoria = {};
-  for (const item of itemsCompra) {
-    if (!itemsPorCategoria[item.categoria]) itemsPorCategoria[item.categoria] = [];
-    itemsPorCategoria[item.categoria].push(item);
-  }
-  
-  const categoriasOrdenadas = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
-  for (const categoria of categoriasOrdenadas) {
-    const items = itemsPorCategoria[categoria];
-    if (items && items.length > 0) {
-      texto += `\n${categoria}:\n`;
-      for (const item of items) {
-        const check = item.completado ? '✓' : '○';
-        texto += `${check} ${item.nombre}${item.cantidad ? ` - ${item.cantidad}` : ''}\n`;
-      }
-    }
-  }
-  
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: 'Mi lista de compras', text: texto });
-      mostrarNotificacion('Lista compartida');
-    } catch (err) {
-      copiarAlPortapapeles(texto);
-    }
-  } else {
-    copiarAlPortapapeles(texto);
+  try {
+    const canvas = await html2canvas(pdfContent, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgWidth = 190;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+    pdf.save(`lista-compras-${new Date().toISOString().slice(0, 10)}.pdf`);
+    mostrarNotificacion('PDF generado correctamente');
+  } catch (error) {
+    console.error('Error al generar PDF:', error);
+    mostrarNotificacion('Error al generar PDF', true);
+  } finally {
+    document.body.removeChild(pdfContent);
   }
 }
 
-function copiarAlPortapapeles(texto) {
-  navigator.clipboard.writeText(texto).then(() => {
-    mostrarNotificacion('Lista copiada al portapapeles');
-  }).catch(() => {
-    mostrarNotificacion('No se pudo copiar', true);
-  });
-}
-
+// Mostrar notificación
 function mostrarNotificacion(mensaje, esError = false) {
   const notif = document.createElement('div');
   notif.className = 'notification-toast';
@@ -320,11 +352,13 @@ function mostrarNotificacion(mensaje, esError = false) {
   }, 3000);
 }
 
+// Escapar HTML
 function escapeHTML(str) {
   if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Renderizar lista
 function renderizarLista() {
   const container = document.getElementById('lista-contenido');
   if (!container) return;
@@ -335,17 +369,11 @@ function renderizarLista() {
         <span>🛒</span>
         <p>Tu lista de compras está vacía</p>
         <small>Agrega recetas desde el planificador semanal</small>
-        <button class="btn-agregar-manual" id="agregar-manual-btn">+ Agregar producto manual</button>
-        <button class="btn-sincronizar" id="sincronizar-btn" style="margin-top:10px;">🔄 Sincronizar con planificador</button>
+        <button id="sincronizar-vacio-btn" class="btn-sincronizar">🔄 Sincronizar con planificador</button>
       </div>
     `;
-    const agregarBtn = document.getElementById('agregar-manual-btn');
-    const sincronizarBtn = document.getElementById('sincronizar-btn');
-    if (agregarBtn) agregarBtn.addEventListener('click', agregarProductoManual);
-    if (sincronizarBtn) sincronizarBtn.addEventListener('click', () => {
-      actualizarDesdePlanificador();
-      mostrarNotificacion('Lista sincronizada con el planificador');
-    });
+    const sincronizarBtn = document.getElementById('sincronizar-vacio-btn');
+    if (sincronizarBtn) sincronizarBtn.addEventListener('click', sincronizarConPlanificador);
     actualizarProgreso();
     return;
   }
@@ -357,12 +385,7 @@ function renderizarLista() {
   }
   
   const categoriasOrdenadas = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
-  let html = `
-    <div class="lista-header-actions">
-      <button class="btn-agregar-manual" id="agregar-manual-btn">+ Agregar producto manual</button>
-      <button class="btn-sincronizar" id="sincronizar-btn">🔄 Sincronizar con planificador</button>
-    </div>
-  `;
+  let html = '';
   
   for (const categoria of categoriasOrdenadas) {
     const items = itemsPorCategoria[categoria];
@@ -375,6 +398,7 @@ function renderizarLista() {
           </div>
           <ul class="items-lista">
       `;
+      
       for (const item of items) {
         html += `
           <li class="item-compra ${item.completado ? 'completado' : ''}" data-id="${item.id}">
@@ -382,84 +406,68 @@ function renderizarLista() {
             <div class="item-contenido">
               <div class="item-nombre">${escapeHTML(item.nombre)}</div>
               ${item.cantidad ? `<div class="item-cantidad">📦 ${escapeHTML(item.cantidad)}</div>` : ''}
-              ${item.recetas && item.recetas.length > 0 && !item.manual ? `<div class="item-recetas">📖 ${escapeHTML(item.recetas.slice(0, 2).join(', '))}${item.recetas.length > 2 ? ` +${item.recetas.length - 2}` : ''}</div>` : ''}
+              ${item.recetas && item.recetas.length > 0 ? `<div class="item-recetas">📖 ${escapeHTML(item.recetas.slice(0, 2).join(', '))}${item.recetas.length > 2 ? ` +${item.recetas.length - 2}` : ''}</div>` : ''}
             </div>
             <div class="item-acciones">
               <button class="btn-editar-cantidad" data-id="${item.id}" title="Editar cantidad">✏️</button>
-              ${item.manual ? `<button class="btn-eliminar-item" data-id="${item.id}" title="Eliminar">🗑️</button>` : ''}
             </div>
           </li>
         `;
       }
+      
       html += `</ul></div>`;
     }
   }
   
   container.innerHTML = html;
   
+  // Event listeners
   document.querySelectorAll('.item-checkbox').forEach(cb => {
-    cb.addEventListener('change', (e) => {
+    cb.addEventListener('change', async (e) => {
       e.stopPropagation();
       const id = parseFloat(cb.dataset.id);
-      toggleCompletado(id);
+      await toggleCompletado(id);
     });
   });
   
   document.querySelectorAll('.btn-editar-cantidad').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = parseFloat(btn.dataset.id);
-      editarCantidad(id);
+      await editarCantidad(id);
     });
-  });
-  
-  document.querySelectorAll('.btn-eliminar-item').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = parseFloat(btn.dataset.id);
-      eliminarProductoManual(id);
-    });
-  });
-  
-  const agregarBtn = document.getElementById('agregar-manual-btn');
-  const sincronizarBtn = document.getElementById('sincronizar-btn');
-  if (agregarBtn) agregarBtn.addEventListener('click', agregarProductoManual);
-  if (sincronizarBtn) sincronizarBtn.addEventListener('click', () => {
-    actualizarDesdePlanificador();
-    mostrarNotificacion('Lista sincronizada con el planificador');
   });
   
   actualizarProgreso();
 }
 
-function initStorageListener() {
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'planSemanal') {
-      console.log('planSemanal cambiado, actualizando lista...');
-      actualizarDesdePlanificador();
-    }
-  });
+// Inicializar
+async function init() {
+  await cargarUsuario();
   
-  setInterval(() => {
-    const planActual = localStorage.getItem('planSemanal');
-    const planAnterior = this.ultimoPlan;
-    if (planActual !== planAnterior) {
-      this.ultimoPlan = planActual;
-      actualizarDesdePlanificador();
+  if (!currentUser) {
+    window.location.href = 'login.html';
+    return;
+  }
+  
+  itemsCompra = await cargarItemsDesdeSupabase();
+  
+  // Sincronización automática: Si la lista está vacía pero hay un plan, generar
+  if (itemsCompra.length === 0) {
+    itemsCompra = await generarListaCompras();
+    if (itemsCompra.length > 0) {
+      await guardarItemsEnSupabase(itemsCompra);
     }
-  }, 2000);
-}
-
-function init() {
-  cargarItemsDesdeLocalStorage();
+  }
+  
   renderizarLista();
-  initStorageListener();
   
-  const exportarBtn = document.getElementById('exportar-btn');
-  if (exportarBtn) exportarBtn.addEventListener('click', exportarLista);
+  // Event listeners
+  const exportarBtn = document.getElementById('exportar-pdf-btn');
+  if (exportarBtn) exportarBtn.addEventListener('click', exportarPDF);
   
-  const compartirBtn = document.getElementById('compartir-btn');
-  if (compartirBtn) compartirBtn.addEventListener('click', compartirLista);
+  const sincronizarBtn = document.getElementById('sincronizar-btn');
+  if (sincronizarBtn) sincronizarBtn.addEventListener('click', sincronizarConPlanificador);
 }
 
 init();

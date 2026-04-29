@@ -1,19 +1,12 @@
-const API = 'http://localhost:3000';
+// planificador.js - Planificador semanal con Supabase
+import { supabase } from './supabaseClient.js';
+
+// Estado
 let todasLasRecetas = [];
-
-let planSemanal = {
-  lunes: { desayuno: [], comida: [], cena: [], merienda: [], snack: [] },
-  martes: { desayuno: [], comida: [], cena: [], merienda: [], snack: [] },
-  miercoles: { desayuno: [], comida: [], cena: [], merienda: [], snack: [] },
-  jueves: { desayuno: [], comida: [], cena: [], merienda: [], snack: [] },
-  viernes: { desayuno: [], comida: [], cena: [], merienda: [], snack: [] },
-  sabado: { desayuno: [], comida: [], cena: [], merienda: [], snack: [] },
-  domingo: { desayuno: [], comida: [], cena: [], merienda: [], snack: [] }
-};
-
-let diaActual = null;
-let comidaActual = null;
+let planSemanal = {};
 let diasAbiertos = {};
+let presupuesto = 500;
+let currentUser = null;
 
 const diasLista = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const comidasLista = ['desayuno', 'comida', 'cena', 'merienda', 'snack'];
@@ -21,31 +14,59 @@ const nombresDias = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles',
 const nombresComidas = { desayuno: 'Desayuno', comida: 'Comida', cena: 'Cena', merienda: 'Merienda', snack: 'Snack' };
 const iconosComidas = { desayuno: '🥐', comida: '🍲', cena: '🍜', merienda: '🍎', snack: '🍿' };
 
-let presupuesto = 500;
+// Estado para modal
+let diaActual = null;
+let comidaActual = null;
 
-function cargarPlanDesdeLocalStorage() {
-  const guardado = localStorage.getItem('planSemanal');
-  if (guardado) {
-    const planGuardado = JSON.parse(guardado);
-    for (const dia of diasLista) {
-      if (!planSemanal[dia]) planSemanal[dia] = {};
-      for (const comida of comidasLista) {
-        if (planGuardado[dia] && Array.isArray(planGuardado[dia][comida])) {
-          planSemanal[dia][comida] = planGuardado[dia][comida];
-        } else if (planGuardado[dia] && planGuardado[dia][comida] && !Array.isArray(planGuardado[dia][comida])) {
-          planSemanal[dia][comida] = [planGuardado[dia][comida]];
-        } else {
-          planSemanal[dia][comida] = [];
-        }
-      }
+// Inicializar plan semanal vacío
+function initPlanSemanal() {
+  const plan = {};
+  for (const dia of diasLista) {
+    plan[dia] = {};
+    for (const comida of comidasLista) {
+      plan[dia][comida] = [];
     }
   }
-  const presupuestoGuardado = localStorage.getItem('presupuesto');
-  if (presupuestoGuardado) {
-    presupuesto = parseInt(presupuestoGuardado);
-    const presupuestoInput = document.getElementById('presupuesto-input');
-    if (presupuestoInput) presupuestoInput.value = presupuesto;
+  return plan;
+}
+
+// Cargar usuario actual (usa datos de localStorage, sin RLS)
+async function cargarUsuario() {
+  const userId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
+  if (userId && token) {
+    currentUser = {
+      id: parseInt(userId),
+      es_premium: localStorage.getItem('userPremium') === 'true',
+      puntos: parseInt(localStorage.getItem('userPuntos') || 0),
+      username: localStorage.getItem('userName')
+    };
   }
+}
+
+// Cargar plan desde Supabase
+async function cargarPlanDesdeSupabase() {
+  if (!currentUser) return;
+  
+  const { data, error } = await supabase
+    .from('planes_semanales')
+    .select('*')
+    .eq('usuario_id', currentUser.id)
+    .maybeSingle();
+  
+  if (error) {
+    console.error('Error al cargar plan:', error);
+    planSemanal = initPlanSemanal();
+    return;
+  }
+  
+  if (data && data.plan) {
+    planSemanal = data.plan;
+  } else {
+    planSemanal = initPlanSemanal();
+  }
+  
+  // Cargar días abiertos desde localStorage (preferencia UI)
   const abiertosGuardados = localStorage.getItem('diasAbiertos');
   if (abiertosGuardados) {
     diasAbiertos = JSON.parse(abiertosGuardados);
@@ -54,34 +75,54 @@ function cargarPlanDesdeLocalStorage() {
       diasAbiertos[dia] = dia === 'lunes';
     }
   }
+  
+  // Cargar presupuesto
+  const presupuestoGuardado = localStorage.getItem('presupuesto');
+  if (presupuestoGuardado) {
+    presupuesto = parseInt(presupuestoGuardado);
+    const presupuestoInput = document.getElementById('presupuesto-input');
+    if (presupuestoInput) presupuestoInput.value = presupuesto;
+  }
 }
 
-function guardarPlanEnLocalStorage() {
-  localStorage.setItem('planSemanal', JSON.stringify(planSemanal));
-  localStorage.setItem('presupuesto', presupuesto);
+// Guardar plan en Supabase
+async function guardarPlanEnSupabase() {
+  if (!currentUser) return;
+  
+  const { error } = await supabase
+    .from('planes_semanales')
+    .upsert({
+      usuario_id: currentUser.id,
+      plan: planSemanal,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'usuario_id' });
+  
+  if (error) {
+    console.error('Error al guardar plan:', error);
+  }
+}
+
+// Guardar preferencias UI
+function guardarPreferenciasUI() {
   localStorage.setItem('diasAbiertos', JSON.stringify(diasAbiertos));
+  localStorage.setItem('presupuesto', presupuesto);
 }
 
+// Alternar día abierto/cerrado
 function toggleDia(dia) {
   diasAbiertos[dia] = !diasAbiertos[dia];
-  guardarPlanEnLocalStorage();
+  guardarPreferenciasUI();
   renderizarPlanificador();
 }
 
+// Calcular gastos
 function calcularGastoTotal() {
   let total = 0;
   for (const dia of diasLista) {
     for (const comida of comidasLista) {
-      const recetas = planSemanal[dia][comida];
-      if (Array.isArray(recetas)) {
-        for (const receta of recetas) {
-          if (receta && receta.precio_numerico) {
-            total += receta.precio_numerico;
-          } else if (receta && receta.precio) {
-            const precioNum = parseInt(receta.precio.replace(/[^0-9]/g, '')) || 0;
-            total += precioNum;
-          }
-        }
+      const recetas = planSemanal[dia][comida] || [];
+      for (const receta of recetas) {
+        total += receta.precio_numerico || 0;
       }
     }
   }
@@ -91,14 +132,9 @@ function calcularGastoTotal() {
 function calcularGastoDia(dia) {
   let total = 0;
   for (const comida of comidasLista) {
-    const recetas = planSemanal[dia][comida];
-    if (Array.isArray(recetas)) {
-      for (const receta of recetas) {
-        if (receta) {
-          const precioNum = receta.precio_numerico || parseInt(String(receta.precio).replace(/[^0-9]/g, '')) || 0;
-          total += precioNum;
-        }
-      }
+    const recetas = planSemanal[dia][comida] || [];
+    for (const receta of recetas) {
+      total += receta.precio_numerico || 0;
     }
   }
   return total;
@@ -106,18 +142,14 @@ function calcularGastoDia(dia) {
 
 function calcularGastoComida(dia, comida) {
   let total = 0;
-  const recetas = planSemanal[dia][comida];
-  if (Array.isArray(recetas)) {
-    for (const receta of recetas) {
-      if (receta) {
-        const precioNum = receta.precio_numerico || parseInt(String(receta.precio).replace(/[^0-9]/g, '')) || 0;
-        total += precioNum;
-      }
-    }
+  const recetas = planSemanal[dia][comida] || [];
+  for (const receta of recetas) {
+    total += receta.precio_numerico || 0;
   }
   return total;
 }
 
+// Actualizar presupuesto en UI
 function actualizarPresupuesto() {
   const total = calcularGastoTotal();
   const restante = presupuesto - total;
@@ -131,6 +163,7 @@ function actualizarPresupuesto() {
   }
 }
 
+// Mostrar notificación
 function mostrarNotificacion(mensaje, esError = false) {
   const notif = document.createElement('div');
   notif.className = 'notification';
@@ -140,83 +173,208 @@ function mostrarNotificacion(mensaje, esError = false) {
   setTimeout(() => notif.remove(), 3000);
 }
 
-function vaciarPlan() {
-  if (confirm('¿Estás seguro de que quieres vaciar todo el plan semanal?')) {
-    for (const dia of diasLista) {
-      for (const comida of comidasLista) {
-        planSemanal[dia][comida] = [];
-      }
+// Cargar recetas desde Supabase
+async function cargarRecetas() {
+  try {
+    let query = supabase.from('recetas').select('*');
+    
+    // Si no es Premium, filtrar recetas Premium
+    if (!currentUser?.es_premium) {
+      query = query.eq('es_premium', false);
     }
-    guardarPlanEnLocalStorage();
-    renderizarPlanificador();
-    actualizarPresupuesto();
-    mostrarNotificacion('Plan semanal vaciado');
+    
+    const { data, error } = await query.order('titulo');
+    
+    if (error) throw error;
+    todasLasRecetas = data || [];
+    renderizarModalRecetas(todasLasRecetas);
+  } catch (err) {
+    console.error('Error cargando recetas:', err);
+    mostrarNotificacion('Error al cargar recetas', true);
   }
 }
 
-function exportarPlan() {
-  let texto = '📅 PLAN SEMANAL DE COMIDAS\n';
-  texto += `💰 Presupuesto: $${presupuesto}\n`;
-  texto += `💸 Gasto total: $${calcularGastoTotal()}\n`;
-  texto += `📊 Restante: $${presupuesto - calcularGastoTotal()}\n`;
-  texto += '='.repeat(50) + '\n\n';
+// Renderizar modal de recetas
+function renderizarModalRecetas(recetas) {
+  const container = document.getElementById('modal-recetas-list');
+  if (!container) return;
   
-  for (const dia of diasLista) {
-    texto += `\n📌 ${nombresDias[dia].toUpperCase()}\n`;
-    texto += '-'.repeat(30) + '\n';
-    for (const comida of comidasLista) {
-      const recetas = planSemanal[dia][comida];
-      texto += `${iconosComidas[comida]} ${nombresComidas[comida]}:\n`;
-      if (recetas && recetas.length > 0) {
-        for (let i = 0; i < recetas.length; i++) {
-          const receta = recetas[i];
-          texto += `   ${i + 1}. ${receta.titulo} (${receta.precio || '$$'})\n`;
-        }
-      } else {
-        texto += `   • Sin recetas\n`;
-      }
-      texto += '\n';
-    }
-    texto += `💰 Total día: $${calcularGastoDia(dia)}\n`;
-    texto += '\n';
+  if (recetas.length === 0) {
+    container.innerHTML = '<div class="vacio-recetas">No hay recetas disponibles</div>';
+    return;
   }
   
-  const blob = new Blob([texto], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `plan-semanal-${new Date().toISOString().slice(0, 10)}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  mostrarNotificacion('Plan exportado');
+  container.innerHTML = recetas.map(receta => `
+    <div class="modal-receta-item" data-id="${receta.id}">
+      <div class="modal-receta-info">
+        <h4>${escapeHTML(receta.titulo)}</h4>
+        <p>💰 ${escapeHTML(receta.precio || '$$')} | ⏱️ ${escapeHTML(receta.tiempo || '30min')}</p>
+      </div>
+      <div class="modal-receta-precio">$${receta.precio_numerico || 0}</div>
+    </div>
+  `).join('');
+  
+  // Event listeners
+  container.querySelectorAll('.modal-receta-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const id = parseInt(item.dataset.id);
+      const receta = todasLasRecetas.find(r => r.id === id);
+      if (receta && diaActual && comidaActual) {
+        agregarReceta(diaActual, comidaActual, receta);
+        cerrarModalRecetas();
+      }
+    });
+  });
 }
 
-function eliminarReceta(dia, comida, index) {
+// Filtrar recetas en modal
+function setupModalSearch() {
+  const searchInput = document.getElementById('modal-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const busqueda = e.target.value.toLowerCase();
+      const filtradas = todasLasRecetas.filter(r => 
+        r.titulo.toLowerCase().includes(busqueda) ||
+        (r.ingredientes && r.ingredientes.toLowerCase().includes(busqueda))
+      );
+      renderizarModalRecetas(filtradas);
+    });
+  }
+}
+
+// Abrir modal
+function abrirModalRecetas(dia, comida) {
+  diaActual = dia;
+  comidaActual = comida;
+  const modal = document.getElementById('modal-recetas');
+  const searchInput = document.getElementById('modal-search-input');
+  if (modal) {
+    modal.classList.add('active');
+    if (searchInput) {
+      searchInput.value = '';
+      renderizarModalRecetas(todasLasRecetas);
+      searchInput.focus();
+    }
+  }
+}
+
+// Cerrar modal
+function cerrarModalRecetas() {
+  const modal = document.getElementById('modal-recetas');
+  if (modal) modal.classList.remove('active');
+  diaActual = null;
+  comidaActual = null;
+}
+
+// Agregar receta al plan
+async function agregarReceta(dia, comida, receta) {
+  if (!planSemanal[dia][comida]) {
+    planSemanal[dia][comida] = [];
+  }
+  
+  // Verificar duplicados
+  const yaExiste = planSemanal[dia][comida].some(r => r.id === receta.id);
+  if (yaExiste) {
+    mostrarNotificacion('Esta receta ya está agregada', true);
+    return;
+  }
+  
+  planSemanal[dia][comida].push(receta);
+  await guardarPlanEnSupabase();
+  renderizarPlanificador();
+  actualizarPresupuesto();
+  mostrarNotificacion(`✓ "${receta.titulo}" agregada a ${nombresDias[dia]} - ${nombresComidas[comida]}`);
+}
+
+// Eliminar receta del plan
+async function eliminarReceta(dia, comida, index) {
   if (confirm('¿Eliminar esta receta del plan?')) {
     planSemanal[dia][comida].splice(index, 1);
-    guardarPlanEnLocalStorage();
+    await guardarPlanEnSupabase();
     renderizarPlanificador();
     actualizarPresupuesto();
     mostrarNotificacion('Receta eliminada');
   }
 }
 
-function agregarReceta(dia, comida, receta) {
-  if (!planSemanal[dia][comida]) {
-    planSemanal[dia][comida] = [];
+// Exportar a PDF usando jsPDF
+async function exportarPDF() {
+  const { jsPDF } = window.jspdf;
+  
+  // Crear elemento temporal para el PDF
+  const pdfContent = document.createElement('div');
+  pdfContent.style.padding = '20px';
+  pdfContent.style.fontFamily = 'Arial, sans-serif';
+  pdfContent.style.backgroundColor = 'white';
+  
+  let html = `
+    <div style="text-align: center; margin-bottom: 30px;">
+      <h1 style="color: #2e7d32;">📅 Plan Semanal de Comidas</h1>
+      <p style="color: #666;">Fecha: ${new Date().toLocaleDateString()}</p>
+      <p style="color: #666;">Presupuesto: $${presupuesto} | Gasto total: $${calcularGastoTotal()} | Restante: $${presupuesto - calcularGastoTotal()}</p>
+    </div>
+  `;
+  
+  for (const dia of diasLista) {
+    const gastoDia = calcularGastoDia(dia);
+    html += `
+      <div style="margin-bottom: 25px; page-break-inside: avoid;">
+        <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 12px 16px; border-radius: 12px; margin-bottom: 12px;">
+          <h2 style="color: #2e7d32; margin: 0;">📌 ${nombresDias[dia]} - Gasto: $${gastoDia}</h2>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+    `;
+    
+    for (const comida of comidasLista) {
+      const recetas = planSemanal[dia][comida] || [];
+      html += `
+        <tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 10px; width: 120px; vertical-align: top;">
+            <strong>${iconosComidas[comida]} ${nombresComidas[comida]}</strong>
+          </td>
+          <td style="padding: 10px;">
+      `;
+      
+      if (recetas.length === 0) {
+        html += '<span style="color: #999;">Sin recetas</span>';
+      } else {
+        recetas.forEach(receta => {
+          html += `<div style="margin-bottom: 8px;">• <strong>${escapeHTML(receta.titulo)}</strong> - ${receta.precio || '$$'}</div>`;
+        });
+      }
+      
+      html += `</td></tr>`;
+    }
+    
+    html += `</table></div>`;
   }
-  planSemanal[dia][comida].push(receta);
-  guardarPlanEnLocalStorage();
-  renderizarPlanificador();
-  actualizarPresupuesto();
-  mostrarNotificacion(`✓ "${receta.titulo}" agregada a ${nombresDias[dia]} - ${nombresComidas[comida]}`);
+  
+  pdfContent.innerHTML = html;
+  document.body.appendChild(pdfContent);
+  
+  try {
+    const canvas = await html2canvas(pdfContent, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgWidth = 190;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+    pdf.save(`plan-semanal-${new Date().toISOString().slice(0, 10)}.pdf`);
+    mostrarNotificacion('PDF generado correctamente');
+  } catch (error) {
+    console.error('Error al generar PDF:', error);
+    mostrarNotificacion('Error al generar PDF', true);
+  } finally {
+    document.body.removeChild(pdfContent);
+  }
 }
 
+// Renderizar planificador completo
 function renderizarPlanificador() {
   const container = document.getElementById('dias-container');
   if (!container) return;
+  
   container.innerHTML = '';
   
   for (const dia of diasLista) {
@@ -241,7 +399,7 @@ function renderizarPlanificador() {
                 <span class="receta-tiempo">⏱️ ${escapeHTML(receta.tiempo || '30min')}</span>
               </div>
             </div>
-            <button class="btn-eliminar" onclick="eliminarReceta('${dia}', '${comida}', ${idx})">✖</button>
+            <button class="btn-eliminar" onclick="window.eliminarReceta('${dia}', '${comida}', ${idx})">✖</button>
           </div>
         `).join('');
       }
@@ -256,7 +414,7 @@ function renderizarPlanificador() {
           <div class="recetas-lista">
             ${recetasHTML}
           </div>
-          <button class="btn-agregar" onclick="abrirModalRecetas('${dia}', '${comida}')">
+          <button class="btn-agregar" onclick="window.abrirModalRecetas('${dia}', '${comida}')">
             <span>+</span> Agregar receta
           </button>
         </div>
@@ -266,16 +424,14 @@ function renderizarPlanificador() {
     const diaCard = document.createElement('div');
     diaCard.className = 'dia-card';
     diaCard.innerHTML = `
-      <div class="dia-header" onclick="toggleDia('${dia}')">
+      <div class="dia-header" onclick="window.toggleDia('${dia}')">
         <div class="dia-nombre">
           <span>📅</span> ${nombresDias[dia]}
         </div>
         <div class="dia-gasto">💰 $${gastoDia}</div>
       </div>
       <div class="dia-contenido ${estaAbierto ? 'activo' : ''}">
-        <div class="comidas-grid">
-          ${comidasHTML}
-        </div>
+        <div class="comidas-grid">${comidasHTML}</div>
       </div>
     `;
     container.appendChild(diaCard);
@@ -284,118 +440,40 @@ function renderizarPlanificador() {
   actualizarPresupuesto();
 }
 
-function abrirModalRecetas(dia, comida) {
-  diaActual = dia;
-  comidaActual = comida;
-  const modal = document.getElementById('modal-recetas');
-  const searchInput = document.getElementById('modal-search-input');
-  if (modal) {
-    modal.classList.add('active');
-    if (searchInput) {
-      searchInput.value = '';
-      searchInput.focus();
-      renderizarModalRecetas(todasLasRecetas);
-      searchInput.oninput = (e) => {
-        const busqueda = e.target.value.toLowerCase();
-        const filtradas = todasLasRecetas.filter(r => 
-          r.titulo.toLowerCase().includes(busqueda) ||
-          (r.ingredientes && r.ingredientes.toLowerCase().includes(busqueda))
-        );
-        renderizarModalRecetas(filtradas);
-      };
-    }
-  }
-}
-
-function cerrarModalRecetas() {
-  const modal = document.getElementById('modal-recetas');
-  if (modal) modal.classList.remove('active');
-  diaActual = null;
-  comidaActual = null;
-}
-
-function renderizarModalRecetas(recetas) {
-  const container = document.getElementById('modal-recetas-list');
-  if (!container) return;
-  if (recetas.length === 0) {
-    container.innerHTML = '<div class="vacio-recetas">No hay recetas disponibles</div>';
-    return;
-  }
-  container.innerHTML = recetas.map(receta => {
-    const precioNum = receta.precio_numerico || parseInt(String(receta.precio).replace(/[^0-9]/g, '')) || 0;
-    return `
-      <div class="modal-receta-item" onclick="seleccionarReceta(${receta.id})">
-        <div class="modal-receta-info">
-          <h4>${escapeHTML(receta.titulo)}</h4>
-          <p>💰 ${escapeHTML(receta.precio || '$$')} | ⏱️ ${escapeHTML(receta.tiempo || '30min')}</p>
-        </div>
-        <div class="modal-receta-precio">$${precioNum}</div>
-      </div>
-    `;
-  }).join('');
-}
-
-function seleccionarReceta(id) {
-  const receta = todasLasRecetas.find(r => r.id === id);
-  if (receta && diaActual && comidaActual) {
-    agregarReceta(diaActual, comidaActual, receta);
-    cerrarModalRecetas();
-  }
-}
-
+// Escapar HTML
 function escapeHTML(str) {
   if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-async function cargarRecetas() {
-  try {
-    const res = await fetch(`${API}/api/recipes`);
-    if (res.ok) {
-      todasLasRecetas = await res.json();
-      renderizarModalRecetas(todasLasRecetas);
-    }
-  } catch (err) {
-    console.error('Error cargando recetas:', err);
-  }
+// Ir a lista de compras
+function irAListaCompras() {
+  window.location.href = 'lista-compras.html';
 }
 
-function initDarkMode() {
-  const savedDark = localStorage.getItem('darkMode') === 'true';
-  if (savedDark) {
-    document.body.classList.add('dark-mode');
-    const darkToggle = document.getElementById('dark-mode-toggle');
-    if (darkToggle) darkToggle.checked = true;
-  }
-}
-
-function init() {
-  initDarkMode();
-  cargarPlanDesdeLocalStorage();
-  cargarRecetas();
+// Inicializar
+async function init() {
+  await cargarUsuario();
+  await cargarPlanDesdeSupabase();
+  await cargarRecetas();
   renderizarPlanificador();
+  setupModalSearch();
   
+  // Event listeners
   const presupuestoInput = document.getElementById('presupuesto-input');
   if (presupuestoInput) {
     presupuestoInput.addEventListener('change', (e) => {
       presupuesto = parseInt(e.target.value) || 0;
-      guardarPlanEnLocalStorage();
+      guardarPreferenciasUI();
       actualizarPresupuesto();
     });
   }
   
-  const vaciarBtn = document.getElementById('vaciar-plan-btn');
-  if (vaciarBtn) vaciarBtn.addEventListener('click', vaciarPlan);
-  
-  const exportarBtn = document.getElementById('exportar-plan-btn');
-  if (exportarBtn) exportarBtn.addEventListener('click', exportarPlan);
+  const exportarBtn = document.getElementById('exportar-pdf-btn');
+  if (exportarBtn) exportarBtn.addEventListener('click', exportarPDF);
   
   const listaComprasBtn = document.getElementById('lista-compras-btn');
-  if (listaComprasBtn) {
-    listaComprasBtn.addEventListener('click', () => {
-      window.location.href = 'lista-compras.html';
-    });
-  }
+  if (listaComprasBtn) listaComprasBtn.addEventListener('click', irAListaCompras);
   
   const modalClose = document.querySelector('.modal-close');
   if (modalClose) modalClose.addEventListener('click', cerrarModalRecetas);
@@ -406,11 +484,10 @@ function init() {
   });
 }
 
+// Exponer funciones globalmente
+window.toggleDia = toggleDia;
 window.eliminarReceta = eliminarReceta;
-window.agregarReceta = agregarReceta;
 window.abrirModalRecetas = abrirModalRecetas;
 window.cerrarModalRecetas = cerrarModalRecetas;
-window.seleccionarReceta = seleccionarReceta;
-window.toggleDia = toggleDia;
 
 init();

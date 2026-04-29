@@ -47,26 +47,51 @@ body {
   font-weight: 400;
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.header-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  object-fit: cover;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.header-avatar:hover {
+  transform: scale(1.1);
+  border-color: white;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
 .premium-badge {
-  position: absolute;
-  top: 32px;
-  right: 24px;
   background: linear-gradient(90deg, #ffb300, #ffca28);
   color: #1a3c34;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  padding: 8px 18px;
+  padding: 6px 14px;
   border-radius: 50px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   box-shadow: 0 4px 16px rgba(255, 179, 0, 0.4);
   transition: all 0.3s ease;
-}
-
-.premium-badge:hover {
-  transform: scale(1.08);
-  box-shadow: 0 8px 24px rgba(255, 179, 0, 0.5);
+  white-space: nowrap;
 }
 
 .search-wrapper {

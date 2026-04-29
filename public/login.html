@@ -3,103 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ForananeoKitchen - Iniciar Sesión</title>
+  <title>ForaneoKitchen - Iniciar Sesión</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/login.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
 </head>
-
 <body>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+
   <div class="login-screen">
     <div class="login-container">
-      <h1>ForananeoKitchen</h1>
+      <h1>ForaneoKitchen</h1>
       <p class="tagline">Tu compañero de cocina estudiantil</p>
 
-      <!-- 1. LOGIN PRINCIPAL -->
+      <!-- LOGIN BOX -->
       <div class="login-card" id="login-box">
         <h2>Iniciar Sesión</h2>
         <p class="welcome">¡Bienvenido de vuelta!</p>
-        <input id="login-user" placeholder="Usuario" autocomplete="off">
-        <input id="login-pass" type="password" placeholder="Contraseña">
-        <button onclick="login()">Iniciar Sesión →</button>
-        
-        <p class="register-link" style="margin-top: 12px; font-size: 0.9rem;">
-          <a href="#" onclick="mostrarForgot(event)">¿Olvidaste tu contraseña?</a>
-        </p>
-        
+        <input id="login-username" type="text" placeholder="Usuario" autocomplete="username">
+        <input id="login-password" type="password" placeholder="Contraseña">
+        <button id="login-btn">Iniciar Sesión →</button>
         <p class="register-link">
-          ¿No tienes cuenta? <a href="#" onclick="mostrarRegistro()">Regístrate</a>
+          ¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a>
         </p>
       </div>
 
-      <!-- 2. REGISTRO -->
+      <!-- REGISTRO BOX -->
       <div class="login-card" id="registro-box" style="display:none;">
         <h2>Registrarse</h2>
-        <input id="reg-nombre" placeholder="Nombre *" required>
-        <input id="reg-apellido" placeholder="Apellido *" required>
-        <input id="reg-email" type="email" placeholder="Email * (gmail/etc)" required>
-        <input id="reg-user" placeholder="Username * (3-20 chars)" required>
-        <input id="reg-pass" type="password" placeholder="Contraseña * (8+ caracteres)" required>
-        <input id="reg-confirm" type="password" placeholder="Confirmar contraseña *" required>
-        <input id="reg-fecha" type="date" placeholder="Fecha nacimiento">
-        <label style="display:block; margin:20px 0;">
-          <input type="checkbox" id="reg-premium"> Premium (chatbot recetas)
+        <p class="welcome">Crea tu cuenta</p>
+        <input id="reg-nombre"    placeholder="Nombre *"              autocomplete="given-name">
+        <input id="reg-apellido"  placeholder="Apellido *"            autocomplete="family-name">
+        <input id="reg-username"  placeholder="Usuario * (letras, números, _)" autocomplete="username">
+        <input id="reg-email"     type="email" placeholder="Correo electrónico *" autocomplete="email">
+        <input id="reg-password"  type="password" placeholder="Contraseña * (mínimo 8 caracteres)">
+        <input id="reg-confirm"   type="password" placeholder="Confirmar contraseña *">
+        <label style="display:block; margin:15px 0; text-align:left; color:#424242; font-size:.95rem;">
+          <input type="checkbox" id="reg-premium"> Quiero ser Premium (chatbot, videos exclusivos)
         </label>
-        <button onclick="registrar()">Crear Usuario →</button>
+        <button id="register-btn">Crear Cuenta →</button>
         <p class="register-link">
-          <a href="#" onclick="mostrarLogin()">Volver a login</a>
+          <a href="#" id="show-login">← Volver al login</a>
         </p>
       </div>
 
-      <!-- 3. OLVIDÉ CONTRASEÑA -->
-      <div class="login-card" id="forgot-box" style="display:none;">
-        <h2>🔒 Recuperar Contraseña</h2>
-        <p style="color: #666; margin-bottom: 20px;">Te enviaremos un código a tu email para crear una nueva contraseña.</p>
-        <input id="forgot-email" type="email" placeholder="Ingresa tu email registrado">
-        <button onclick="forgotPassword()">📧 Enviar Código</button>
-        <p class="register-link" style="margin-top: 15px;">
-          <a href="#" onclick="mostrarLogin()">← Volver a login</a>
-        </p>
-      </div>
-
-      <!-- 4. VERIFICAR OTP (para registro y reset) -->
-      <div class="login-card" id="verify-box" style="display:none;">
-        <h2>✅ Verificar Código</h2>
-        <p style="color:#4caf50; font-weight:500;">Enviado a: <strong id="verify-email"></strong></p>
-        <input id="otp-input" type="text" maxlength="6" placeholder="123456" 
-               style="text-align:center; font-size:1.5rem; letter-spacing:8px; font-weight:bold;">
-        <br><br>
-        <button onclick="verificarOTP()" style="background:#4caf50; color:white; padding:16px 24px;">
-          Verificar y Continuar
-        </button>
-        <br><br>
-        <button onclick="mostrarLogin()" style="background:transparent; color:#2e7d32; 
-                        border:2px solid #4caf50; padding:12px 24px;">
-          Cambiar Email
-        </button>
-      </div>
-
-      <!-- 5. RESET CONTRASEÑA (CREAR NUEVA CONTRASEÑA) -->
-      <div class="login-card" id="reset-box" style="display:none;">
-        <h2>🔐 Crear Nueva Contraseña</h2>
-        <p style="color: #666; margin-bottom: 20px;">
-          Estás restableciendo la contraseña de: <strong id="reset-email-display"></strong>
-        </p>
-        <input id="reset-new-pass" type="password" placeholder="Nueva contraseña * (mínimo 8 caracteres)">
-        <input id="reset-confirm-pass" type="password" placeholder="Confirmar nueva contraseña *">
-        <button onclick="resetPassword()">✅ Actualizar Contraseña</button>
-        <p class="register-link" style="margin-top: 15px;">
-          <a href="#" onclick="mostrarLogin()">← Volver a login</a>
-        </p>
-      </div>
-
-      <!-- 6. INVITADO -->
+      <!-- INVITADO -->
       <div class="guest-option">
         <a href="home.html" class="btn-guest">👤 Continuar como invitado</a>
       </div>
 
-      <!-- 7. PREMIUM -->
+      <!-- PREMIUM SECTION -->
       <div class="premium-section">
         <div class="premium-card">
           <div class="premium-header">
@@ -117,6 +72,7 @@
     </div>
   </div>
 
+  <script src="js/dark-mode.js"></script>
   <script src="js/login.js"></script>
 </body>
 </html>

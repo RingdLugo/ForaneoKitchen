@@ -8,14 +8,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/planificador.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
 </head>
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" onclick="toggleDarkMode()">🌙</button>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
   
   <div class="planificador-screen">
     <div class="planificador-header">
       <h1>📅 Planificador Semanal</h1>
-      <p>Organiza tus comidas - Puedes agregar múltiples recetas por día</p>
+      <p>Organiza tus comidas - Agrega recetas a cada día</p>
     </div>
     
     <div class="presupuesto-section">
@@ -38,8 +39,7 @@
         </div>
       </div>
       <div class="acciones">
-        <button class="btn btn-danger" id="vaciar-plan-btn">🗑️ Vaciar Plan</button>
-        <button class="btn btn-secondary" id="exportar-plan-btn">📄 Exportar Plan</button>
+        <button class="btn btn-secondary" id="exportar-pdf-btn">📄 Exportar PDF</button>
         <button class="btn btn-primary" id="lista-compras-btn">📋 Lista de Compras</button>
       </div>
     </div>
@@ -47,6 +47,7 @@
     <div id="dias-container" class="dias-container"></div>
   </div>
   
+  <!-- Modal para seleccionar recetas -->
   <div id="modal-recetas" class="modal-recetas">
     <div class="modal-content">
       <div class="modal-header">
@@ -54,7 +55,7 @@
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-search">
-        <input type="text" id="modal-search-input" placeholder="🔍 Buscar receta por nombre o ingrediente...">
+        <input type="text" id="modal-search-input" placeholder="🔍 Buscar receta...">
       </div>
       <div id="modal-recetas-list" class="modal-recetas-list"></div>
     </div>
@@ -83,21 +84,10 @@
     </a>
   </nav>
   
-  <script>
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark-mode');
-      const isDark = document.body.classList.contains('dark-mode');
-      localStorage.setItem('darkMode', isDark);
-      const btn = document.getElementById('dark-mode-toggle');
-      if (btn) btn.textContent = isDark ? '☀️' : '🌙';
-    }
-    
-    const savedDark = localStorage.getItem('darkMode') === 'true';
-    if (savedDark) {
-      document.body.classList.add('dark-mode');
-      document.getElementById('dark-mode-toggle').textContent = '☀️';
-    }
-  </script>
-  <script src="js/planificador.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="js/supabaseClient.js" type="module"></script>
+  <script src="js/planificador.js" type="module"></script>
+  <script src="js/dark-mode.js"></script>
 </body>
 </html>

@@ -1,641 +1,349 @@
-// ================================================
-// receta.js – ForaneoKitchen
-// Visualización de receta con video, likes, favoritos, comentarios y puntos
-// ================================================
+// receta.js — CORREGIDO: campo es_premium correcto, imágenes y navegación
+import { supabase } from './supabaseClient.js';
 
-(function () {
-  const API = (() => {
-    if (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')) {
-      return 'http://localhost:3000';
+let recetaActual = null;
+let currentUser  = null;
+
+const PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
+
+function escapeHTML(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast(m, err = false) {
+  let t = document.getElementById('receta-toast');
+  if (!t) { t = document.createElement('div'); t.id = 'receta-toast'; t.className = 'notification-toast'; document.body.appendChild(t); }
+  t.textContent = m; t.style.background = err ? '#e53935' : '#4caf50';
+  t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function formatFecha(f) {
+  const d = new Date(f), now = new Date(), diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'Ahora';
+  if (diff < 3600) return `${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} h`;
+  return d.toLocaleDateString('es-MX');
+}
+
+// ── Cargar usuario desde localStorage ─────────────────────────────────────────
+async function cargarUsuario() {
+  const userId = localStorage.getItem('userId');
+  if (!userId) return;
+  try {
+    // Intentar con el id numérico o como string
+    const { data } = await supabase.from('usuarios').select('*').eq('id', userId).single();
+    currentUser = data;
+  } catch { currentUser = null; }
+}
+
+// ── Cargar receta ──────────────────────────────────────────────────────────────
+async function cargarReceta() {
+  const id        = new URLSearchParams(window.location.search).get('id');
+  const container = document.getElementById('receta-container');
+  if (!id) { mostrarError('No se especificó la receta'); return; }
+
+  container.innerHTML = `<div class="receta-loading"><div class="loading-spinner"></div><p>Cargando...</p></div>`;
+
+  try {
+    // CORRECCIÓN: sin filtro es_premium_receta (campo no existe), usar es_premium
+    // Los usuarios Free pueden ver recetas no-premium, Premium ve todas
+    let query = supabase.from('recetas').select('*').eq('id', parseInt(id));
+    const esPremium = currentUser?.es_premium || currentUser?.esPremium;
+    if (!esPremium) {
+      // Si no es premium, solo puede ver recetas no-premium
+      // Pero primero cargar para verificar si es premium o no
+      query = query.or('es_premium.eq.false,es_premium.is.null');
     }
-    return window.location.origin;
-  })();
-  
-  let token = localStorage.getItem('token');
-  let recetaActual = null;
 
-  // ================================================
-  // UTILIDADES
-  // ================================================
+    const { data, error } = await query.single();
+    if (error || !data) throw new Error('Receta no encontrada');
 
-  function getId() {
-    return new URLSearchParams(window.location.search).get('id');
+    recetaActual = data;
+    renderizarReceta(recetaActual);
+    if (currentUser) await registrarVista(recetaActual.id);
+    await cargarComentarios(recetaActual.id);
+  } catch (e) {
+    console.error('Error cargando receta:', e);
+    mostrarError('Receta no encontrada o sin acceso');
   }
+}
 
-  function esc(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+// ── Like ───────────────────────────────────────────────────────────────────────
+async function toggleLike() {
+  const userId = localStorage.getItem('userId');
+  if (!userId) { showToast('Inicia sesión para dar like', true); return; }
 
-  function formatFecha(fecha) {
-    if (!fecha) return '';
-    const d = new Date(fecha);
-    const now = new Date();
-    const diff = now - d;
-    const minutos = Math.floor(diff / 60000);
-    const horas = Math.floor(diff / 3600000);
-    const dias = Math.floor(diff / 86400000);
-    
-    if (minutos < 1) return 'Ahora mismo';
-    if (minutos < 60) return `${minutos} minuto${minutos !== 1 ? 's' : ''}`;
-    if (horas < 24) return `${horas} hora${horas !== 1 ? 's' : ''}`;
-    if (dias < 7) return `${dias} día${dias !== 1 ? 's' : ''}`;
-    return d.toLocaleDateString('es-MX');
-  }
+  const btn     = document.getElementById('like-btn');
+  const countEl = document.getElementById('like-count');
+  const liked   = btn.dataset.liked === '1';
+  btn.disabled  = true;
+  const old     = parseInt(countEl.textContent) || 0;
+  countEl.textContent = liked ? Math.max(old - 1, 0) : old + 1;
+  btn.classList.toggle('liked', !liked);
+  btn.dataset.liked = liked ? '0' : '1';
 
-  function toast(msg, isError = false) {
-    let el = document.getElementById('receta-toast');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'receta-toast';
-      el.style.cssText = `position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(20px);
-        padding:12px 24px;border-radius:50px;font-weight:600;font-size:.9rem;z-index:2000;
-        opacity:0;pointer-events:none;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.2);
-        color:white;white-space:nowrap;font-family:'Inter',sans-serif;`;
-      document.body.appendChild(el);
+  try {
+    if (liked) {
+      await supabase.rpc('eliminar_like', { p_receta_id: recetaActual.id, p_usuario_id: parseInt(userId) });
+    } else {
+      await supabase.rpc('agregar_like',  { p_receta_id: recetaActual.id, p_usuario_id: parseInt(userId) });
     }
-    el.textContent = msg;
-    el.style.background = isError ? '#f44336' : '#4caf50';
-    el.style.opacity = '1';
-    el.style.transform = 'translateX(-50%) translateY(0)';
-    setTimeout(() => {
-      el.style.opacity = '0';
-      el.style.transform = 'translateX(-50%) translateY(20px)';
-    }, 3000);
-  }
+    const { data } = await supabase.from('recetas').select('likes').eq('id', recetaActual.id).single();
+    if (data) countEl.textContent = data.likes;
+    showToast(liked ? 'Like eliminado' : '❤️ ¡Like!');
+  } catch {
+    countEl.textContent = old;
+    btn.classList.toggle('liked', liked);
+    btn.dataset.liked = liked ? '1' : '0';
+  } finally { btn.disabled = false; }
+}
 
-  function formatIngredientes(raw) {
-    if (!raw) return [];
-    return raw.split(',').map(s => s.trim()).filter(Boolean);
-  }
+// ── Favorito ───────────────────────────────────────────────────────────────────
+async function toggleFav() {
+  const userId = localStorage.getItem('userId');
+  if (!userId) { showToast('Inicia sesión para guardar', true); return; }
 
-  function formatPasos(raw) {
-    if (!raw) return [];
-    if (/\d+\./.test(raw)) {
-      return raw.split(/\d+\./).map(s => s.trim()).filter(Boolean);
+  const btn = document.getElementById('fav-btn');
+  const fav = btn.dataset.fav === '1';
+  btn.disabled = true;
+  btn.textContent = fav ? '☆ Guardar' : '⭐ Guardado';
+  btn.classList.toggle('favorited', !fav);
+  btn.dataset.fav = fav ? '0' : '1';
+
+  try {
+    if (fav) {
+      await supabase.from('favoritos').delete().eq('usuario_id', userId).eq('receta_id', recetaActual.id);
+    } else {
+      await supabase.from('favoritos').insert({ usuario_id: userId, receta_id: recetaActual.id });
     }
-    if (raw.includes('\n')) {
-      return raw.split('\n').map(s => s.trim()).filter(Boolean);
+    showToast(fav ? 'Eliminado de favoritos' : '⭐ Guardado');
+  } catch {
+    btn.textContent = fav ? '⭐ Guardado' : '☆ Guardar';
+    btn.classList.toggle('favorited', fav);
+    btn.dataset.fav = fav ? '1' : '0';
+  } finally { btn.disabled = false; }
+}
+
+// ── Historial ──────────────────────────────────────────────────────────────────
+async function registrarVista(id) {
+  const userId = localStorage.getItem('userId');
+  if (!userId || (!currentUser?.es_premium && !currentUser?.esPremium)) return;
+  try {
+    await supabase.from('historial').upsert(
+      { usuario_id: userId, receta_id: id, fecha: new Date().toISOString() },
+      { onConflict: 'usuario_id,receta_id' }
+    );
+  } catch { /* silencioso */ }
+}
+
+// ── Agregar al planificador ────────────────────────────────────────────────────
+function agregarAPlan() {
+  const userId = localStorage.getItem('userId');
+  if (!userId) { showToast('Inicia sesión para usar el planificador', true); return; }
+  window.location.href = `planificador.html?agregar=${recetaActual.id}`;
+}
+
+// ── Comentarios ────────────────────────────────────────────────────────────────
+async function cargarComentarios(recipeId) {
+  const lista = document.getElementById('comentarios-lista');
+  if (!lista) return;
+  try {
+    // Traer comentarios con info de usuario por join
+    const { data } = await supabase
+      .from('comentarios')
+      .select('*, usuario:usuario_id(username, nombre)')
+      .eq('receta_id', recipeId)
+      .order('fecha');
+
+    if (!data?.length) {
+      lista.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;">Sin comentarios aún. ¡Sé el primero!</div>';
+      return;
     }
-    return [raw.trim()];
-  }
 
-  function extraerYouTubeId(url) {
-    if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-  }
-
-  // ================================================
-  // LOCALSTORAGE PARA INGREDIENTES
-  // ================================================
-
-  function getEstadoIngredientes(id) {
-    try {
-      return JSON.parse(localStorage.getItem('ing_' + id) || '{}');
-    } catch {
-      return {};
-    }
-  }
-
-  function setEstadoIngredientes(id, estado) {
-    localStorage.setItem('ing_' + id, JSON.stringify(estado));
-  }
-
-  // ================================================
-  // REGISTRAR VISTA EN HISTORIAL
-  // ================================================
-
-  async function registrarVista(id) {
-    if (!token) return;
-    try {
-      await fetch(`${API}/api/users/me/history`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ recipeId: id })
-      });
-    } catch (err) {
-      console.error('Error registrando vista:', err);
-    }
-  }
-
-  // ================================================
-  // OBTENER ESTADO LIKE/FAV
-  // ================================================
-
-  async function getEstadoSocial(id) {
-    if (!token) return { liked: false, favorito: false };
-    try {
-      const [lRes, fRes] = await Promise.all([
-        fetch(`${API}/api/recipes/${id}/like`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        }),
-        fetch(`${API}/api/users/me/favorites/${id}`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        })
-      ]);
-      const l = lRes.ok ? await lRes.json() : { liked: false };
-      const f = fRes.ok ? await fRes.json() : { favorito: false };
-      return { liked: l.liked, favorito: f.favorito };
-    } catch {
-      return { liked: false, favorito: false };
-    }
-  }
-
-  // ================================================
-  // RENDER RECETA
-  // ================================================
-
-  async function renderReceta(r) {
-    const container = document.getElementById('receta-container');
-    if (!container) return;
-
-    const ings = formatIngredientes(r.ingredientes);
-    const pasos = formatPasos(r.pasos);
-    const precio = r.precio || '$$';
-    const tiempo = r.tiempo || '30 min';
-    const img = r.imagen || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
-    
-    const estadoIngredientes = getEstadoIngredientes(r.id);
-    const social = await getEstadoSocial(r.id);
-
-    // HTML de ingredientes con checkboxes
-    const ingsHTML = ings.map((ing, i) => {
-      const seleccionado = estadoIngredientes[i] || false;
+    const userId = localStorage.getItem('userId');
+    lista.innerHTML = data.map(c => {
+      const uname  = c.usuario?.username || c.usuario?.nombre || 'Usuario';
+      const inicial = uname[0].toUpperCase();
+      const esPropio = userId && String(c.user_id) === String(userId);
       return `
-        <li class="${seleccionado ? 'seleccionado' : ''}" data-ing-index="${i}">
-          <input type="checkbox" class="checkbox-ingrediente" data-ing-index="${i}" ${seleccionado ? 'checked' : ''}>
-          <span>🥄 ${esc(ing)}</span>
-        </li>
-      `;
+        <div class="comentario-item">
+          <div class="comentario-avatar"><div class="avatar-placeholder">${inicial}</div></div>
+          <div class="comentario-contenido">
+            <div class="comentario-header">
+              <strong>${escapeHTML(uname)}</strong>
+              <small>${formatFecha(c.fecha)}</small>
+            </div>
+            <p>${escapeHTML(c.texto)}</p>
+            ${esPropio ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario(${c.id})">🗑️</button>` : ''}
+          </div>
+        </div>`;
     }).join('');
+  } catch (e) {
+    console.error('Error cargando comentarios:', e);
+    lista.innerHTML = '<div style="color:#e53935;text-align:center;">Error al cargar comentarios</div>';
+  }
+}
 
-    // HTML de pasos
-    const pasosHTML = pasos.map((p, i) => `
-      <div class="paso-item">
-        <div class="paso-numero">${i + 1}</div>
-        <div class="paso-texto">${esc(p)}</div>
-      </div>
-    `).join('');
+async function enviarComentario() {
+  const userId = localStorage.getItem('userId');
+  if (!userId) { showToast('Inicia sesión para comentar', true); return; }
+  const inp   = document.getElementById('nuevo-comentario');
+  const texto = inp?.value.trim();
+  if (!texto) { showToast('Escribe un comentario', true); return; }
+  const btn = document.getElementById('enviar-comentario-btn');
+  if (btn) btn.disabled = true;
+  try {
+    const { error } = await supabase.from('comentarios').insert({
+      receta_id: recetaActual.id,
+      usuario_id:   userId,
+      texto,
+      fecha:     new Date().toISOString()
+    });
+    if (error) throw error;
+    if (inp) inp.value = '';
+    showToast('💬 Comentario publicado');
+    await cargarComentarios(recetaActual.id);
+  } catch (e) { showToast('Error al publicar: ' + (e.message || ''), true); }
+  finally { if (btn) btn.disabled = false; }
+}
 
-    // Video solo si puede verlo (Premium o receta normal)
-    const videoId = extraerYouTubeId(r.video_url);
-    const puedeVerVideo = r.puedeVerVideo !== undefined ? r.puedeVerVideo : true;
-    
-    let videoHTML = '';
-    if (videoId) {
-      if (puedeVerVideo) {
-        videoHTML = `
-          <div class="video-container" style="margin-bottom: 24px;">
-            <h2 style="font-family:'Poppins',sans-serif; font-size:1.2rem; margin-bottom:12px;">🎬 Video de preparación</h2>
-            <iframe 
-              width="100%" 
-              height="315" 
-              src="https://www.youtube.com/embed/${videoId}" 
-              frameborder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              allowfullscreen
-              style="border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-            </iframe>
-          </div>
-        `;
-      } else if (r.video_url) {
-        videoHTML = `
-          <div class="video-premium-bloqueado" style="margin-bottom: 24px; padding: 30px; background: linear-gradient(135deg, #fff3e0, #ffe0b2); border-radius: 20px; text-align: center; border: 2px dashed #ff9800;">
-            <span style="font-size: 3rem;">🔒</span>
-            <h3 style="color: #e65100; margin: 10px 0;">Contenido Premium</h3>
-            <p style="margin-bottom: 15px;">Este video es exclusivo para usuarios <strong>Premium</strong></p>
-            <button onclick="window.location.href='perfil.html'" class="btn-premium" style="background: linear-gradient(135deg, #ff9800, #f57c00); color: white; border: none; padding: 10px 24px; border-radius: 30px; cursor: pointer; font-weight: 600;">👑 Actualizar a Premium</button>
-          </div>
-        `;
-      }
-    }
+async function eliminarComentario(cid) {
+  if (!confirm('¿Eliminar comentario?')) return;
+  try {
+    await supabase.from('comentarios').delete().eq('id', cid);
+    await cargarComentarios(recetaActual.id);
+    showToast('Comentario eliminado');
+  } catch { showToast('Error al eliminar', true); }
+}
 
-    container.innerHTML = `
+// ── Renderizar receta ──────────────────────────────────────────────────────────
+function renderizarReceta(r) {
+  const container = document.getElementById('receta-container');
+
+  // CORRECCIÓN: parsear ingredientes y pasos defensivamente
+  const ings  = (r.ingredientes || '').split(',').map(i => i.trim()).filter(i => i);
+  const pasos = (r.pasos || '').split(/\d+\./).filter(p => p.trim()).map(p => p.trim());
+  if (!pasos.length) pasos.push(r.pasos || '');
+
+  // CORRECCIÓN: usar imagen directamente — si viene de Supabase Storage ya es URL pública
+  const imagenSrc = r.imagen || PLACEHOLDER;
+
+  const likedCls = r.usuarioLike ? 'liked'     : '';
+  const favCls   = r.esFavorito  ? 'favorited' : '';
+  const userId   = localStorage.getItem('userId');
+
+  container.innerHTML = `
+    <button class="back-btn" onclick="window.history.back()">← Volver</button>
+    <div class="receta-container">
       <div class="receta-imagen">
-        <img src="${esc(img)}" alt="${esc(r.titulo)}" onerror="this.src='${img}'">
+        <img src="${imagenSrc}"
+             alt="${escapeHTML(r.titulo)}"
+             onerror="this.src='${PLACEHOLDER}'"
+             loading="lazy">
       </div>
+      ${r.video_youtube || r.video_url ? `
+      <div class="receta-video" style="margin-top: 20px; border-radius: 12px; overflow: hidden; background: #000;">
+        ${r.video_youtube ? `
+          <iframe width="100%" height="315" src="https://www.youtube.com/embed/${r.video_youtube}" frameborder="0" allowfullscreen></iframe>
+        ` : `
+          <video src="${r.video_url}" controls style="width: 100%; max-height: 400px;"></video>
+        `}
+      </div>
+      ` : ''}
       <div class="receta-content">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-          <h1>${esc(r.titulo)}</h1>
-          ${r.es_premium_receta ? '<span class="premium-badge" style="background: linear-gradient(135deg, #ff9800, #f57c00); color: white; padding: 5px 12px; border-radius: 30px; font-size: 0.8rem; font-weight: bold;">👑 Premium</span>' : ''}
-        </div>
-        <div class="receta-autor">
-          <span>👨‍🍳</span> ${esc(r.autor || 'Anónimo')}
-          <span style="margin-left: 15px;">📅 ${formatFecha(r.fecha)}</span>
+        <h1>${escapeHTML(r.titulo)}</h1>
+        <div class="receta-autor">👨‍🍳 ${escapeHTML(r.autor || 'Anónimo')}</div>
+
+        <div class="acciones-receta" style="display:flex;gap:12px;margin:16px 0;flex-wrap:wrap;">
+          <button class="btn-like ${likedCls}" id="like-btn"
+            data-liked="${r.usuarioLike ? 1 : 0}"
+            onclick="window.toggleLike()">
+            ❤️ <span id="like-count">${r.likes || 0}</span>
+          </button>
+          <button class="btn-fav ${favCls}" id="fav-btn"
+            data-fav="${r.esFavorito ? 1 : 0}"
+            onclick="window.toggleFav()">
+            ${r.esFavorito ? '⭐ Guardado' : '☆ Guardar'}
+          </button>
+          <button class="btn-plan-mini" onclick="window.agregarAPlan()">📅 Al plan</button>
         </div>
 
         <div class="info-cards">
           <div class="info-card">
             <span class="info-icon">💰</span>
-            <div class="info-label">TOTAL</div>
-            <div class="info-value total">${esc(precio)}</div>
+            <div class="info-label">COSTO</div>
+            <div class="info-value total">${escapeHTML(r.precio || '$$')}</div>
           </div>
           <div class="info-card">
             <span class="info-icon">⏱️</span>
             <div class="info-label">TIEMPO</div>
-            <div class="info-value">${esc(tiempo)}</div>
-          </div>
-        </div>
-
-        ${videoHTML}
-
-        <div class="receta-acciones-sociales" style="display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap;">
-          <button id="like-btn" class="like-btn ${social.liked ? 'liked' : ''}"
-            style="padding: 10px 20px; border-radius: 40px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem;
-                   background: ${social.liked ? '#f44336' : '#ffebee'}; color: ${social.liked ? 'white' : '#e53935'}; transition: all 0.2s;">
-            ❤️ <span id="likes-count">${r.likes || 0}</span> Likes
-          </button>
-          <button id="fav-btn" class="favorito-btn ${social.favorito ? 'favorited' : ''}"
-            style="padding: 10px 20px; border-radius: 40px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem;
-                   background: ${social.favorito ? '#ff9800' : '#fff3e0'}; color: ${social.favorito ? 'white' : '#e65100'}; transition: all 0.2s;">
-            ${social.favorito ? '⭐ Guardada' : '☆ Guardar'}
-          </button>
-          <button id="comentar-btn"
-            style="padding: 10px 20px; border-radius: 40px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem;
-                   background: #e8f5e9; color: #2e7d32; transition: all 0.2s;">
-            💬 Comentarios
-          </button>
-        </div>
-
-        <div id="comentarios-section" style="display: none; margin-bottom: 28px;">
-          <h2 style="font-family: 'Poppins', sans-serif; font-size: 1.2rem; margin-bottom: 16px;">💬 Comentarios</h2>
-          <div id="comentarios-lista" style="max-height: 350px; overflow-y: auto; margin-bottom: 16px; border: 1px solid #e0e0e0; border-radius: 20px; padding: 16px; background: #fafafa;"></div>
-          <div style="display: flex; gap: 12px;">
-            <textarea id="nuevo-comentario" rows="2" placeholder="Escribe un comentario..." maxlength="500"
-              style="flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 20px; font-family: inherit; font-size: 0.9rem; resize: none; outline: none; transition: all 0.2s;"></textarea>
-            <button id="enviar-comentario"
-              style="padding: 0 24px; background: linear-gradient(135deg, #4caf50, #2e7d32); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-family: inherit;">
-              Enviar
-            </button>
+            <div class="info-value">${escapeHTML(r.tiempo || '30 min')}</div>
           </div>
         </div>
 
         <div class="seccion">
           <h2>📝 Ingredientes</h2>
-          <ul class="lista-ingredientes">${ingsHTML}</ul>
+          <ul class="lista-ingredientes">
+            ${ings.map(i => `<li>🥘 ${escapeHTML(i)}</li>`).join('')}
+          </ul>
         </div>
 
         <div class="seccion">
           <h2>👨‍🍳 Preparación</h2>
-          <div class="pasos-lista">${pasosHTML}</div>
+          <div class="pasos-lista">
+            ${pasos.map((p, idx) => `
+              <div class="paso-item">
+                <div class="paso-numero">${idx + 1}</div>
+                <div class="paso-texto">${escapeHTML(p)}</div>
+              </div>`).join('')}
+          </div>
+        </div>
+
+        <button class="btn-plan-semanal" onclick="window.agregarAPlan()">
+          📅 Agregar al planificador
+        </button>
+
+        <div class="seccion">
+          <h2>💬 Comentarios</h2>
+          <div id="comentarios-lista" class="comentarios-lista">
+            <div style="text-align:center;padding:20px;">Cargando comentarios...</div>
+          </div>
+          ${userId ? `
+            <div class="nuevo-comentario-area" style="display:flex;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #eee;">
+              <textarea id="nuevo-comentario" placeholder="Escribe un comentario..." rows="2"
+                style="flex:1;padding:12px;border:2px solid #e8f5e9;border-radius:16px;font-family:inherit;resize:none;outline:none;font-size:0.9rem;"></textarea>
+              <button id="enviar-comentario-btn"
+                style="padding:8px 20px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:white;border:none;border-radius:30px;cursor:pointer;font-weight:500;white-space:nowrap;">
+                Enviar
+              </button>
+            </div>` : `
+            <p style="text-align:center;color:#aaa;margin-top:16px;">
+              <a href="login.html" style="color:#4caf50;font-weight:600;">Inicia sesión</a> para comentar
+            </p>`}
         </div>
       </div>
-    `;
+    </div>`;
 
-    setupIngredientes(r.id, container);
-    setupSocial(r);
-  }
+  // Listener del botón enviar comentario
+  document.getElementById('enviar-comentario-btn')?.addEventListener('click', enviarComentario);
+}
 
-  // ================================================
-  // INGREDIENTES INTERACTIVOS
-  // ================================================
+function mostrarError(msg) {
+  const c = document.getElementById('receta-container');
+  if (c) c.innerHTML = `
+    <div class="error-message">
+      <span class="error-icon">😕</span>
+      <p>${escapeHTML(msg)}</p>
+      <button onclick="window.location.href='home.html'">← Volver al inicio</button>
+    </div>`;
+}
 
-  function setupIngredientes(recetaId, container) {
-    const items = container.querySelectorAll('.lista-ingredientes li');
-    items.forEach(li => {
-      const cb = li.querySelector('.checkbox-ingrediente');
-      const index = parseInt(li.dataset.ingIndex);
-      
-      const toggle = () => {
-        cb.checked = !cb.checked;
-        li.classList.toggle('seleccionado', cb.checked);
-        const estado = getEstadoIngredientes(recetaId);
-        estado[index] = cb.checked;
-        setEstadoIngredientes(recetaId, estado);
-      };
-      
-      li.addEventListener('click', e => {
-        if (e.target !== cb) toggle();
-      });
-      
-      cb.addEventListener('change', () => {
-        li.classList.toggle('seleccionado', cb.checked);
-        const estado = getEstadoIngredientes(recetaId);
-        estado[index] = cb.checked;
-        setEstadoIngredientes(recetaId, estado);
-      });
-    });
-  }
+// Exponer globalmente
+window.toggleLike        = toggleLike;
+window.toggleFav         = toggleFav;
+window.agregarAPlan      = agregarAPlan;
+window.eliminarComentario = eliminarComentario;
 
-  // ================================================
-  // LIKES, FAVORITOS, COMENTARIOS
-  // ================================================
-
-  function setupSocial(r) {
-    // --- LIKE ---
-    const likeBtn = document.getElementById('like-btn');
-    likeBtn?.addEventListener('click', async () => {
-      if (!token) {
-        toast('Inicia sesión para dar like', true);
-        return;
-      }
-      
-      const isLiked = likeBtn.classList.contains('liked');
-      const method = isLiked ? 'DELETE' : 'POST';
-      const countEl = document.getElementById('likes-count');
-      const currentLikes = r.likes || 0;
-      
-      // Optimistic update
-      likeBtn.classList.toggle('liked', !isLiked);
-      likeBtn.style.background = !isLiked ? '#f44336' : '#ffebee';
-      likeBtn.style.color = !isLiked ? 'white' : '#e53935';
-      if (countEl) {
-        countEl.textContent = !isLiked ? currentLikes + 1 : Math.max(currentLikes - 1, 0);
-      }
-      
-      try {
-        const res = await fetch(`${API}/api/recipes/${r.id}/like`, {
-          method,
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        const data = await res.json();
-        
-        if (!res.ok) {
-          // Revertir
-          likeBtn.classList.toggle('liked', isLiked);
-          likeBtn.style.background = isLiked ? '#f44336' : '#ffebee';
-          likeBtn.style.color = isLiked ? 'white' : '#e53935';
-          if (countEl) countEl.textContent = currentLikes;
-          toast(data.error || 'Error', true);
-          return;
-        }
-        
-        r.likes = data.likes;
-        if (countEl) countEl.textContent = data.likes;
-        toast(isLiked ? 'Like eliminado' : '❤️ ¡Te gusta esta receta!');
-      } catch {
-        toast('Error de conexión', true);
-      }
-    });
-
-    // --- FAVORITO ---
-    const favBtn = document.getElementById('fav-btn');
-    favBtn?.addEventListener('click', async () => {
-      if (!token) {
-        toast('Inicia sesión para guardar favoritos', true);
-        return;
-      }
-      
-      const isFav = favBtn.classList.contains('favorited');
-      const method = isFav ? 'DELETE' : 'POST';
-      
-      favBtn.classList.toggle('favorited', !isFav);
-      favBtn.textContent = !isFav ? '⭐ Guardada' : '☆ Guardar';
-      favBtn.style.background = !isFav ? '#ff9800' : '#fff3e0';
-      favBtn.style.color = !isFav ? 'white' : '#e65100';
-      
-      try {
-        const res = await fetch(`${API}/api/users/me/favorites/${r.id}`, {
-          method,
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        
-        if (!res.ok) {
-          favBtn.classList.toggle('favorited', isFav);
-          favBtn.textContent = isFav ? '⭐ Guardada' : '☆ Guardar';
-          favBtn.style.background = isFav ? '#ff9800' : '#fff3e0';
-          favBtn.style.color = isFav ? 'white' : '#e65100';
-          const data = await res.json();
-          toast(data.error || 'Error', true);
-          return;
-        }
-        
-        toast(isFav ? 'Eliminada de favoritos' : '⭐ Guardada en favoritos');
-      } catch {
-        toast('Error de conexión', true);
-      }
-    });
-
-    // --- COMENTARIOS ---
-    const comentarBtn = document.getElementById('comentar-btn');
-    const comentariosSection = document.getElementById('comentarios-section');
-    const nuevoComentario = document.getElementById('nuevo-comentario');
-    const enviarComentario = document.getElementById('enviar-comentario');
-    
-    comentarBtn?.addEventListener('click', () => {
-      const visible = comentariosSection.style.display !== 'none';
-      comentariosSection.style.display = visible ? 'none' : 'block';
-      if (!visible) cargarComentarios(r.id);
-    });
-    
-    enviarComentario?.addEventListener('click', () => enviarNuevoComentario(r.id));
-    nuevoComentario?.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        enviarNuevoComentario(r.id);
-      }
-    });
-    nuevoComentario?.addEventListener('focus', () => {
-      nuevoComentario.style.borderColor = '#4caf50';
-    });
-    nuevoComentario?.addEventListener('blur', () => {
-      nuevoComentario.style.borderColor = '#e0e0e0';
-    });
-  }
-
-  // ================================================
-  // COMENTARIOS
-  // ================================================
-
-  async function cargarComentarios(recipeId) {
-    const lista = document.getElementById('comentarios-lista');
-    if (!lista) return;
-    
-    lista.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">Cargando comentarios...</div>';
-    
-    let usuarioActual = null;
-    if (token) {
-      try {
-        const meRes = await fetch(`${API}/api/auth/me`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (meRes.ok) usuarioActual = await meRes.json();
-      } catch {}
-    }
-    
-    try {
-      const res = await fetch(`${API}/api/recipes/${recipeId}/comments`);
-      const comments = res.ok ? await res.json() : [];
-      
-      if (!comments.length) {
-        lista.innerHTML = '<div style="text-align: center; padding: 30px; color: #aaa;">No hay comentarios aún. ¡Sé el primero en comentar!</div>';
-        return;
-      }
-      
-      lista.innerHTML = comments.map(c => {
-        const usuario = c.usuario || {};
-        const puedeEliminar = usuarioActual && usuarioActual.id === usuario.id;
-        const avatar = usuario.foto_perfil
-          ? `<img src="${usuario.foto_perfil}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" alt="">`
-          : `<div style="width: 40px; height: 40px; border-radius: 50%; background: #4caf50; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">${(usuario.username || 'U').charAt(0).toUpperCase()}</div>`;
-        
-        return `
-          <div class="comentario-item" data-id="${c.id}" style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
-            ${avatar}
-            <div style="flex: 1;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <strong style="color: #2e7d32;">${esc(usuario.username || 'Usuario')}</strong>
-                <small style="color: #aaa;">${formatFecha(c.fecha)}</small>
-              </div>
-              <p style="color: #555; line-height: 1.4;">${esc(c.texto)}</p>
-            </div>
-            ${puedeEliminar ? `<button class="eliminar-comentario" data-id="${c.id}" style="background: none; border: none; color: #ccc; cursor: pointer; font-size: 1rem;">🗑️</button>` : ''}
-          </div>
-        `;
-      }).join('');
-      
-      // Eventos para eliminar comentarios
-      document.querySelectorAll('.eliminar-comentario').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('¿Eliminar este comentario?')) return;
-          const commentId = btn.dataset.id;
-          try {
-            const res = await fetch(`${API}/api/comments/${commentId}`, {
-              method: 'DELETE',
-              headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (res.ok) {
-              toast('Comentario eliminado');
-              cargarComentarios(recipeId);
-            } else {
-              toast('Error al eliminar', true);
-            }
-          } catch {
-            toast('Error de conexión', true);
-          }
-        });
-      });
-      
-    } catch {
-      lista.innerHTML = '<div style="color: #f44336; padding: 20px; text-align: center;">Error al cargar comentarios</div>';
-    }
-  }
-  
-  async function enviarNuevoComentario(recipeId) {
-    if (!token) {
-      toast('Inicia sesión para comentar', true);
-      return;
-    }
-    
-    const input = document.getElementById('nuevo-comentario');
-    const texto = input?.value.trim();
-    if (!texto) {
-      toast('Escribe un comentario', true);
-      return;
-    }
-    if (texto.length > 500) {
-      toast('Máximo 500 caracteres', true);
-      return;
-    }
-    
-    try {
-      const res = await fetch(`${API}/api/recipes/${recipeId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ texto })
-      });
-      
-      if (res.ok) {
-        input.value = '';
-        await cargarComentarios(recipeId);
-        toast('💬 Comentario publicado (+3 puntos)');
-      } else {
-        const data = await res.json();
-        toast(data.error || 'Error al comentar', true);
-      }
-    } catch {
-      toast('Error de conexión', true);
-    }
-  }
-
-  // ================================================
-  // MOSTRAR ERROR
-  // ================================================
-
-  function mostrarError(mensaje, esPremium = false) {
-    const container = document.getElementById('receta-container');
-    if (!container) return;
-    
-    if (esPremium) {
-      container.innerHTML = `
-        <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 32px;">
-          <div style="font-size: 4rem; margin-bottom: 16px;">👑</div>
-          <h2 style="color: #e65100; margin-bottom: 12px;">Contenido Premium</h2>
-          <p style="color: #666; margin-bottom: 24px;">${mensaje || 'Esta receta es exclusiva para usuarios Premium'}</p>
-          <button onclick="window.location.href='perfil.html'" style="background: linear-gradient(135deg, #ff9800, #f57c00); color: white; border: none; padding: 12px 28px; border-radius: 30px; cursor: pointer; font-size: 1rem; font-weight: 600;">👑 Actualizar a Premium</button>
-          <br><br>
-          <button onclick="window.location.href='home.html'" style="background: transparent; color: #4caf50; border: 2px solid #4caf50; padding: 10px 24px; border-radius: 30px; cursor: pointer; font-size: 0.9rem; font-weight: 600;">← Volver a recetas</button>
-        </div>
-      `;
-    } else {
-      container.innerHTML = `
-        <div style="text-align: center; padding: 60px 20px; background: white; border-radius: 32px;">
-          <div style="font-size: 3rem; margin-bottom: 16px;">😢</div>
-          <p style="color: #c62828; font-size: 1.1rem; margin-bottom: 20px;">${esc(mensaje)}</p>
-          <button onclick="history.back()" style="background: #4caf50; color: white; border: none; padding: 12px 24px; border-radius: 30px; cursor: pointer; font-size: 1rem; font-weight: 600;">← Volver</button>
-        </div>
-      `;
-    }
-  }
-
-  // ================================================
-  // INICIALIZACIÓN
-  // ================================================
-
-  async function init() {
-    const id = getId();
-    if (!id) {
-      mostrarError('No se especificó qué receta ver');
-      return;
-    }
-    
-    try {
-      const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
-      const res = await fetch(`${API}/api/recipes/${id}`, { headers });
-      
-      if (res.status === 403) {
-        const error = await res.json();
-        mostrarError(error.mensaje || 'Esta receta es Premium. Actualiza tu cuenta para verla.', true);
-        return;
-      }
-      
-      if (res.status === 401) {
-        mostrarError('Inicia sesión para ver esta receta');
-        return;
-      }
-      
-      if (!res.ok) {
-        mostrarError(res.status === 404 ? 'Receta no encontrada' : 'Error al cargar la receta');
-        return;
-      }
-      
-      recetaActual = await res.json();
-      await renderReceta(recetaActual);
-      
-      // Registrar vista en historial (solo si el usuario está logueado)
-      if (token && recetaActual.id) {
-        await registrarVista(recetaActual.id);
-      }
-      
-    } catch (err) {
-      console.error('Error:', err);
-      mostrarError('No se pudo conectar con el servidor');
-    }
-  }
-  
-  // Iniciar
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
+async function init() {
+  await cargarUsuario();
+  await cargarReceta();
+}
+init();

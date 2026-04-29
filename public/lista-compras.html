@@ -24,8 +24,8 @@
         </div>
       </div>
       <div class="acciones">
-        <button class="btn-exportar" id="exportar-btn">📄 Exportar</button>
-        <button class="btn-compartir" id="compartir-btn">🔗 Compartir</button>
+        <button class="btn-exportar" id="exportar-pdf-btn">📄 Exportar PDF</button>
+        <button class="btn-sincronizar" id="sincronizar-btn">🔄 Sincronizar</button>
       </div>
     </header>
     
@@ -40,7 +40,7 @@
       <a href="subir-receta.html" class="nav-item">
         <span>📝</span> Subir
       </a>
-      <a href="planificador.html" class="nav-item active">
+      <a href="planificador.html" class="nav-item">
         <span>📅</span> Planificador
       </a>
       <a href="comunidad.html" class="nav-item">
@@ -52,7 +52,10 @@
     </nav>
   </div>
   
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="js/supabaseClient.js" type="module"></script>
+  <script src="js/lista-compras.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
-  <script src="js/lista-compras.js"></script>
 </body>
 </html>

@@ -1,354 +1,276 @@
-var API = 'http://localhost:3000';
+// home.js - Versión CORREGIDA
 
-var token = localStorage.getItem('token');
-var currentUser = null;
-var todasLasRecetas = [];
+let currentUser = null;
+let todasRecetas = [];
+let searchTimeout = null;
 
-var DOM = {
-  userName: document.getElementById('user-name'),
-  premiumBadge: document.getElementById('premium-badge'),
-  searchInput: document.getElementById('search-input'),
-  filterTags: document.querySelectorAll('.tag'),
-  recetasContainer: document.getElementById('recetas'),
-  cerrarSesionBtn: document.getElementById('cerrar-sesion-btn'),
-  chatBoton: document.getElementById('chat-boton'),
-  chatWindow: document.getElementById('chat-window'),
-  cerrarChatBtn: document.getElementById('cerrar-chat-btn'),
-  chatInput: document.getElementById('chat-input'),
-  enviarChatBtn: document.getElementById('enviar-chat-btn'),
-  chatMessages: document.getElementById('chat-messages')
-};
+const PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
 
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+function escapeHTML(s) { if (!s) return ''; return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function showToast(m, err = false) {
+  let t = document.getElementById('home-toast');
+  if (!t) { t = document.createElement('div'); t.id = 'home-toast'; t.className = 'notification-toast'; document.body.appendChild(t); }
+  t.textContent = m;
+  if (err) t.style.background = '#e53935';
+  else t.style.background = '#4caf50';
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-function obtenerValorNumerico(texto) {
-  if (!texto) return 0;
-  var numeros = texto.match(/\d+/);
-  return numeros ? parseInt(numeros[0]) : 0;
-}
-
-function coincideConFiltro(receta, filtro) {
-  var precioNumerico = receta.precio_numerico || obtenerValorNumerico(receta.precio);
-  var tiempoNumerico = receta.tiempo_numerico || obtenerValorNumerico(receta.tiempo);
-  var pasosLower = (receta.pasos || '').toLowerCase();
-  var ingredientesLower = (receta.ingredientes || '').toLowerCase();
-  var tituloLower = (receta.titulo || '').toLowerCase();
+async function cargarUsuario() {
+  const token = localStorage.getItem('token');
+  const userId = localStorage.getItem('userId');
   
-  switch(filtro) {
-    case 'economicas':
-      return precioNumerico > 0 && precioNumerico <= 35;
-    case 'rapidas':
-      return tiempoNumerico > 0 && tiempoNumerico <= 20;
-    case 'microondas':
-      return pasosLower.includes('microondas') || ingredientesLower.includes('microondas') || tituloLower.includes('microondas');
-    case 'menos30':
-      return precioNumerico > 0 && precioNumerico <= 30;
-    default:
-      return true;
+  console.log('🔍 home.js - Token:', token ? '✅' : '❌');
+  console.log('🔍 home.js - UserId:', userId);
+  
+  // Si no hay token, mostrar como invitado
+  if (!token) {
+    console.log('⚠️ No hay token, modo invitado');
+    document.getElementById('user-name').textContent = 'Invitado';
+    const puntos = document.getElementById('puntos-display');
+    if (puntos) puntos.textContent = '⭐ 0 pts';
+    return false;
   }
-}
-
-function obtenerEtiquetasReceta(receta) {
-  var etiquetas = [];
-  var precioNumerico = receta.precio_numerico || obtenerValorNumerico(receta.precio);
-  var tiempoNumerico = receta.tiempo_numerico || obtenerValorNumerico(receta.tiempo);
-  var pasosLower = (receta.pasos || '').toLowerCase();
   
-  if (precioNumerico > 0 && precioNumerico <= 35) etiquetas.push('economicas');
-  if (tiempoNumerico > 0 && tiempoNumerico <= 20) etiquetas.push('rapidas');
-  if (pasosLower.includes('microondas')) etiquetas.push('microondas');
-  if (precioNumerico > 0 && precioNumerico <= 30) etiquetas.push('menos de $30');
-  
-  return etiquetas;
-}
-
-function filtrarRecetas() {
-  if (!todasLasRecetas.length) return;
-  var textoBusqueda = DOM.searchInput ? DOM.searchInput.value.toLowerCase().trim() : '';
-  var filtroActivo = document.querySelector('.tag.active-filter');
-  var filtroCategoria = filtroActivo ? filtroActivo.dataset.filter : null;
-  var recetasFiltradas = todasLasRecetas.slice();
-  
-  if (textoBusqueda) {
-    recetasFiltradas = recetasFiltradas.filter(function(receta) {
-      return receta.titulo.toLowerCase().includes(textoBusqueda) ||
-             receta.ingredientes.toLowerCase().includes(textoBusqueda) ||
-             receta.pasos.toLowerCase().includes(textoBusqueda) ||
-             (receta.autor && receta.autor.toLowerCase().includes(textoBusqueda));
+  try {
+    const response = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
+    
+    console.log('📡 /api/auth/me response:', response.status);
+    
+    if (!response.ok) {
+      console.log('❌ Token inválido');
+      localStorage.clear();
+      document.getElementById('user-name').textContent = 'Invitado';
+      return false;
+    }
+    
+    currentUser = await response.json();
+    console.log('✅ Usuario cargado:', currentUser.username);
+    
+    document.getElementById('user-name').textContent = currentUser.nombre || currentUser.username;
+    
+    const puntos = document.getElementById('puntos-display');
+    if (puntos) puntos.textContent = `⭐ ${currentUser.puntos || 0} pts`;
+
+    // Avatar
+    const avatarImg = document.getElementById('user-avatar');
+    if (avatarImg && currentUser.foto_perfil) {
+      avatarImg.src = currentUser.foto_perfil;
+    }
+
+    // Mostrar botón cerrar sesión solo si está logueado
+    const cerrarBtn = document.getElementById('cerrar-sesion-btn');
+    if (cerrarBtn) cerrarBtn.style.display = 'block';
+    
+    if (currentUser.esPremium) {
+      const badge = document.getElementById('premium-badge');
+      if (badge) badge.style.display = 'flex';
+      const chatBtn = document.getElementById('chat-boton');
+      if (chatBtn) chatBtn.style.display = 'block';
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error:', error);
+    return false;
   }
-  if (filtroCategoria) {
-    recetasFiltradas = recetasFiltradas.filter(function(receta) {
-      return coincideConFiltro(receta, filtroCategoria);
+}
+
+async function toggleLike(id, btn) {
+  const token = localStorage.getItem('token');
+  if (!token) { showToast('Inicia sesión para dar like', true); return; }
+  
+  const liked = btn.dataset.liked === '1';
+  const countEl = btn.querySelector('span');
+  btn.disabled = true;
+  const old = parseInt(countEl.textContent) || 0;
+  countEl.textContent = liked ? Math.max(old - 1, 0) : old + 1;
+  btn.classList.toggle('liked', !liked);
+  btn.dataset.liked = liked ? '0' : '1';
+  
+  try {
+    const method = liked ? 'DELETE' : 'POST';
+    const res = await fetch(`/api/recipes/${id}/like`, {
+      method: method,
+      headers: { 'Authorization': `Bearer ${token}` }
     });
+    
+    if (!res.ok) throw new Error('Error');
+    
+    const data = await res.json();
+    countEl.textContent = data.likes;
+    showToast(liked ? 'Like eliminado' : '❤️ ¡Like!');
+  } catch {
+    countEl.textContent = old;
+    btn.classList.toggle('liked', liked);
+    btn.dataset.liked = liked ? '1' : '0';
   }
-  renderizarRecetas(recetasFiltradas);
+  finally { btn.disabled = false; }
+}
+
+async function toggleFav(id, btn) {
+  const token = localStorage.getItem('token');
+  if (!token) { showToast('Inicia sesión para guardar', true); return; }
+  
+  const fav = btn.dataset.fav === '1';
+  btn.disabled = true;
+  btn.textContent = fav ? '☆' : '⭐';
+  btn.dataset.fav = fav ? '0' : '1';
+  btn.classList.toggle('favorited', !fav);
+  
+  try {
+    const method = fav ? 'DELETE' : 'POST';
+    await fetch(`/api/users/me/favorites/${id}`, {
+      method: method,
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    showToast(fav ? 'Eliminado de favoritos' : '⭐ Guardado');
+  } catch {
+    btn.textContent = fav ? '⭐' : '☆';
+    btn.classList.toggle('favorited', fav);
+    btn.dataset.fav = fav ? '1' : '0';
+  }
+  finally { btn.disabled = false; }
+}
+
+async function cargarRecetas(params = {}) {
+  const container = document.getElementById('recetas');
+  const token = localStorage.getItem('token');
+  if (!container) return;
+  
+  container.innerHTML = '<div class="loading-spinner"></div>';
+  
+  try {
+    let url = '/api/recipes?';
+    if (params.q) url += `q=${encodeURIComponent(params.q)}&`;
+    if (params.maxPrecio) url += `maxPrecio=${params.maxPrecio}&`;
+    if (params.maxTiempo) url += `maxTiempo=${params.maxTiempo}&`;
+    
+    // Algoritmo: Si hay usuario logueado, pasar sus preferencias
+    if (currentUser && currentUser.preferencias && currentUser.preferencias.length > 0) {
+      url += `preferencias=${currentUser.preferencias.join(',')}&`;
+    }
+    
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    const response = await fetch(url, { headers });
+    const recetas = await response.json();
+    
+    renderizarRecetas(recetas);
+  } catch (error) {
+    console.error('Error cargando recetas:', error);
+    container.innerHTML = '<div class="error-message"><p>❌ Error al cargar recetas</p></div>';
+  }
 }
 
 function renderizarRecetas(recetas) {
-  if (!DOM.recetasContainer) return;
-  DOM.recetasContainer.innerHTML = '';
+  const container = document.getElementById('recetas');
+  if (!container) return;
   
-  if (recetas.length === 0) {
-    DOM.recetasContainer.innerHTML = '<div class="no-results"><span>🍳</span><p>No hay recetas disponibles</p></div>';
+  if (!recetas.length) {
+    container.innerHTML = '<div class="no-results"><span>🍳</span><p>No hay recetas</p></div>';
     return;
   }
   
-  for (var i = 0; i < recetas.length; i++) {
-    var r = recetas[i];
-    var card = document.createElement('div');
-    card.className = 'recipe-card';
-    var etiquetas = obtenerEtiquetasReceta(r);
-    var precio = r.precio || '$$';
-    var tiempo = r.tiempo || '30 min';
-    var etiquetasHTML = '';
-    for (var e = 0; e < etiquetas.length; e++) {
-      etiquetasHTML += '<span class="recipe-tag">' + escapeHTML(etiquetas[e]) + '</span>';
-    }
-    var imagenURL = r.imagen || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23e8f5e9"/%3E%3Ctext x="50" y="55" text-anchor="middle" fill="%234caf50" font-size="40"%3E🍳%3C/text%3E%3C/svg%3E';
-    
-    card.innerHTML = `
-      <div class="recipe-image"><img src="${imagenURL}" alt="${escapeHTML(r.titulo)}"></div>
-      <div class="recipe-content">
-        <h3>${escapeHTML(r.titulo)}</h3>
-        <div class="recipe-meta"><span class="recipe-price">💰 ${escapeHTML(precio)}</span><span class="recipe-time">⏱️ ${escapeHTML(tiempo)}</span></div>
-        <div class="recipe-tags">${etiquetasHTML}</div>
-        <button class="btn-ver-mas" data-id="${r.id}">Ver receta completa →</button>
-      </div>
-    `;
-    
-    var verMasBtn = card.querySelector('.btn-ver-mas');
-    verMasBtn.addEventListener('click', function(id) {
-      return function() {
-        registrarVistaReceta(id);
-        window.location.href = 'receta.html?id=' + id;
-      };
-    }(r.id));
-    DOM.recetasContainer.appendChild(card);
-  }
-}
-
-async function registrarVistaReceta(recipeId) {
-  if (!token) return;
-  try {
-    await fetch(API + '/api/users/me/history', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({ recipeId: recipeId })
-    });
-  } catch (err) {
-    console.error('Error al registrar vista:', err);
-  }
-}
-
-async function cargarRecetas() {
-  try {
-    var res = await fetch(API + '/api/recipes');
-    if (!res.ok) throw new Error('Error al cargar recetas');
-    todasLasRecetas = await res.json();
-    renderizarRecetas(todasLasRecetas);
-  } catch (err) {
-    console.error('Error cargando recetas', err);
-    if (DOM.recetasContainer) {
-      DOM.recetasContainer.innerHTML = '<div class="error-message"><p>Error al cargar las recetas</p></div>';
-    }
-  }
-}
-
-function agregarMensaje(tipo, texto, esOpcion, recetaId) {
-  if (esOpcion === undefined) esOpcion = false;
-  if (!DOM.chatMessages) return;
-  var div = document.createElement('div');
-  div.className = 'msg msg-' + tipo;
+  container.innerHTML = recetas.map(r => {
+    const likedCls = r.usuarioLike ? 'liked' : '';
+    const favCls = r.esFavorito ? 'favorited' : '';
+    const premiumBadge = r.es_premium ? '<span class="badge-premium">👑 Premium</span>' : '';
+    return `
+      <div class="recipe-card" data-id="${r.id}">
+        <div class="recipe-image"><img src="${r.imagen || PLACEHOLDER}" alt="${escapeHTML(r.titulo)}" loading="lazy">${premiumBadge}</div>
+        <div class="recipe-content">
+          <h3>${escapeHTML(r.titulo)}</h3>
+          <div class="recipe-autor">👨‍🍳 ${escapeHTML(r.autor)}</div>
+          <div class="recipe-meta"><span class="recipe-price">💰 ${escapeHTML(r.precio || '$$')}</span><span class="recipe-time">⏱️ ${escapeHTML(r.tiempo || '30 min')}</span></div>
+          <div class="recipe-social">
+            <button class="btn-like-mini ${likedCls}" data-id="${r.id}" data-liked="${r.usuarioLike ? 1 : 0}" onclick="event.stopPropagation();window.toggleLike(${r.id}, this)">
+              ❤️ <span>${r.likes || 0}</span>
+            </button>
+            <button class="btn-fav-mini ${favCls}" data-id="${r.id}" data-fav="${r.esFavorito ? 1 : 0}" onclick="event.stopPropagation();window.toggleFav(${r.id}, this)">
+              ${r.esFavorito ? '⭐' : '☆'}
+            </button>
+          </div>
+          <button class="btn-ver-mas" data-id="${r.id}">Ver receta →</button>
+        </div>
+      </div>`;
+  }).join('');
   
-  if (esOpcion && recetaId) {
-    div.innerHTML = '<button class="chat-receta-btn" data-id="' + recetaId + '">📖 ' + escapeHTML(texto) + '</button>';
-    var btn = div.querySelector('.chat-receta-btn');
-    btn.addEventListener('click', function() {
-      window.location.href = 'receta.html?id=' + recetaId;
-    });
-  } else {
-    div.textContent = texto;
-  }
-  
-  DOM.chatMessages.appendChild(div);
-  DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
-}
-
-function mostrarResultadosChat(resultados, busqueda) {
-  if (resultados.length === 0) {
-    agregarMensaje('bot', 'No encontré recetas relacionadas con "' + busqueda + '"');
-    return;
-  }
-  agregarMensaje('bot', 'Encontré ' + resultados.length + ' receta' + (resultados.length > 1 ? 's' : '') + ':');
-  var limite = Math.min(resultados.length, 5);
-  for (var i = 0; i < limite; i++) {
-    var r = resultados[i];
-    var textoOpcion = r.titulo + ' | 💰 ' + (r.precio || '$$') + ' | ⏱️ ' + (r.tiempo || '30 min');
-    agregarMensaje('bot', textoOpcion, true, r.id);
-  }
-  if (resultados.length > 5) {
-    agregarMensaje('bot', '...y ' + (resultados.length - 5) + ' más. Usa el buscador para ver todas.');
-  }
-}
-
-function buscarPorIngrediente(ingrediente) {
-  var busquedaLower = ingrediente.toLowerCase();
-  var resultados = todasLasRecetas.filter(function(r) {
-    return r.ingredientes.toLowerCase().includes(busquedaLower);
+  document.querySelectorAll('.recipe-card').forEach(card => {
+    card.addEventListener('click', () => window.location.href = `receta.html?id=${card.dataset.id}`);
   });
-  mostrarResultadosChat(resultados, ingrediente);
 }
 
-function buscarRapidas() {
-  var resultados = todasLasRecetas.filter(function(r) {
-    return (r.tiempo_numerico || obtenerValorNumerico(r.tiempo)) <= 20;
-  });
-  mostrarResultadosChat(resultados, 'rápidas');
-}
-
-function buscarEconomicas() {
-  var resultados = todasLasRecetas.filter(function(r) {
-    return (r.precio_numerico || obtenerValorNumerico(r.precio)) <= 30;
-  });
-  mostrarResultadosChat(resultados, 'económicas');
-}
-
-function procesarMensajeNatural(texto) {
-  var lower = texto.toLowerCase().trim();
-  
-  if (lower.includes('pollo')) return buscarPorIngrediente('pollo');
-  if (lower.includes('carne')) return buscarPorIngrediente('carne');
-  if (lower.includes('pescado')) return buscarPorIngrediente('pescado');
-  if (lower.includes('huevo')) return buscarPorIngrediente('huevo');
-  if (lower.includes('pasta')) return buscarPorIngrediente('pasta');
-  if (lower.includes('arroz')) return buscarPorIngrediente('arroz');
-  if (lower.includes('rápida') || lower.includes('rapida')) return buscarRapidas();
-  if (lower.includes('económica') || lower.includes('economica')) return buscarEconomicas();
-  if (lower === 'menu' || lower === 'inicio' || lower === 'hola') {
-    agregarMensaje('bot', '🍳 Hola, soy ChefBot. Puedo ayudarte a encontrar recetas. Ejemplos:\n- "¿Qué puedo cocinar con pollo?"\n- "Recetas rápidas"\n- "Comida económica"');
-    return;
-  }
-  buscarRecetasEnChat(texto);
-}
-
-function buscarRecetasEnChat(busqueda) {
-  var busquedaLower = busqueda.toLowerCase();
-  var resultados = todasLasRecetas.filter(function(r) {
-    return r.titulo.toLowerCase().includes(busquedaLower) ||
-           r.ingredientes.toLowerCase().includes(busquedaLower) ||
-           r.pasos.toLowerCase().includes(busquedaLower);
-  });
-  mostrarResultadosChat(resultados, busqueda);
-}
-
-async function preguntar() {
-  if (!DOM.chatInput) return;
-  var pregunta = DOM.chatInput.value.trim();
-  if (!pregunta) return;
-  
-  agregarMensaje('user', pregunta);
-  DOM.chatInput.value = '';
-  procesarMensajeNatural(pregunta);
-}
-
-function setupChatbot() {
-  if (DOM.chatBoton) {
-    DOM.chatBoton.addEventListener('click', function() {
-      if (DOM.chatWindow) DOM.chatWindow.style.display = 'flex';
-      agregarMensaje('bot', '🍳 ¡Hola! Soy ChefBot. ¿Qué quieres cocinar hoy?\nPuedes preguntarme:\n• "Qué puedo cocinar con pollo"\n• "Recetas rápidas"\n• "Comida económica"');
-    });
-  }
-  if (DOM.cerrarChatBtn) {
-    DOM.cerrarChatBtn.addEventListener('click', function() {
-      if (DOM.chatWindow) DOM.chatWindow.style.display = 'none';
-    });
-  }
-  if (DOM.enviarChatBtn) {
-    DOM.enviarChatBtn.addEventListener('click', preguntar);
-  }
-  if (DOM.chatInput) {
-    DOM.chatInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') preguntar();
-    });
-  }
-}
-
-function initDarkMode() {
-  var savedDark = localStorage.getItem('darkMode') === 'true';
-  if (savedDark) {
-    document.body.classList.add('dark-mode');
-    var darkToggle = document.getElementById('dark-mode-toggle');
-    if (darkToggle) darkToggle.textContent = '☀️';
-  }
-}
-
-function toggleDarkMode() {
-  document.body.classList.toggle('dark-mode');
-  var isDark = document.body.classList.contains('dark-mode');
-  localStorage.setItem('darkMode', isDark);
-  var btn = document.getElementById('dark-mode-toggle');
-  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+function obtenerFiltros() {
+  const q = document.getElementById('search-input')?.value.trim();
+  const filtroActivo = document.querySelector('.tag.active-filter')?.dataset.filter;
+  const params = {};
+  if (q) params.q = q;
+  if (filtroActivo === 'economicas') params.maxPrecio = 35;
+  if (filtroActivo === 'rapidas') params.maxTiempo = 20;
+  return params;
 }
 
 async function init() {
-  initDarkMode();
-  var darkToggle = document.getElementById('dark-mode-toggle');
-  if (darkToggle) darkToggle.addEventListener('click', toggleDarkMode);
+  console.log('🏠 home.js iniciado');
   
-  token = localStorage.getItem('token');
-  if (!token) {
-    window.location.href = 'login.html';
-    return;
-  }
-  try {
-    var res = await fetch(API + '/api/auth/me', {
-      headers: { 'Authorization': 'Bearer ' + token }
+  // Cargar usuario (no redirige)
+  await cargarUsuario();
+  
+  // Cargar recetas
+  await cargarRecetas();
+  
+  // Event listeners
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => cargarRecetas(obtenerFiltros()), 400);
     });
-    if (!res.ok) throw new Error('Token invalido');
-    var userData = await res.json();
-    currentUser = { username: userData.username, esPremium: userData.esPremium };
-    if (DOM.userName) DOM.userName.textContent = currentUser.username || 'Usuario';
-    if (currentUser.esPremium && DOM.premiumBadge) DOM.premiumBadge.style.display = 'flex';
-    if (currentUser.esPremium && DOM.chatBoton) DOM.chatBoton.style.display = 'block';
-    await cargarRecetas();
-    setupEventListeners();
-    setupChatbot();
-  } catch (err) {
-    localStorage.removeItem('token');
-    window.location.href = 'login.html';
   }
-}
-
-function cerrarSesion() {
-  localStorage.removeItem('token');
-  window.location.href = 'login.html';
-}
-
-function setupEventListeners() {
-  if (DOM.searchInput) DOM.searchInput.addEventListener('input', function() { filtrarRecetas(); });
-  for (var i = 0; i < DOM.filterTags.length; i++) {
-    var tag = DOM.filterTags[i];
+  
+  document.querySelectorAll('.tag').forEach(tag => {
     tag.addEventListener('click', function() {
-      var isActive = this.classList.contains('active-filter');
-      if (isActive) {
-        this.classList.remove('active-filter');
-      } else {
-        for (var j = 0; j < DOM.filterTags.length; j++) {
-          DOM.filterTags[j].classList.remove('active-filter');
-        }
-        this.classList.add('active-filter');
-      }
-      filtrarRecetas();
+      document.querySelectorAll('.tag').forEach(t => t.classList.remove('active-filter'));
+      this.classList.add('active-filter');
+      cargarRecetas(obtenerFiltros());
+    });
+  });
+  
+  const cerrarSesion = document.getElementById('cerrar-sesion-btn');
+  if (cerrarSesion) {
+    cerrarSesion.addEventListener('click', async () => {
+      localStorage.clear();
+      window.location.href = 'login.html';
     });
   }
-  if (DOM.cerrarSesionBtn) DOM.cerrarSesionBtn.addEventListener('click', cerrarSesion);
+  
+  // Chat
+  const chatBtn = document.getElementById('chat-boton');
+  if (chatBtn) {
+    chatBtn.addEventListener('click', () => {
+      const w = document.getElementById('chat-window');
+      if (w) w.style.display = 'flex';
+    });
+  }
+  
+  const cerrarChat = document.getElementById('cerrar-chat-btn');
+  if (cerrarChat) {
+    cerrarChat.addEventListener('click', () => {
+      document.getElementById('chat-window').style.display = 'none';
+    });
+  }
 }
 
+// Exponer funciones globales
+window.toggleLike = toggleLike;
+window.toggleFav = toggleFav;
+
+// Iniciar
 init();

@@ -13,7 +13,7 @@ body {
   padding: 20px 20px 120px;
 }
 
-/* ── HEADER ── */
+/* HEADER */
 .perfil-header {
   display: flex;
   align-items: center;
@@ -29,7 +29,7 @@ body {
   color: #2e7d32;
 }
 
-/* ── HERO DE PERFIL (estilo Instagram) ── */
+/* HERO DE PERFIL */
 .perfil-info-card {
   background: white;
   border-radius: 20px;
@@ -89,7 +89,7 @@ body {
   font-size: 1.4rem;
   font-weight: 600;
   color: #1a1a2e;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .perfil-nombre-display {
@@ -107,6 +107,13 @@ body {
   max-width: 400px;
 }
 
+.role-badge-container {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
 .perfil-badge {
   display: inline-flex;
   align-items: center;
@@ -119,7 +126,24 @@ body {
   border-radius: 20px;
 }
 
-/* ── ESTADÍSTICAS ── */
+.perfil-badge.free {
+  background: linear-gradient(90deg, #9e9e9e, #757575);
+  color: white;
+}
+
+.puntos-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* ESTADÍSTICAS */
 .stats-container {
   display: flex;
   gap: 32px;
@@ -145,7 +169,7 @@ body {
   font-weight: 500;
 }
 
-/* ── ACCIONES DE PERFIL ── */
+/* ACCIONES */
 .perfil-acciones {
   display: flex;
   gap: 10px;
@@ -167,7 +191,7 @@ body {
 }
 .btn-editar-perfil:hover { background: #e0e0e0; }
 
-/* ── FORMULARIO EDICIÓN ── */
+/* FORMULARIO EDICIÓN */
 .perfil-form-section {
   display: none;
   animation: fadeIn .3s ease;
@@ -227,7 +251,7 @@ body {
   cursor: not-allowed;
 }
 
-/* ── PREFERENCIAS ── */
+/* PREFERENCIAS */
 .preferencias-tags {
   display: flex;
   flex-wrap: wrap;
@@ -249,7 +273,7 @@ body {
 .pref-tag:hover { border-color: #4caf50; color: #2e7d32; background: #e8f5e9; }
 .pref-tag.selected { background: #4caf50; color: white; border-color: #2e7d32; }
 
-/* ── BOTONES DE ACCIÓN ── */
+/* BOTONES FORMULARIO */
 .btn-form-row {
   display: flex;
   gap: 12px;
@@ -286,7 +310,104 @@ body {
 }
 #cerrar-sesion-btn:hover { background: #c62828; color: white; }
 
-/* ── SECCIONES (tabs) ── */
+/* SECCIÓN RECOMPENSAS */
+.rewards-section {
+  background: linear-gradient(135deg, #fff8e1, #fff3e0);
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 2px solid #ffb74d;
+}
+
+.rewards-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.rewards-header h2 {
+  font-family: 'Poppins', sans-serif;
+  color: #e65100;
+  margin-bottom: 8px;
+}
+
+.rewards-header p {
+  color: #f57c00;
+  font-weight: 500;
+}
+
+.rewards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.reward-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid #ffe0b2;
+}
+
+.reward-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  border-color: #ff9800;
+}
+
+.reward-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.reward-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+}
+
+.reward-points {
+  color: #ff9800;
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+}
+
+.reward-benefit {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.reward-btn {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.reward-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(255,152,0,0.3);
+}
+
+.reward-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* TABS */
 .secciones-perfil {
   display: flex;
   justify-content: center;
@@ -318,7 +439,7 @@ body {
   background: #1a1a2e;
 }
 
-/* ── GRID DE RECETAS ── */
+/* GRID DE RECETAS */
 .recetas-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -372,7 +493,6 @@ body {
   font-weight: 500;
 }
 
-/* Botón eliminar receta propia */
 .btn-eliminar-receta-overlay {
   position: absolute;
   top: 6px; right: 6px;
@@ -391,7 +511,7 @@ body {
 .receta-grid-item:hover .btn-eliminar-receta-overlay { display: flex; }
 .btn-eliminar-receta-overlay:hover { background: rgba(198,40,40,.9); }
 
-/* ── VACÍO ── */
+/* VACÍO */
 .vacio-mensaje {
   text-align: center;
   padding: 60px 20px;
@@ -401,7 +521,7 @@ body {
 .vacio-mensaje span { font-size: 3rem; display: block; margin-bottom: 16px; opacity: .5; }
 .vacio-mensaje p { font-size: 1rem; }
 
-/* ── NAV ── */
+/* NAV */
 .bottom-nav {
   position: fixed;
   bottom: 20px;
@@ -433,7 +553,7 @@ body {
 .nav-item.active { background: #e8f5e9; color: #4caf50; }
 .nav-item:hover { color: #4caf50; }
 
-/* ── TOAST ── */
+/* TOAST */
 .notification-toast {
   position: fixed;
   bottom: 110px; left: 50%;
@@ -447,7 +567,7 @@ body {
 .notification-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 .notification-toast.error { background: #f44336; }
 
-/* ── RESPONSIVE ── */
+/* RESPONSIVE */
 @media (max-width: 768px) {
   .perfil-screen { padding: 16px 12px 110px; }
   .avatar-section { flex-direction: column; text-align: center; gap: 20px; align-items: center; }
@@ -460,6 +580,7 @@ body {
   .nav-item { padding: 4px 8px; }
   .perfil-acciones { justify-content: center; }
   .btn-form-row { flex-direction: column; }
+  .rewards-container { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {

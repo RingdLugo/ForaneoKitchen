@@ -92,6 +92,12 @@ button:hover {
   transform: translateY(-2px);
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .register-link {
   margin-top: 20px;
   font-size: 0.95rem;
@@ -168,7 +174,8 @@ button:hover {
   gap: 10px;
 }
 
-.custom-alert {
+/* Toast personalizado */
+.custom-toast {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -182,6 +189,18 @@ button:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
+.custom-toast.success {
+  background: #4caf50;
+}
+
+.custom-toast.error {
+  background: #f44336;
+}
+
+.custom-toast.info {
+  background: #2196f3;
+}
+
 @keyframes slideIn {
   from {
     transform: translateX(100%);
@@ -193,44 +212,23 @@ button:hover {
   }
 }
 
-/* Dark Mode Toggle Button */
-.dark-mode-toggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: white;
-  border: none;
-  cursor: pointer;
-  font-size: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-body.dark-mode .dark-mode-toggle {
-  background: rgba(30, 30, 30, 0.95);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-}
-
-.dark-mode-toggle:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
 @media (max-width: 768px) {
-  .dark-mode-toggle {
-    top: 12px;
-    right: 12px;
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
+  .login-screen {
+    padding: 20px 16px 40px;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  .login-card {
+    padding: 24px 20px;
+  }
+  
+  .custom-toast {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
   }
 }

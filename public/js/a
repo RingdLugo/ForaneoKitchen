@@ -1,0 +1,238 @@
+-- =====================================================
+-- AGREGAR COLUMNAS FALTANTES A TABLAS EXISTENTES
+-- =====================================================
+
+-- 1. Agregar puntos a usuarios (si no existe)
+ALTER TABLE public.usuarios 
+ADD COLUMN IF NOT EXISTS puntos INTEGER DEFAULT 0;
+
+-- 2. Agregar rol a usuarios (free/premium/admin)
+ALTER TABLE public.usuarios 
+ADD COLUMN IF NOT EXISTS rol VARCHAR(20) DEFAULT 'free';
+
+-- 3. Agregar premium_expira si se llama diferente
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'usuarios' AND column_name = 'premium_expira') THEN
+        ALTER TABLE public.usuarios ADD COLUMN premium_expira TIMESTAMP;
+    END IF;
+END $$;
+
+-- 4. Agregar video_youtube a recetas
+ALTER TABLE public.recetas 
+ADD COLUMN IF NOT EXISTS video_youtube TEXT;
+
+-- 5. Agregar índice para búsquedas
+CREATE INDEX IF NOT EXISTS idx_recetas_usuario_id ON public.recetas(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_recetas_fecha ON public.recetas(fecha DESC);
+CREATE INDEX IF NOT EXISTS idx_recetas_likes ON public.recetas(likes DESC);
+
+-- =====================================================
+-- TABLAS NUEVAS (las que no tienes)
+-- =====================================================
+
+-- 6. Tabla para registrar puntos (no existe)
+CREATE TABLE IF NOT EXISTS public.puntos_log (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    accion VARCHAR(50) NOT NULL,
+    puntos INTEGER NOT NULL,
+    descripcion TEXT,
+    fecha TIMESTAMP DEFAULT NOW()
+);
+
+-- 7. Tabla para lista de compras (no existe)
+CREATE TABLE IF NOT EXISTS public.lista_compras (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES public.usuarios(id) ON DELETE CASCADE UNIQUE,
+    items JSONB DEFAULT '[]',
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 8. Tabla para planes semanales unificados (alternativa a plan_semanal)
+CREATE TABLE IF NOT EXISTS public.planes_semanales (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES public.usuarios(id) ON DELETE CASCADE UNIQUE,
+    plan JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- =====================================================
+-- FUNCIONES RPC PARA LIKES (compatibles con tu esquema)
+-- =====================================================
+
+-- Función para agregar like
+CREATE OR REPLACE FUNCTION public.agregar_like(p_receta_id INTEGER, p_usuario_id INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO public.likes (user_id, recipe_id, created_at) 
+    VALUES (p_usuario_id, p_receta_id, NOW());
+    
+    UPDATE public.recetas 
+    SET likes = likes + 1 
+    WHERE id = p_receta_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para eliminar like
+CREATE OR REPLACE FUNCTION public.eliminar_like(p_receta_id INTEGER, p_usuario_id INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    DELETE FROM public.likes 
+    WHERE recipe_id = p_receta_id AND user_id = p_usuario_id;
+    
+    UPDATE public.recetas 
+    SET likes = likes - 1 
+    WHERE id = p_receta_id AND likes > 0;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para agregar puntos
+CREATE OR REPLACE FUNCTION public.add_puntos(uid INTEGER, pts INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE public.usuarios 
+    SET puntos = COALESCE(puntos, 0) + pts 
+    WHERE id = uid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- TRIGGERS
+-- =====================================================
+
+-- Trigger para updated_at en planes_semanales
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_planes_semanales_updated_at ON public.planes_semanales;
+CREATE TRIGGER update_planes_semanales_updated_at
+    BEFORE UPDATE ON public.planes_semanales
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_lista_compras_updated_at ON public.lista_compras;
+CREATE TRIGGER update_lista_compras_updated_at
+    BEFORE UPDATE ON public.lista_compras
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_updated_at_column();
+
+-- =====================================================
+-- DATOS DE EJEMPLO (Usuario: usuario12345 / usuario12345)
+-- =====================================================
+
+-- Verificar si el usuario ya existe
+DO $$ 
+DECLARE
+    user_id INTEGER;
+BEGIN
+    -- Buscar si ya existe el usuario
+    SELECT id INTO user_id FROM public.usuarios WHERE username = 'usuario12345';
+    
+    -- Si no existe, crearlo
+    IF user_id IS NULL THEN
+        INSERT INTO public.usuarios (
+            nombre, 
+            apellido, 
+            email, 
+            username, 
+            password_hash, 
+            es_premium, 
+            puntos, 
+            rol,
+            bio,
+            fecha_registro
+        ) VALUES (
+            'Usuario',
+            'Ejemplo',
+            'usuario@example.com',
+            'usuario12345',
+            '$2a$10$uHnPYjL3xQ5HXqfG7wE.GOrN5K5gY4oAvexAoeaYJx6nTqVzqYpqu', -- "usuario12345"
+            FALSE,
+            100,
+            'free',
+            '¡Hola! Soy un usuario de prueba de ForaneoKitchen.',
+            NOW()
+        );
+        RAISE NOTICE '✅ Usuario usuario12345 creado';
+    ELSE
+        RAISE NOTICE '✅ Usuario usuario12345 ya existe';
+    END IF;
+END $$;
+
+-- Verificar recetas de ejemplo
+DO $$ 
+DECLARE
+    user_id INTEGER;
+BEGIN
+    SELECT id INTO user_id FROM public.usuarios WHERE username = 'usuario12345';
+    
+    IF user_id IS NOT NULL THEN
+        -- Receta 1: Pasta Alfredo
+        IF NOT EXISTS (SELECT 1 FROM public.recetas WHERE titulo = 'Pasta Alfredo Económica') THEN
+            INSERT INTO public.recetas (
+                titulo, ingredientes, pasos, precio, precio_numerico, 
+                tiempo, tiempo_numerico, autor, usuario_id, likes, es_premium_receta, fecha
+            ) VALUES (
+                'Pasta Alfredo Económica',
+                '200g de pasta, 1 taza de crema, 50g de queso parmesano, 2 dientes de ajo, sal y pimienta',
+                '1. Cocer la pasta en agua con sal.\n2. Dorar el ajo.\n3. Agregar crema y queso.\n4. Mezclar con la pasta.\n5. Servir caliente.',
+                '$45 MXN', 45, '20 min', 20, 'usuario12345', user_id, 0, FALSE, NOW()
+            );
+        END IF;
+        
+        -- Receta 2: Huevos Rancheros
+        IF NOT EXISTS (SELECT 1 FROM public.recetas WHERE titulo = 'Huevos Rancheros Rápidos') THEN
+            INSERT INTO public.recetas (
+                titulo, ingredientes, pasos, precio, precio_numerico, 
+                tiempo, tiempo_numerico, autor, usuario_id, likes, es_premium_receta, fecha
+            ) VALUES (
+                'Huevos Rancheros Rápidos',
+                '4 huevos, 4 tortillas, 1/2 taza de salsa roja, 1/4 de cebolla, aceite, sal',
+                '1. Calentar aceite.\n2. Freír tortillas.\n3. Freír huevos.\n4. Servir huevos sobre tortillas.\n5. Bañar con salsa y cebolla.',
+                '$28 MXN', 28, '10 min', 10, 'usuario12345', user_id, 0, FALSE, NOW()
+            );
+        END IF;
+        
+        -- Receta 3: Premium
+        IF NOT EXISTS (SELECT 1 FROM public.recetas WHERE titulo = 'Ensalada de Atún Premium') THEN
+            INSERT INTO public.recetas (
+                titulo, ingredientes, pasos, precio, precio_numerico, 
+                tiempo, tiempo_numerico, autor, usuario_id, likes, es_premium_receta, fecha
+            ) VALUES (
+                'Ensalada de Atún Premium',
+                '2 latas de atún, 1 lechuga, 2 tomates, 1/2 cebolla morada, aceitunas, vinagre balsámico',
+                '1. Lavar lechuga.\n2. Cortar tomates y cebolla.\n3. Mezclar todo.\n4. Agregar atún.\n5. Aliñar al gusto.',
+                '$60 MXN', 60, '15 min', 15, 'usuario12345', user_id, 0, TRUE, NOW()
+            );
+        END IF;
+        
+        RAISE NOTICE '✅ Recetas de ejemplo verificadas';
+    END IF;
+END $$;
+
+-- =====================================================
+-- VERIFICACIÓN FINAL
+-- =====================================================
+
+SELECT '📊 RESUMEN DE TABLAS:' as info;
+SELECT COUNT(*) as usuarios FROM public.usuarios;
+SELECT COUNT(*) as recetas FROM public.recetas;
+SELECT COUNT(*) as comentarios FROM public.comentarios;
+SELECT COUNT(*) as likes FROM public.likes;
+
+-- =====================================================
+-- CREDENCIALES
+-- =====================================================
+-- 
+-- Usuario: usuario12345
+-- Contraseña: usuario12345
+-- 
+-- =====================================================

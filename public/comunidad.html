@@ -16,13 +16,38 @@
   <div class="comunidad-screen">
     <div class="comunidad-header">
       <h1>👥 Comunidad</h1>
-      <p>Descubre recetas de otros usuarios, dale like y comenta</p>
+      <p>Descubre recetas de otros usuarios, comenta y comparte</p>
     </div>
 
-    <div id="recetas-comunidad" class="recetas-comunidad">
-      <div class="loading-spinner"></div>
+    <!-- Tabs -->
+    <div class="comunidad-tabs">
+      <button class="tab-btn active" data-tab="recetas">📖 Recetas Recientes</button>
+      <button class="tab-btn" data-tab="populares">🔥 Populares</button>
+      <button class="tab-btn" data-tab="comentarios">💬 Actividad Reciente</button>
     </div>
 
+    <!-- Contenido Recetas -->
+    <div id="recetas-tab" class="tab-content active">
+      <div id="recetas-comunidad" class="recetas-comunidad">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+
+    <!-- Contenido Populares -->
+    <div id="populares-tab" class="tab-content" style="display:none;">
+      <div id="recetas-populares" class="recetas-comunidad">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+
+    <!-- Contenido Comentarios Recientes -->
+    <div id="comentarios-tab" class="tab-content" style="display:none;">
+      <div id="actividad-reciente" class="actividad-container">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+
+    <!-- Modal de comentarios -->
     <div id="modal-comentarios" class="modal-comentarios">
       <div class="modal-content">
         <div class="modal-header">
@@ -31,8 +56,23 @@
         </div>
         <div id="comentarios-lista" class="comentarios-lista"></div>
         <div class="nuevo-comentario-area">
-          <textarea id="nuevo-comentario" placeholder="Escribe un comentario..." rows="2"></textarea>
+          <textarea id="nuevo-comentario" placeholder="Escribe un comentario..." rows="2" maxlength="500"></textarea>
           <button id="enviar-comentario">Enviar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para responder comentario -->
+    <div id="modal-respuesta" class="modal-comentarios">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>💬 Responder comentario</h3>
+          <button class="close-respuesta-modal">&times;</button>
+        </div>
+        <div class="respuesta-contexto" id="respuesta-contexto"></div>
+        <div class="nuevo-comentario-area">
+          <textarea id="respuesta-texto" placeholder="Escribe tu respuesta..." rows="3" maxlength="500"></textarea>
+          <button id="enviar-respuesta">Responder</button>
         </div>
       </div>
     </div>
@@ -56,7 +96,8 @@
     </nav>
   </div>
 
+  <script src="js/supabaseClient.js" type="module"></script>
+  <script src="js/comunidad.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
-  <script src="js/comunidad.js"></script>
 </body>
 </html>

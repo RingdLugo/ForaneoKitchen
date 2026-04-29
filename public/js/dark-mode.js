@@ -1,46 +1,27 @@
-/* ================================================================
-   ForaneoKitchen — dark-mode.js
-   Sistema centralizado de dark mode para todas las páginas
-   ================================================================ */
-
+/* ForaneoKitchen — dark-mode.js */
 (function () {
-  'use strict';
-
-  function applyDark(isDark) {
+  function apply(isDark) {
     document.body.classList.toggle('dark-mode', isDark);
-    document.querySelectorAll('.dark-mode-toggle').forEach(btn => {
-      btn.textContent = isDark ? '☀️' : '🌙';
-      btn.title = isDark ? 'Modo claro' : 'Modo oscuro';
+    document.querySelectorAll('.dark-mode-toggle').forEach(b => {
+      b.textContent = isDark ? '☀️' : '🌙';
+      b.title = isDark ? 'Modo claro' : 'Modo oscuro';
     });
   }
-
-  function toggleDarkMode() {
-    const isDark = !document.body.classList.contains('dark-mode');
-    localStorage.setItem('darkMode', isDark);
-    applyDark(isDark);
+  function toggle() {
+    const d = !document.body.classList.contains('dark-mode');
+    localStorage.setItem('darkMode', d);
+    apply(d);
   }
-
-  function initDarkMode() {
-    const saved = localStorage.getItem('darkMode') === 'true';
-    applyDark(saved);
-    // Vincular todos los botones toggle de la página
-    document.querySelectorAll('.dark-mode-toggle').forEach(btn => {
-      btn.removeEventListener('click', toggleDarkMode);
-      btn.addEventListener('click', toggleDarkMode);
+  function init() {
+    apply(localStorage.getItem('darkMode') === 'true');
+    document.querySelectorAll('.dark-mode-toggle').forEach(b => {
+      b.removeEventListener('click', toggle);
+      b.addEventListener('click', toggle);
     });
   }
-
-  // Aplicar inmediatamente para evitar flash
-  const savedDark = localStorage.getItem('darkMode') === 'true';
-  if (savedDark) document.body.classList.add('dark-mode');
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDarkMode);
-  } else {
-    initDarkMode();
-  }
-
-  // Exponer globalmente por si alguna página lo llama directamente
-  window.toggleDarkMode = toggleDarkMode;
-  window.initDarkMode = initDarkMode;
+  // Aplicar sin flash
+  if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+  window.toggleDarkMode = toggle;
 })();

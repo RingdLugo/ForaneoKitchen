@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ForaneoKitchen – Mi Perfil</title>
+  <title>ForananeoKitchen - Mi Perfil</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,7 +14,6 @@
   <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
 
   <div class="perfil-screen">
-
     <div class="perfil-header">
       <h1>👤 Mi Perfil</h1>
     </div>
@@ -22,23 +21,22 @@
     <!-- Hero de perfil -->
     <div class="perfil-info-card">
       <div class="avatar-section">
-        <!-- Avatar -->
         <div class="avatar-wrapper">
-          <img id="avatar-img" class="avatar-img"
-            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%234caf50'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='white' font-size='45'%3E👤%3C/text%3E%3C/svg%3E"
-            alt="Avatar">
+          <img id="avatar-img" class="avatar-img" src="" alt="Avatar">
           <div class="avatar-overlay" id="avatar-overlay-btn" title="Cambiar foto">
             <span>📷</span>
           </div>
         </div>
         <input type="file" id="avatar-input" accept="image/*" style="display:none;">
 
-        <!-- Info principal -->
         <div class="avatar-info">
           <div class="perfil-username-display" id="display-username">@usuario</div>
-          <div class="perfil-nombre-display" id="display-nombre">Nombre completo</div>
-          <div class="perfil-bio-display" id="display-bio">Tu biografía aquí...</div>
-          <span class="perfil-badge" id="premium-badge" style="display:none;">👑 Premium</span>
+          <div class="perfil-nombre-display" id="display-nombre">Cargando...</div>
+          <div class="perfil-bio-display" id="display-bio"></div>
+          <div class="role-badge-container">
+            <span class="perfil-badge" id="role-badge">🆓 Free</span>
+            <span class="puntos-badge" id="puntos-badge">⭐ 0 pts</span>
+          </div>
 
           <div class="stats-container">
             <div class="stat">
@@ -61,7 +59,7 @@
         </div>
       </div>
 
-      <!-- Formulario de edición (oculto por defecto) -->
+      <!-- Formulario de edición -->
       <div class="perfil-form-section" id="perfil-form-section">
         <div class="form-row">
           <div class="form-group">
@@ -105,31 +103,43 @@
       </div>
     </div>
 
+    <!-- SECCIÓN DE RECOMPENSAS (SOLO FREE) -->
+    <div id="rewards-section" class="rewards-section" style="display:none;">
+      <div class="rewards-header">
+        <h2>🎁 Canje de Recompensas</h2>
+        <p>Cambia tus puntos por beneficios Premium</p>
+      </div>
+      <div class="rewards-container" id="rewards-container">
+        <!-- Recompensas dinámicas -->
+      </div>
+    </div>
+
     <!-- Tabs de secciones -->
     <div class="secciones-perfil">
       <button class="seccion-btn active" id="btn-mis-recetas">📝 Mis recetas</button>
       <button class="seccion-btn" id="btn-favoritos">⭐ Favoritos</button>
-      <button class="seccion-btn" id="btn-historial">👁️ Historial</button>
+      <button class="seccion-btn premium-only" id="btn-historial" style="display:none;">👁️ Historial</button>
     </div>
 
     <!-- Grids -->
-    <div id="mis-recetas-grid"  class="recetas-grid"></div>
-    <div id="favoritos-grid"    class="recetas-grid" style="display:none;"></div>
-    <div id="historial-grid"    class="recetas-grid" style="display:none;"></div>
+    <div id="mis-recetas-grid" class="recetas-grid"></div>
+    <div id="favoritos-grid" class="recetas-grid" style="display:none;"></div>
+    <div id="historial-grid" class="recetas-grid" style="display:none;"></div>
 
-  </div><!-- /perfil-screen -->
+  </div>
 
   <nav class="bottom-nav">
-    <a href="home.html"         class="nav-item"><span>🏠</span><span>Inicio</span></a>
+    <a href="home.html" class="nav-item"><span>🏠</span><span>Inicio</span></a>
     <a href="subir-receta.html" class="nav-item"><span>📝</span><span>Subir</span></a>
     <a href="planificador.html" class="nav-item"><span>📅</span><span>Plan</span></a>
-    <a href="comunidad.html"    class="nav-item"><span>👥</span><span>Comunidad</span></a>
-    <a href="perfil.html"       class="nav-item active"><span>👤</span><span>Perfil</span></a>
+    <a href="comunidad.html" class="nav-item"><span>👥</span><span>Comunidad</span></a>
+    <a href="perfil.html" class="nav-item active"><span>👤</span><span>Perfil</span></a>
   </nav>
 
   <div class="notification-toast" id="notif-toast"></div>
 
+  <script src="js/supabaseClient.js" type="module"></script>
+  <script src="js/perfil.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
-  <script src="js/perfil.js"></script>
 </body>
 </html>

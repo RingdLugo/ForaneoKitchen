@@ -11,11 +11,6 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-body.dark-mode {
-  background: #0a0f0a;
-  color: #e8f0e8;
-}
-
 .planificador-screen {
   max-width: 1400px;
   margin: 0 auto;
@@ -39,18 +34,8 @@ body.dark-mode {
   margin-bottom: 8px;
 }
 
-body.dark-mode .planificador-header h1 {
-  background: linear-gradient(135deg, #81c784, #a5d6a7);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-
 .planificador-header p {
   color: #6b8c6b;
-}
-
-body.dark-mode .planificador-header p {
-  color: #9e9e9e;
 }
 
 /* Presupuesto Section */
@@ -65,11 +50,6 @@ body.dark-mode .planificador-header p {
   flex-wrap: wrap;
   gap: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-}
-
-body.dark-mode .presupuesto-section {
-  background: #1a1e1a;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .presupuesto-info {
@@ -98,10 +78,6 @@ body.dark-mode .presupuesto-section {
   color: #2e7d32;
 }
 
-body.dark-mode .presupuesto-valor .moneda {
-  color: #81c784;
-}
-
 .presupuesto-valor input {
   font-size: 2rem;
   font-weight: 700;
@@ -111,10 +87,6 @@ body.dark-mode .presupuesto-valor .moneda {
   width: 130px;
   font-family: 'Poppins', sans-serif;
   outline: none;
-}
-
-body.dark-mode .presupuesto-valor input {
-  color: #81c784;
 }
 
 .presupuesto-stats {
@@ -181,29 +153,9 @@ body.dark-mode .presupuesto-valor input {
   color: #666;
 }
 
-body.dark-mode .btn-secondary {
-  background: #2a2e2a;
-  color: #ccc;
-}
-
 .btn-secondary:hover {
   transform: translateY(-2px);
   background: #e0e0e0;
-}
-
-.btn-danger {
-  background: #ffebee;
-  color: #f44336;
-}
-
-body.dark-mode .btn-danger {
-  background: #3a1a1a;
-  color: #ff8a80;
-}
-
-.btn-danger:hover {
-  transform: translateY(-2px);
-  background: #ffcdd2;
 }
 
 /* Días Container */
@@ -221,11 +173,6 @@ body.dark-mode .btn-danger {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-body.dark-mode .dia-card {
-  background: #1a1e1a;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
 .dia-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
@@ -241,10 +188,6 @@ body.dark-mode .dia-card {
   transition: all 0.3s;
 }
 
-body.dark-mode .dia-header {
-  background: linear-gradient(135deg, #1e3220, #162818);
-}
-
 .dia-nombre {
   font-family: 'Poppins', sans-serif;
   font-weight: 700;
@@ -255,10 +198,6 @@ body.dark-mode .dia-header {
   gap: 10px;
 }
 
-body.dark-mode .dia-nombre {
-  color: #81c784;
-}
-
 .dia-gasto {
   font-size: 0.85rem;
   font-weight: 600;
@@ -266,11 +205,6 @@ body.dark-mode .dia-nombre {
   background: rgba(76, 175, 80, 0.15);
   border-radius: 30px;
   color: #2e7d32;
-}
-
-body.dark-mode .dia-gasto {
-  background: rgba(129, 199, 132, 0.15);
-  color: #81c784;
 }
 
 .dia-contenido {
@@ -320,10 +254,6 @@ body.dark-mode .dia-gasto {
   transition: all 0.3s ease;
 }
 
-body.dark-mode .comida-card {
-  background: #242824;
-}
-
 .comida-card:hover {
   transform: translateY(-3px);
 }
@@ -337,10 +267,6 @@ body.dark-mode .comida-card {
   border-bottom: 2px solid #e8f5e9;
 }
 
-body.dark-mode .comida-header {
-  border-bottom-color: #2e7d32;
-}
-
 .comida-icono {
   font-size: 1.5rem;
 }
@@ -350,10 +276,6 @@ body.dark-mode .comida-header {
   font-size: 0.9rem;
   color: #2e7d32;
   flex: 1;
-}
-
-body.dark-mode .comida-titulo {
-  color: #81c784;
 }
 
 .comida-gasto {
@@ -384,11 +306,6 @@ body.dark-mode .comida-titulo {
   transition: all 0.2s ease;
   border-left: 3px solid #4caf50;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-body.dark-mode .receta-item {
-  background: #2a2e2a;
-  border-left-color: #81c784;
 }
 
 .receta-item:hover {
@@ -445,11 +362,6 @@ body.dark-mode .receta-item {
   border-radius: 12px;
 }
 
-body.dark-mode .vacio-recetas {
-  background: #1e221e;
-  color: #666;
-}
-
 .btn-agregar {
   width: 100%;
   background: transparent;
@@ -470,15 +382,6 @@ body.dark-mode .vacio-recetas {
 .btn-agregar:hover {
   background: #e8f5e9;
   border-color: #4caf50;
-}
-
-body.dark-mode .btn-agregar {
-  border-color: #2e7d32;
-  color: #81c784;
-}
-
-body.dark-mode .btn-agregar:hover {
-  background: #2a322a;
 }
 
 /* Modal */
@@ -510,10 +413,6 @@ body.dark-mode .btn-agregar:hover {
   display: flex;
   flex-direction: column;
   animation: fadeInUp 0.3s;
-}
-
-body.dark-mode .modal-content {
-  background: #1a1e1a;
 }
 
 .modal-header {
@@ -595,28 +494,6 @@ body.dark-mode .modal-content {
   font-size: 0.85rem;
 }
 
-/* Notificación */
-.notification {
-  position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #4caf50;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 50px;
-  z-index: 2000;
-  font-weight: 500;
-  animation: fadeOut 3s ease forwards;
-  white-space: nowrap;
-}
-
-@keyframes fadeOut {
-  0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-  70% { opacity: 1; }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
-}
-
 /* Bottom Nav */
 .bottom-nav {
   position: fixed;
@@ -632,10 +509,6 @@ body.dark-mode .modal-content {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   z-index: 100;
   gap: 16px;
-}
-
-body.dark-mode .bottom-nav {
-  background: rgba(26, 30, 26, 0.95);
 }
 
 .nav-item {
@@ -660,15 +533,33 @@ body.dark-mode .bottom-nav {
   color: #4caf50;
 }
 
-body.dark-mode .nav-item.active {
-  background: #2a322a;
-  color: #81c784;
-}
-
 .nav-item:hover {
   color: #4caf50;
 }
 
+/* Notificación */
+.notification {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4caf50;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 50px;
+  z-index: 2000;
+  font-weight: 500;
+  animation: fadeOut 3s ease forwards;
+  white-space: nowrap;
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   .planificador-screen {
     padding: 20px 16px 90px;
@@ -709,47 +600,5 @@ body.dark-mode .nav-item.active {
     text-align: center;
     max-width: 90%;
     font-size: 0.8rem;
-  }
-}
-
-/* Dark Mode Toggle Button */
-.dark-mode-toggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: white;
-  border: none;
-  cursor: pointer;
-  font-size: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-body.dark-mode .dark-mode-toggle {
-  background: rgba(30, 30, 30, 0.95);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-}
-
-.dark-mode-toggle:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-@media (max-width: 768px) {
-  .dark-mode-toggle {
-    top: 12px;
-    right: 12px;
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
   }
 }

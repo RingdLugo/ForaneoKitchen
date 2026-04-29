@@ -5,7 +5,7 @@
 }
 
 .comunidad-screen {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 20px 20px 100px;
 }
@@ -13,7 +13,6 @@
 .comunidad-header {
   text-align: center;
   margin-bottom: 32px;
-  position: relative;
 }
 
 .comunidad-header h1 {
@@ -22,6 +21,45 @@
   color: #2e7d32;
 }
 
+.comunidad-header p {
+  color: #666;
+  margin-top: 8px;
+}
+
+/* Tabs */
+.comunidad-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background: white;
+  border: 2px solid #e8f5e9;
+  padding: 10px 24px;
+  border-radius: 40px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  color: #666;
+}
+
+.tab-btn:hover {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white;
+  border-color: #2e7d32;
+}
+
+/* Recetas */
 .recetas-comunidad {
   display: flex;
   flex-direction: column;
@@ -74,6 +112,27 @@
   font-size: 0.8rem;
   color: #888;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.autor-badge {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.autor-badge.premium {
+  background: linear-gradient(90deg, #ffb300, #ffca28);
+  color: #1a3c34;
+}
+
+.autor-badge.free {
+  background: #e0e0e0;
+  color: #666;
 }
 
 .receta-stats {
@@ -92,13 +151,18 @@
   color: #ff9800;
 }
 
+.receta-likes {
+  color: #e53935;
+}
+
 .acciones-comunidad {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 
-.like-btn, .favorito-btn, .comentar-btn {
+.like-btn, .favorito-btn, .comentar-btn, .responder-btn {
   padding: 6px 14px;
   border-radius: 30px;
   border: none;
@@ -131,16 +195,95 @@
   color: white;
 }
 
-.comentar-btn {
+.comentar-btn, .responder-btn {
   background: #e8f5e9;
   color: #4caf50;
 }
 
-.like-btn:hover, .favorito-btn:hover, .comentar-btn:hover {
+.responder-btn {
+  font-size: 0.7rem;
+  padding: 4px 10px;
+}
+
+.like-btn:hover, .favorito-btn:hover, .comentar-btn:hover, .responder-btn:hover {
   transform: translateY(-2px);
   filter: brightness(0.95);
 }
 
+/* Actividad reciente */
+.actividad-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.actividad-item {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  transition: all 0.3s ease;
+  border-left: 4px solid #4caf50;
+}
+
+.actividad-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.actividad-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.actividad-contenido {
+  flex: 1;
+}
+
+.actividad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.actividad-autor {
+  font-weight: 700;
+  color: #2e7d32;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actividad-fecha {
+  font-size: 0.7rem;
+  color: #999;
+}
+
+.actividad-texto {
+  color: #424242;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.actividad-receta {
+  font-size: 0.8rem;
+  color: #4caf50;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.actividad-receta:hover {
+  text-decoration: underline;
+}
+
+/* Modal comentarios */
 .modal-comentarios {
   display: none;
   position: fixed;
@@ -183,7 +326,8 @@
   color: #2e7d32;
 }
 
-.modal-comentarios .close-modal {
+.modal-comentarios .close-modal,
+.modal-comentarios .close-respuesta-modal {
   background: none;
   border: none;
   font-size: 1.6rem;
@@ -202,6 +346,13 @@
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
+}
+
+.comentario-item.respuesta {
+  margin-left: 48px;
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 10px 12px;
 }
 
 .comentario-avatar {
@@ -239,10 +390,15 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .comentario-header strong {
   color: #2e7d32;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .comentario-header small {
@@ -254,6 +410,27 @@
   font-size: 0.9rem;
   line-height: 1.4;
   color: #424242;
+  margin-bottom: 6px;
+}
+
+.comentario-acciones {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.btn-responder {
+  background: none;
+  border: none;
+  font-size: 0.7rem;
+  color: #4caf50;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 500;
+}
+
+.btn-responder:hover {
+  text-decoration: underline;
 }
 
 .btn-eliminar-comentario {
@@ -301,6 +478,36 @@
   font-weight: 500;
 }
 
+.nuevo-comentario-area button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.respuesta-contexto {
+  padding: 12px 20px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #eee;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.restriction-message {
+  text-align: center;
+  padding: 20px;
+  background: #fff3e0;
+  border-radius: 16px;
+  color: #e65100;
+  margin: 20px;
+}
+
+.restriction-message .premium-link {
+  color: #ff9800;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Bottom Nav */
 .bottom-nav {
   position: fixed;
   bottom: 20px;
@@ -364,9 +571,32 @@
   opacity: 1;
 }
 
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e8f5e9;
+  border-top-color: #4caf50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 40px auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 768px) {
   .comunidad-screen {
     padding: 16px 16px 90px;
+  }
+  
+  .comunidad-tabs {
+    gap: 8px;
+  }
+  
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 0.8rem;
   }
   
   .receta-comunidad-card {
@@ -393,9 +623,21 @@
     padding: 4px 8px;
   }
   
+  .nav-item span:first-child {
+    font-size: 1rem;
+  }
+  
+  .nav-item span:last-child {
+    font-size: 0.55rem;
+  }
+  
   .notification-toast {
     white-space: normal;
     text-align: center;
     max-width: 90%;
+  }
+  
+  .comentario-item.respuesta {
+    margin-left: 24px;
   }
 }

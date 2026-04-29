@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForaneoKitchen - Verificar cuenta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/login.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
+  <style>
+    .otp-inputs {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 24px 0;
+    }
+    .otp-inputs input {
+      width: 48px;
+      height: 56px;
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+      border: 2px solid #d0d0d0;
+      border-radius: 12px;
+      padding: 0;
+      margin: 0;
+      transition: border-color .2s;
+    }
+    .otp-inputs input:focus {
+      border-color: #4caf50;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(76,175,80,.15);
+    }
+    .email-hint {
+      color: #888;
+      font-size: .9rem;
+      margin-bottom: 8px;
+    }
+    .email-hint strong { color: #2e7d32; }
+    .reenviar-link {
+      background: none;
+      border: none;
+      color: #4caf50;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: .9rem;
+      margin-top: 16px;
+      font-family: inherit;
+      text-decoration: underline;
+    }
+    .reenviar-link:disabled { color: #aaa; text-decoration: none; cursor: not-allowed; }
+    #countdown { color: #888; font-size: .85rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+
+  <div class="login-screen">
+    <div class="login-container">
+      <h1>ForaneoKitchen</h1>
+      <p class="tagline">Verifica tu cuenta</p>
+
+      <div class="login-card">
+        <h2>📧 Código de verificación</h2>
+        <p class="email-hint">Enviamos un código de 6 dígitos a<br><strong id="email-display">tu correo</strong></p>
+
+        <div class="otp-inputs">
+          <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]">
+        </div>
+
+        <button id="verificar-btn">Verificar →</button>
+
+        <p style="margin-top:20px">
+          <button class="reenviar-link" id="reenviar-btn" disabled>Reenviar código</button>
+          <br><span id="countdown"></span>
+        </p>
+
+        <p class="register-link" style="margin-top:16px">
+          <a href="login.html">← Volver al login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/dark-mode.js"></script>
+  <script>
+    const API_BASE = (() => {
+      const o = window.location.origin;
+      return (o.includes('localhost') || o.includes('127.0.0.1'))
+        ? 'http://localhost:3000/api'
+        : o + '/api';
+    })();
+
+    const email = localStorage.getItem('verifyEmail') || '';
+    document.getElementById('email-display').textContent = email || 'tu correo';
+
+    // ── OTP inputs con autoavance ────────────────────────────
+    const digits = document.querySelectorAll('.otp-digit');
+    digits.forEach((inp, i) => {
+      inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/\D/g, '').slice(-1);
+        if (inp.value && i < digits.length - 1) digits[i + 1].focus();
+      });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !inp.value && i > 0) digits[i - 1].focus();
+      });
+      inp.addEventListener('paste', e => {
+        e.preventDefault();
+        const txt = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+        txt.split('').forEach((ch, j) => { if (digits[j]) digits[j].value = ch; });
+        const last = Math.min(txt.length, digits.length - 1);
+        digits[last].focus();
+      });
+    });
+
+    function getOTP() { return [...digits].map(d => d.value).join(''); }
+
+    function showToast(msg, type = 'error') {
+      const ex = document.querySelector('.custom-toast');
+      if (ex) ex.remove();
+      const t = document.createElement('div');
+      t.className = `custom-toast ${type}`;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 4000);
+    }
+
+    // ── Verificar ────────────────────────────────────────────
+    document.getElementById('verificar-btn').addEventListener('click', async () => {
+      const otp = getOTP();
+      if (otp.length < 6) { showToast('Ingresa el código completo de 6 dígitos', 'error'); return; }
+      if (!email) { showToast('Email no encontrado, vuelve al registro', 'error'); return; }
+
+      const btn = document.getElementById('verificar-btn');
+      btn.disabled = true; btn.textContent = 'Verificando...';
+
+      try {
+        const res  = await fetch(`${API_BASE}/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, otp })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al verificar');
+
+        // Guardar sesión si el servidor devuelve token
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('userId',      data.user.id);
+          localStorage.setItem('userRol',     data.user.rol);
+          localStorage.setItem('userPremium', data.user.es_premium);
+          localStorage.setItem('userPuntos',  data.user.puntos || 0);
+          localStorage.removeItem('verifyEmail');
+        }
+
+        showToast('✅ ¡Cuenta verificada! Bienvenido', 'success');
+        setTimeout(() => { window.location.href = 'home.html'; }, 1200);
+
+      } catch (err) {
+        showToast(err.message, 'error');
+        digits.forEach(d => d.value = '');
+        digits[0].focus();
+      } finally {
+        btn.disabled = false; btn.textContent = 'Verificar →';
+      }
+    });
+
+    // ── Countdown para reenviar ──────────────────────────────
+    let segundos = 60;
+    const reenviarBtn = document.getElementById('reenviar-btn');
+    const countdown   = document.getElementById('countdown');
+
+    function startCountdown() {
+      segundos = 60;
+      reenviarBtn.disabled = true;
+      const iv = setInterval(() => {
+        countdown.textContent = `Puedes reenviar en ${segundos}s`;
+        segundos--;
+        if (segundos < 0) {
+          clearInterval(iv);
+          reenviarBtn.disabled = false;
+          countdown.textContent = '';
+        }
+      }, 1000);
+    }
+    startCountdown();
+
+    reenviarBtn.addEventListener('click', async () => {
+      reenviarBtn.disabled = true;
+      try {
+        // Reutilizamos forgot-password para reenviar con el email guardado
+        // En producción podrías tener un endpoint /api/auth/resend-otp
+        showToast('Reenviando código...', 'info');
+        // Aquí sería ideal un endpoint dedicado; por ahora avisamos al usuario
+        showToast('Vuelve al registro para solicitar un nuevo código', 'error');
+      } finally {
+        startCountdown();
+      }
+    });
+  </script>
+</body>
+</html>

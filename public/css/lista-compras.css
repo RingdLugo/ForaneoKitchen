@@ -80,37 +80,6 @@ body {
   transition: width 0.3s ease;
 }
 
-.lista-header-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.btn-agregar-manual, .btn-sincronizar {
-  background: white;
-  border: 2px solid #a5d6a7;
-  padding: 10px 20px;
-  border-radius: 40px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: inherit;
-  color: #2e7d32;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-agregar-manual:hover, .btn-sincronizar:hover {
-  background: #e8f5e9;
-  border-color: #4caf50;
-  transform: translateY(-2px);
-}
-
 .acciones {
   display: flex;
   justify-content: center;
@@ -118,7 +87,7 @@ body {
   margin-bottom: 24px;
 }
 
-.btn-exportar, .btn-compartir {
+.btn-exportar, .btn-sincronizar {
   background: white;
   border: 2px solid #a5d6a7;
   padding: 10px 24px;
@@ -131,7 +100,7 @@ body {
   color: #2e7d32;
 }
 
-.btn-exportar:hover, .btn-compartir:hover {
+.btn-exportar:hover, .btn-sincronizar:hover {
   background: #e8f5e9;
   border-color: #4caf50;
   transform: translateY(-2px);
@@ -282,6 +251,13 @@ body {
 
 .vacio-mensaje button {
   margin-top: 16px;
+  background: white;
+  border: 2px solid #a5d6a7;
+  padding: 10px 20px;
+  border-radius: 30px;
+  color: #2e7d32;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .bottom-nav {
@@ -357,20 +333,11 @@ body {
     font-size: 1.5rem;
   }
   
-  .lista-header-actions {
-    flex-direction: column;
-  }
-  
-  .btn-agregar-manual, .btn-sincronizar {
-    width: 100%;
-    justify-content: center;
-  }
-  
   .acciones {
     gap: 12px;
   }
   
-  .btn-exportar, .btn-compartir {
+  .btn-exportar, .btn-sincronizar {
     padding: 8px 20px;
     font-size: 0.85rem;
     flex: 1;

@@ -1,28 +1,44 @@
-/* ================================================================
-   ForaneoKitchen — comunidad.js
-   Likes, favoritos y comentarios funcionales + sin duplicados
-   ================================================================ */
-'use strict';
+// comunidad.js - Comunidad con Supabase
+import { supabase } from './supabaseClient.js';
 
-const API = (() => {
-  const o = window.location.origin;
-  return (o.includes('localhost') || o.includes('127.0.0.1')) ? 'http://localhost:3000' : o;
-})();
+// URL base del API REST propio
+const API_BASE = (window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1"))
+  ? "http://localhost:3000/api"
+  : window.location.origin + "/api";
 
-const token = localStorage.getItem('token');
+// Estado
+let currentUser = null;
 let recetas = [];
-let usuarioActual = null;
+let recetasPopulares = [];
+let comentariosRecientes = [];
 let recetaModalId = null;
+let comentarioPadreId = null;
 
-// ── Helpers ──────────────────────────────────────────────────
-function escapeHTML(s) {
-  if (!s) return '';
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-          .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+// Elementos DOM
+const recetasContainer = document.getElementById('recetas-comunidad');
+const popularesContainer = document.getElementById('recetas-populares');
+const actividadContainer = document.getElementById('actividad-reciente');
+const modalComentarios = document.getElementById('modal-comentarios');
+const modalRespuesta = document.getElementById('modal-respuesta');
+
+// Constantes
+const PLACEHOLDER_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
+
+// Cargar usuario actual (usa JWT propio, no Supabase auth)
+async function cargarUsuario() {
+  const userId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
+  if (userId && token) {
+    currentUser = {
+      id: parseInt(userId),
+      es_premium: localStorage.getItem('userPremium') === 'true',
+      puntos: parseInt(localStorage.getItem('userPuntos') || 0),
+      username: localStorage.getItem('userName')
+    };
+  }
 }
-function authHeaders() {
-  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-}
+
+// Mostrar notificación
 function showToast(msg, isError = false) {
   let t = document.getElementById('comunidad-toast');
   if (!t) {
@@ -37,135 +53,252 @@ function showToast(msg, isError = false) {
   clearTimeout(t._timeout);
   t._timeout = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// Escapar HTML
+function escapeHTML(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Formatear fecha
 function formatFecha(f) {
-  const d = new Date(f), now = new Date();
+  const d = new Date(f);
+  const now = new Date();
   const diff = Math.floor((now - d) / 1000);
   if (diff < 60) return 'Ahora';
-  if (diff < 3600) return `${Math.floor(diff/60)} min`;
-  if (diff < 86400) return `${Math.floor(diff/3600)} h`;
-  if (diff < 604800) return `${Math.floor(diff/86400)} d`;
+  if (diff < 3600) return `${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} h`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} d`;
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 }
-const PLACEHOLDER_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
 
-// ── Cargar usuario actual ─────────────────────────────────────
-async function obtenerUsuario() {
-  if (!token) return;
+// Cargar recetas recientes
+async function cargarRecetasRecientes() {
+  if (!recetasContainer) return;
+  
+  recetasContainer.innerHTML = '<div class="loading-spinner"></div>';
+  
   try {
-    const res = await fetch(`${API}/api/auth/me`, { headers: authHeaders() });
-    if (res.ok) usuarioActual = await res.json();
-  } catch {}
-}
-
-// ── Cargar recetas ─────────────────────────────────────────────
-async function cargarRecetas() {
-  const container = document.getElementById('recetas-comunidad');
-  if (!container) return;
-
-  // Skeleton
-  container.innerHTML = Array(3).fill(`
-    <div class="receta-comunidad-card" style="cursor:default">
-      <div class="receta-imagen-mini"><div class="skeleton" style="width:100%;height:100%;border-radius:12px"></div></div>
-      <div class="receta-info-comunidad" style="flex:1">
-        <div class="skeleton" style="height:18px;width:70%;margin-bottom:8px;border-radius:4px"></div>
-        <div class="skeleton" style="height:13px;width:40%;margin-bottom:12px;border-radius:4px"></div>
-        <div class="skeleton" style="height:13px;width:55%;border-radius:4px"></div>
-      </div>
-    </div>`).join('');
-
-  try {
-    const headers = token ? authHeaders() : {};
-    const res = await fetch(`${API}/api/recipes`, { headers });
-    if (!res.ok) throw new Error();
-    recetas = await res.json();
-    renderizarRecetas();
-  } catch {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:#999">No se pudieron cargar las recetas. ¿Está el servidor corriendo?</div>';
+    let query = supabase
+      .from('recetas')
+      .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol)')
+      .order('fecha', { ascending: false })
+      .limit(20);
+    
+    // Si no es Premium, filtrar recetas Premium
+    if (!currentUser?.es_premium) {
+      query = query.eq('es_premium', false);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    recetas = data || [];
+    renderizarRecetas(recetasContainer, recetas);
+  } catch (error) {
+    console.error('Error cargando recetas:', error);
+    recetasContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Error al cargar recetas</div>';
   }
 }
 
-// ── Render recetas ─────────────────────────────────────────────
-function renderizarRecetas() {
-  const container = document.getElementById('recetas-comunidad');
-  if (!container || !recetas.length) {
-    if (container) container.innerHTML = '<div style="text-align:center;padding:60px;color:#999">No hay recetas aún.</div>';
+// Cargar recetas populares (por likes)
+async function cargarRecetasPopulares() {
+  if (!popularesContainer) return;
+  
+  popularesContainer.innerHTML = '<div class="loading-spinner"></div>';
+  
+  try {
+    let query = supabase
+      .from('recetas')
+      .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol)')
+      .order('likes', { ascending: false })
+      .limit(20);
+    
+    if (!currentUser?.es_premium) {
+      query = query.eq('es_premium', false);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    recetasPopulares = data || [];
+    renderizarRecetas(popularesContainer, recetasPopulares);
+  } catch (error) {
+    console.error('Error cargando recetas populares:', error);
+    popularesContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Error al cargar recetas</div>';
+  }
+}
+
+// Cargar actividad reciente (comentarios)
+async function cargarActividadReciente() {
+  if (!actividadContainer) return;
+  actividadContainer.innerHTML = '<div class="loading-spinner"></div>';
+  
+  const token = localStorage.getItem('token');
+  if (token) {
+    // Si hay token, intentar cargar actividad personal primero
+    try {
+      const res = await fetch(`${API_BASE}/users/me/activity`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const activity = await res.json();
+        if (activity && activity.length > 0) {
+          renderizarActividadPersonal(activity);
+          return;
+        }
+      }
+    } catch (e) { console.error('Error personal activity:', e); }
+  }
+
+  // Fallback a actividad global (comentarios)
+  try {
+    const { data, error } = await supabase
+      .from('comentarios')
+      .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol), receta:receta_id(id, titulo)')
+      .order('fecha', { ascending: false })
+      .limit(30);
+    
+    if (error) throw error;
+    renderizarActividad(data || []);
+  } catch (error) {
+    console.error('Error cargando actividad:', error);
+    actividadContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Error al cargar actividad</div>';
+  }
+}
+
+// Renderizar recetas
+function renderizarRecetas(container, recetasList) {
+  if (!container) return;
+  
+  if (!recetasList.length) {
+    container.innerHTML = '<div style="text-align:center;padding:60px;color:#999">No hay recetas aún.</div>';
     return;
   }
-
-  container.innerHTML = recetas.map(r => {
+  
+  container.innerHTML = recetasList.map(r => {
     const img = r.imagen || PLACEHOLDER_IMG;
     const likedClass = r.usuarioLike ? 'liked' : '';
     const favClass = r.esFavorito ? 'favorited' : '';
-    const estrellas = r.rating ? `⭐ ${parseFloat(r.rating).toFixed(1)}` : '';
-
+    const autorPremium = r.usuario?.es_premium || false;
+    const autorBadge = autorPremium 
+      ? '<span class="autor-badge premium">👑 Premium</span>' 
+      : '<span class="autor-badge free">🆓 Free</span>';
+    
     return `
-    <div class="receta-comunidad-card" data-id="${r.id}" onclick="irAReceta(${r.id}, event)">
-      <div class="receta-imagen-mini">
-        <img src="${img}" alt="${escapeHTML(r.titulo)}" loading="lazy"
-             onerror="this.src='${PLACEHOLDER_IMG}'">
-      </div>
-      <div class="receta-info-comunidad">
-        <h3>${escapeHTML(r.titulo)}</h3>
-        <p class="receta-autor">👨‍🍳 ${escapeHTML(r.autor || 'Anónimo')}</p>
-        <div class="receta-stats">
-          <span class="receta-precio">💰 ${escapeHTML(r.precio || '$$')}</span>
-          <span class="receta-tiempo">⏱️ ${escapeHTML(r.tiempo || '30 min')}</span>
-          ${estrellas ? `<span style="color:#f0883e;font-size:.8rem">${estrellas}</span>` : ''}
+      <div class="receta-comunidad-card" data-id="${r.id}" onclick="window.irAReceta(${r.id}, event)">
+        <div class="receta-imagen-mini">
+          <img src="${img}" alt="${escapeHTML(r.titulo)}" loading="lazy"
+               onerror="this.src='${PLACEHOLDER_IMG}'">
         </div>
-        <div class="acciones-comunidad" onclick="event.stopPropagation()">
-          <button class="like-btn ${likedClass}"
-            data-id="${r.id}" data-liked="${r.usuarioLike ? '1':'0'}"
-            onclick="toggleLike(${r.id}, this)">
-            ❤️ <span class="like-count">${r.likes || 0}</span>
-          </button>
-          <button class="favorito-btn ${favClass}"
-            data-id="${r.id}" data-fav="${r.esFavorito ? '1':'0'}"
-            onclick="toggleFavorito(${r.id}, this)">
-            ⭐ ${r.esFavorito ? 'Guardado' : 'Guardar'}
-          </button>
-          <button class="comentar-btn" onclick="abrirComentarios(${r.id}, '${escapeHTML(r.titulo)}')">
-            💬 Comentar
-          </button>
+        <div class="receta-info-comunidad">
+          <h3>${escapeHTML(r.titulo)}</h3>
+          <p class="receta-autor">
+            👨‍🍳 ${escapeHTML(r.usuario?.username || 'Anónimo')}
+            ${autorBadge}
+          </p>
+          <div class="receta-stats">
+            <span class="receta-precio">💰 ${escapeHTML(r.precio || '$$')}</span>
+            <span class="receta-tiempo">⏱️ ${escapeHTML(r.tiempo || '30 min')}</span>
+            <span class="receta-likes">❤️ ${r.likes || 0}</span>
+          </div>
+          <div class="acciones-comunidad" onclick="event.stopPropagation()">
+            <button class="like-btn ${likedClass}"
+              data-id="${r.id}" data-liked="${r.usuarioLike ? '1' : '0'}"
+              onclick="window.toggleLike(${r.id}, this)">
+              ❤️ <span class="like-count">${r.likes || 0}</span>
+            </button>
+            <button class="favorito-btn ${favClass}"
+              data-id="${r.id}" data-fav="${r.esFavorito ? '1' : '0'}"
+              onclick="window.toggleFavorito(${r.id}, this)">
+              ⭐ ${r.esFavorito ? 'Guardado' : 'Guardar'}
+            </button>
+            <button class="comentar-btn" onclick="window.abrirComentarios(${r.id}, '${escapeHTML(r.titulo)}')">
+              💬 Comentar
+            </button>
+          </div>
         </div>
       </div>
-    </div>`;
+    `;
   }).join('');
 }
 
-function irAReceta(id, e) {
-  if (e.target.closest('.acciones-comunidad')) return;
-  window.location.href = `receta.html?id=${id}`;
+// Renderizar actividad reciente
+function renderizarActividad(comentarios) {
+  if (!actividadContainer) return;
+  if (!comentarios.length) {
+    actividadContainer.innerHTML = '<div style="text-align:center;padding:60px;color:#999">No hay actividad reciente.</div>';
+    return;
+  }
+  
+  actividadContainer.innerHTML = comentarios.map(c => {
+    const avatar = c.usuario?.foto_perfil 
+      ? `<img src="${c.usuario.foto_perfil}" alt="${escapeHTML(c.usuario.username)}">`
+      : `<div class="avatar-placeholder">${(c.usuario?.username?.charAt(0) || 'U').toUpperCase()}</div>`;
+    
+    const autorBadge = c.usuario?.es_premium ? '👑' : '🆓';
+    
+    return `
+      <div class="actividad-item">
+        <div class="actividad-avatar">${avatar}</div>
+        <div class="actividad-contenido">
+          <div class="actividad-header">
+            <span class="actividad-autor">${escapeHTML(c.usuario?.username || 'Usuario')} <span style="font-size:0.7rem">${autorBadge}</span></span>
+            <span class="actividad-fecha">${formatFecha(c.fecha)}</span>
+          </div>
+          <div class="actividad-texto">"${escapeHTML(c.texto.substring(0, 100))}"</div>
+          <div class="actividad-receta" onclick="window.location.href='receta.html?id=${c.receta?.id}'">
+            📖 En: ${escapeHTML(c.receta?.titulo || 'Receta')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
-// ── LIKE ──────────────────────────────────────────────────────
+function renderizarActividadPersonal(activity) {
+  if (!actividadContainer) return;
+  actividadContainer.innerHTML = '<h4 style="margin-bottom:15px; color:#2e7d32">Tu actividad reciente:</h4>' + activity.map(a => {
+    const iconos = { like: '❤️', favorito: '⭐', comentario: '💬', receta: '📝' };
+    return `
+      <div class="actividad-item personal">
+        <div class="actividad-icon" style="font-size:1.5rem; margin-right:15px">${iconos[a.tipo] || '📌'}</div>
+        <div class="actividad-contenido">
+          <div class="actividad-texto">${escapeHTML(a.texto)}</div>
+          <div class="actividad-fecha" style="font-size:0.8rem; color:#999">${formatFecha(a.fecha)}</div>
+          ${a.id ? `<button onclick="window.location.href='receta.html?id=${a.id}'" style="border:none; background:none; color:#4caf50; cursor:pointer; padding:0; font-size:0.8rem; margin-top:5px">Ver receta →</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Toggle Like
 async function toggleLike(recipeId, btn) {
-  if (!token) { showToast('Inicia sesión para dar like', true); return; }
-
+  if (!currentUser) {
+    showToast('Inicia sesión para dar like', true);
+    return;
+  }
+  const token = localStorage.getItem('token');
   const liked = btn.dataset.liked === '1';
-  const method = liked ? 'DELETE' : 'POST';
   const countEl = btn.querySelector('.like-count');
-
-  // Optimistic UI
   btn.disabled = true;
   const oldCount = parseInt(countEl.textContent) || 0;
   countEl.textContent = liked ? Math.max(oldCount - 1, 0) : oldCount + 1;
   btn.classList.toggle('liked', !liked);
   btn.dataset.liked = liked ? '0' : '1';
-
   try {
-    const res = await fetch(`${API}/api/recipes/${recipeId}/like`, { method, headers: authHeaders() });
-    if (res.status === 400 && !liked) {
-      // Ya existe el like — sincronizar UI
-      showToast('Ya le diste like a esta receta');
-      btn.classList.add('liked'); btn.dataset.liked = '1';
-      return;
-    }
-    if (!res.ok) throw new Error();
+    const res = await fetch(`${API_BASE}/recipes/${recipeId}/like`, {
+      method: liked ? 'DELETE' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Error');
     const data = await res.json();
-    countEl.textContent = data.likes;
+    if (data.likes !== undefined) countEl.textContent = data.likes;
     showToast(liked ? 'Like eliminado' : '❤️ ¡Like!');
-  } catch {
-    // Revertir
+  } catch (error) {
     countEl.textContent = oldCount;
     btn.classList.toggle('liked', liked);
     btn.dataset.liked = liked ? '1' : '0';
@@ -175,30 +308,28 @@ async function toggleLike(recipeId, btn) {
   }
 }
 
-// ── FAVORITO ──────────────────────────────────────────────────
+// Toggle Favorito
 async function toggleFavorito(recipeId, btn) {
-  if (!token) { showToast('Inicia sesión para guardar favoritos', true); return; }
-
+  if (!currentUser) {
+    showToast('Inicia sesión para guardar favoritos', true);
+    return;
+  }
+  const token = localStorage.getItem('token');
   const fav = btn.dataset.fav === '1';
-  const method = fav ? 'DELETE' : 'POST';
-
   btn.disabled = true;
   btn.classList.toggle('favorited', !fav);
-  btn.textContent = `⭐ ${!fav ? 'Guardado' : 'Guardar'}`;
+  btn.innerHTML = `⭐ ${!fav ? 'Guardado' : 'Guardar'}`;
   btn.dataset.fav = fav ? '0' : '1';
-
   try {
-    const res = await fetch(`${API}/api/users/me/favorites/${recipeId}`, { method, headers: authHeaders() });
-    if (res.status === 400 && !fav) {
-      showToast('Ya está en favoritos');
-      btn.classList.add('favorited'); btn.dataset.fav = '1'; btn.textContent = '⭐ Guardado';
-      return;
-    }
-    if (!res.ok) throw new Error();
+    const res = await fetch(`${API_BASE}/users/me/favorites/${recipeId}`, {
+      method: fav ? 'DELETE' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Error');
     showToast(fav ? '⭐ Eliminado de favoritos' : '⭐ Guardado en favoritos');
-  } catch {
+  } catch (error) {
     btn.classList.toggle('favorited', fav);
-    btn.textContent = `⭐ ${fav ? 'Guardado' : 'Guardar'}`;
+    btn.innerHTML = `⭐ ${fav ? 'Guardado' : 'Guardar'}`;
     btn.dataset.fav = fav ? '1' : '0';
     showToast('Error al procesar favorito', true);
   } finally {
@@ -206,123 +337,340 @@ async function toggleFavorito(recipeId, btn) {
   }
 }
 
-// ── COMENTARIOS ───────────────────────────────────────────────
+// Abrir modal de comentarios
 async function abrirComentarios(recipeId, titulo) {
   recetaModalId = recipeId;
-  const modal = document.getElementById('modal-comentarios');
-  document.getElementById('modal-comentarios-titulo').textContent = `💬 ${titulo}`;
-  modal.classList.add('active');
+  comentarioPadreId = null;
+  document.getElementById('modal-comentarios-titulo').textContent = `💬 ${escapeHTML(titulo)}`;
+  modalComentarios.classList.add('active');
   document.getElementById('nuevo-comentario').value = '';
   await cargarComentarios(recipeId);
 }
 
+// Cargar comentarios (incluyendo respuestas)
 async function cargarComentarios(recipeId) {
   const lista = document.getElementById('comentarios-lista');
   lista.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa">Cargando…</div>';
-
+  
   try {
-    const res = await fetch(`${API}/api/recipes/${recipeId}/comments`);
-    const comentarios = res.ok ? await res.json() : [];
-
-    if (!comentarios.length) {
+    const { data, error } = await supabase
+      .from('comentarios')
+      .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol)')
+      .eq('receta_id', recipeId)
+      .is('padre_id', null)
+      .order('fecha', { ascending: true });
+    
+    if (error) throw error;
+    
+    if (!data?.length) {
       lista.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa">Sin comentarios. ¡Sé el primero! 🍳</div>';
       return;
     }
-
-    lista.innerHTML = comentarios.map(c => {
-      const uname = c.usuario?.username || 'Usuario';
-      const inicial = uname[0].toUpperCase();
-      const foto = c.usuario?.foto_perfil;
-      const avatarHTML = foto
-        ? `<img src="${foto}" alt="${escapeHTML(uname)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-        : `<div class="avatar-placeholder">${inicial}</div>`;
-      const esPropio = usuarioActual && c.usuario?.id === usuarioActual.id;
-
-      return `
-      <div class="comentario-item" data-id="${c.id}">
-        <div class="comentario-avatar">${avatarHTML}</div>
-        <div class="comentario-contenido">
-          <div class="comentario-header">
-            <strong>${escapeHTML(uname)}</strong>
-            <small>${formatFecha(c.fecha)}</small>
-          </div>
-          <p>${escapeHTML(c.texto)}</p>
-        </div>
-        ${esPropio ? `<button class="btn-eliminar-comentario" onclick="eliminarComentario('${c.id}', this)" title="Eliminar">🗑️</button>` : ''}
-      </div>`;
-    }).join('');
-  } catch {
+    
+    lista.innerHTML = await Promise.all(data.map(async (c) => {
+      const respuestas = await cargarRespuestas(c.id);
+      return renderComentario(c, respuestas);
+    })).then(results => results.join(''));
+    
+  } catch (error) {
+    console.error('Error cargando comentarios:', error);
     lista.innerHTML = '<div style="text-align:center;padding:20px;color:#e53935">Error al cargar comentarios</div>';
   }
 }
 
-async function enviarComentario() {
-  if (!token) { showToast('Inicia sesión para comentar', true); return; }
-  const input = document.getElementById('nuevo-comentario');
-  const texto = input.value.trim();
-  if (!texto) { showToast('Escribe un comentario', true); return; }
-  if (texto.length > 500) { showToast('Máximo 500 caracteres', true); return; }
+// Cargar respuestas de un comentario
+async function cargarRespuestas(padreId) {
+  const { data, error } = await supabase
+    .from('comentarios')
+    .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol)')
+    .eq('padre_id', padreId)
+    .order('fecha', { ascending: true });
+  
+  if (error) return [];
+  return data || [];
+}
 
-  const btn = document.getElementById('enviar-comentario');
-  btn.disabled = true; btn.textContent = '…';
+// Renderizar comentario individual
+function renderComentario(comentario, respuestas = []) {
+  const uname = comentario.usuario?.username || 'Usuario';
+  const inicial = uname[0].toUpperCase();
+  const foto = comentario.usuario?.foto_perfil;
+  const autorPremium = comentario.usuario?.es_premium || false;
+  const autorBadge = autorPremium ? '<span style="font-size:0.7rem">👑</span>' : '<span style="font-size:0.7rem">🆓</span>';
+  const esPropio = currentUser && comentario.usuario?.id === currentUser.id;
+  const puedeResponder = currentUser?.es_premium || false;
+  
+  const avatarHTML = foto
+    ? `<img src="${foto}" alt="${escapeHTML(uname)}">`
+    : `<div class="avatar-placeholder">${inicial}</div>`;
+  
+  let respuestasHTML = '';
+  if (respuestas.length > 0) {
+    respuestasHTML = `
+      <div style="margin-top: 12px; margin-left: 32px;">
+        ${respuestas.map(r => renderComentarioRespuesta(r)).join('')}
+      </div>
+    `;
+  }
+  
+  return `
+    <div class="comentario-item" data-id="${comentario.id}">
+      <div class="comentario-avatar">${avatarHTML}</div>
+      <div class="comentario-contenido">
+        <div class="comentario-header">
+          <strong>${escapeHTML(uname)} ${autorBadge}</strong>
+          <small>${formatFecha(comentario.fecha)}</small>
+        </div>
+        <p>${escapeHTML(comentario.texto)}</p>
+        <div class="comentario-acciones">
+          ${puedeResponder ? `<button class="btn-responder" onclick="window.abrirResponder(${comentario.id}, '${escapeHTML(uname)}')">💬 Responder</button>` : ''}
+          ${esPropio ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${comentario.id}', this)">🗑️</button>` : ''}
+        </div>
+        ${respuestasHTML}
+      </div>
+    </div>
+  `;
+}
 
+function renderComentarioRespuesta(respuesta) {
+  const uname = respuesta.usuario?.username || 'Usuario';
+  const inicial = uname[0].toUpperCase();
+  const foto = respuesta.usuario?.foto_perfil;
+  const autorPremium = respuesta.usuario?.es_premium || false;
+  const autorBadge = autorPremium ? '👑' : '🆓';
+  const esPropio = currentUser && respuesta.usuario?.id === currentUser.id;
+  
+  const avatarHTML = foto
+    ? `<img src="${foto}" alt="${escapeHTML(uname)}">`
+    : `<div class="avatar-placeholder">${inicial}</div>`;
+  
+  return `
+    <div class="comentario-item respuesta" data-id="${respuesta.id}">
+      <div class="comentario-avatar">${avatarHTML}</div>
+      <div class="comentario-contenido">
+        <div class="comentario-header">
+          <strong>${escapeHTML(uname)} <span style="font-size:0.7rem">${autorBadge}</span></strong>
+          <small>${formatFecha(respuesta.fecha)}</small>
+        </div>
+        <p>${escapeHTML(respuesta.texto)}</p>
+        <div class="comentario-acciones">
+          ${esPropio ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${respuesta.id}', this)">🗑️</button>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Abrir modal para responder
+function abrirResponder(comentarioId, autorNombre) {
+  if (!currentUser) {
+    showToast('Inicia sesión para responder', true);
+    return;
+  }
+  
+  if (!currentUser.es_premium) {
+    showToast('⚠️ Solo usuarios Premium pueden responder comentarios. ¡Mejora tu cuenta!', true);
+    const restrictionDiv = document.createElement('div');
+    restrictionDiv.className = 'restriction-message';
+    restrictionDiv.innerHTML = `
+      <p>🔒 Solo usuarios Premium pueden participar en conversaciones.</p>
+      <a href="perfil.html" class="premium-link">🌟 Mejorar a Premium</a>
+    `;
+    modalRespuesta.querySelector('.respuesta-contexto').innerHTML = '';
+    modalRespuesta.querySelector('.respuesta-contexto').appendChild(restrictionDiv);
+    modalRespuesta.classList.add('active');
+    return;
+  }
+  
+  comentarioPadreId = comentarioId;
+  const contexto = document.getElementById('respuesta-contexto');
+  contexto.innerHTML = `<strong>Respondiendo a @${escapeHTML(autorNombre)}</strong>`;
+  document.getElementById('respuesta-texto').value = '';
+  modalRespuesta.classList.add('active');
+}
+
+// Enviar respuesta
+async function enviarRespuesta() {
+  const texto = document.getElementById('respuesta-texto').value.trim();
+  if (!texto) {
+    showToast('Escribe una respuesta', true);
+    return;
+  }
+  
+  if (!currentUser?.es_premium) {
+    showToast('Solo usuarios Premium pueden responder', true);
+    modalRespuesta.classList.remove('active');
+    return;
+  }
+  
+  const btn = document.getElementById('enviar-respuesta');
+  btn.disabled = true;
+  btn.textContent = '...';
+  
+  const token = localStorage.getItem('token');
   try {
-    const res = await fetch(`${API}/api/recipes/${recetaModalId}/comments`, {
-      method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({ texto })
+    const res = await fetch(`${API_BASE}/recipes/${recetaModalId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ texto, padre_id: comentarioPadreId })
     });
-    if (!res.ok) throw new Error();
-    input.value = '';
-    showToast('💬 Comentario publicado');
+    if (!res.ok) throw new Error('Error');
+    showToast('💬 Respuesta publicada');
+    modalRespuesta.classList.remove('active');
     await cargarComentarios(recetaModalId);
-  } catch {
-    showToast('Error al publicar', true);
+  } catch (error) {
+    console.error('Error al responder:', error);
+    showToast('Error al publicar respuesta', true);
   } finally {
-    btn.disabled = false; btn.textContent = 'Enviar';
+    btn.disabled = false;
+    btn.textContent = 'Responder';
   }
 }
 
+// Enviar comentario principal
+async function enviarComentario() {
+  if (!currentUser) {
+    showToast('Inicia sesión para comentar', true);
+    return;
+  }
+  
+  const input = document.getElementById('nuevo-comentario');
+  const texto = input.value.trim();
+  if (!texto) {
+    showToast('Escribe un comentario', true);
+    return;
+  }
+  
+  const btn = document.getElementById('enviar-comentario');
+  btn.disabled = true;
+  btn.textContent = '...';
+  
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(`${API_BASE}/recipes/${recetaModalId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ texto, padre_id: null })
+    });
+    if (!res.ok) throw new Error('Error');
+    input.value = '';
+    showToast('💬 Comentario publicado');
+    await cargarComentarios(recetaModalId);
+  } catch (error) {
+    console.error('Error al publicar:', error);
+    showToast('Error al publicar comentario', true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+  }
+}
+
+// Eliminar comentario
 async function eliminarComentario(commentId, btn) {
   if (!confirm('¿Eliminar este comentario?')) return;
+  
   btn.disabled = true;
+  
+  const token = localStorage.getItem('token');
   try {
-    const res = await fetch(`${API}/api/comments/${commentId}`, { method: 'DELETE', headers: authHeaders() });
-    if (!res.ok) throw new Error();
-    btn.closest('.comentario-item').remove();
+    const res = await fetch(`${API_BASE}/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Error');
+    const comentarioDiv = btn.closest('.comentario-item');
+    if (comentarioDiv) comentarioDiv.remove();
     showToast('Comentario eliminado');
-  } catch {
+  } catch (error) {
+    console.error('Error al eliminar:', error);
     showToast('Error al eliminar', true);
     btn.disabled = false;
   }
 }
 
+// Cerrar modales
 function cerrarModal() {
-  document.getElementById('modal-comentarios').classList.remove('active');
+  modalComentarios.classList.remove('active');
   recetaModalId = null;
 }
 
-// ── INIT ──────────────────────────────────────────────────────
-async function init() {
-  await obtenerUsuario();
-  await cargarRecetas();
+function cerrarModalRespuesta() {
+  modalRespuesta.classList.remove('active');
+  comentarioPadreId = null;
+}
 
-  // Modal
-  document.querySelector('#modal-comentarios .close-modal')?.addEventListener('click', cerrarModal);
-  document.getElementById('enviar-comentario')?.addEventListener('click', enviarComentario);
-  document.getElementById('nuevo-comentario')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarComentario(); }
-  });
-  window.addEventListener('click', e => {
-    const modal = document.getElementById('modal-comentarios');
-    if (e.target === modal) cerrarModal();
+// Ir a receta
+function irAReceta(id, event) {
+  if (event?.target?.closest('.acciones-comunidad')) return;
+  window.location.href = `receta.html?id=${id}`;
+}
+
+// Cambiar tabs
+function initTabs() {
+  const tabs = document.querySelectorAll('.tab-btn');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', async () => {
+      const tabName = tab.dataset.tab;
+      
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+      });
+      
+      if (tabName === 'recetas') {
+        document.getElementById('recetas-tab').style.display = 'block';
+        if (recetas.length === 0) await cargarRecetasRecientes();
+      } else if (tabName === 'populares') {
+        document.getElementById('populares-tab').style.display = 'block';
+        if (recetasPopulares.length === 0) await cargarRecetasPopulares();
+      } else if (tabName === 'comentarios') {
+        document.getElementById('comentarios-tab').style.display = 'block';
+        if (comentariosRecientes.length === 0) await cargarActividadReciente();
+      }
+    });
   });
 }
 
-// Exponer globalmente
+// Inicializar
+async function init() {
+  await cargarUsuario();
+  await cargarRecetasRecientes();
+  await cargarRecetasPopulares();
+  await cargarActividadReciente();
+  initTabs();
+  
+  // Modales
+  document.querySelector('#modal-comentarios .close-modal')?.addEventListener('click', cerrarModal);
+  document.querySelector('#modal-respuesta .close-respuesta-modal')?.addEventListener('click', cerrarModalRespuesta);
+  document.getElementById('enviar-comentario')?.addEventListener('click', enviarComentario);
+  document.getElementById('enviar-respuesta')?.addEventListener('click', enviarRespuesta);
+  document.getElementById('nuevo-comentario')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarComentario();
+    }
+  });
+  document.getElementById('respuesta-texto')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviarRespuesta();
+    }
+  });
+  
+  window.addEventListener('click', e => {
+    if (e.target === modalComentarios) cerrarModal();
+    if (e.target === modalRespuesta) cerrarModalRespuesta();
+  });
+}
+
+// Exponer funciones globalmente
 window.toggleLike = toggleLike;
 window.toggleFavorito = toggleFavorito;
 window.abrirComentarios = abrirComentarios;
 window.eliminarComentario = eliminarComentario;
 window.irAReceta = irAReceta;
+window.abrirResponder = abrirResponder;
 
 init();
