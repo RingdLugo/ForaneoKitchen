@@ -75,25 +75,11 @@ function formatFecha(f) {
 // Cargar recetas recientes
 async function cargarRecetasRecientes() {
   if (!recetasContainer) return;
-  
   recetasContainer.innerHTML = '<div class="loading-spinner"></div>';
   
   try {
-    let query = supabase
-      .from('recetas')
-      .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol)')
-      .order('fecha', { ascending: false })
-      .limit(20);
-    
-    // Si no es Premium, filtrar recetas Premium
-    if (!currentUser?.es_premium) {
-      query = query.eq('es_premium', false);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
+    const res = await fetch('/api/recipes?orden=reciente');
+    const data = await res.json();
     recetas = data || [];
     renderizarRecetas(recetasContainer, recetas);
   } catch (error) {
@@ -105,24 +91,11 @@ async function cargarRecetasRecientes() {
 // Cargar recetas populares (por likes)
 async function cargarRecetasPopulares() {
   if (!popularesContainer) return;
-  
   popularesContainer.innerHTML = '<div class="loading-spinner"></div>';
   
   try {
-    let query = supabase
-      .from('recetas')
-      .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol)')
-      .order('likes', { ascending: false })
-      .limit(20);
-    
-    if (!currentUser?.es_premium) {
-      query = query.eq('es_premium', false);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
+    const res = await fetch('/api/recipes?orden=likes');
+    const data = await res.json();
     recetasPopulares = data || [];
     renderizarRecetas(popularesContainer, recetasPopulares);
   } catch (error) {
@@ -138,7 +111,6 @@ async function cargarActividadReciente() {
   
   const token = localStorage.getItem('token');
   if (token) {
-    // Si hay token, intentar cargar actividad personal primero
     try {
       const res = await fetch(`${API_BASE}/users/me/activity`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -148,25 +120,26 @@ async function cargarActividadReciente() {
         if (activity && activity.length > 0) {
           renderizarActividadPersonal(activity);
           return;
+        } else {
+          actividadContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Aún no tienes actividad registrada. ¡Empieza a explorar recetas!</div>';
+          return;
         }
       }
-    } catch (e) { console.error('Error personal activity:', e); }
+    } catch (e) { 
+      console.error('Error personal activity:', e);
+      actividadContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Error al cargar tu actividad.</div>';
+      return;
+    }
   }
 
-  // Fallback a actividad global (comentarios)
-  try {
-    const { data, error } = await supabase
-      .from('comentarios')
-      .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol), receta:receta_id(id, titulo)')
-      .order('fecha', { ascending: false })
-      .limit(30);
-    
-    if (error) throw error;
-    renderizarActividad(data || []);
-  } catch (error) {
-    console.error('Error cargando actividad:', error);
-    actividadContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Error al cargar actividad</div>';
-  }
+  // Si no hay token, invitar a iniciar sesión
+  actividadContainer.innerHTML = `
+    <div style="text-align:center;padding:60px;color:#999">
+      <span style="font-size:3rem">🔒</span>
+      <p style="margin-top:15px">Inicia sesión para ver tu actividad personal.</p>
+      <button onclick="window.location.href='login.html'" class="tab-btn active" style="margin-top:20px">Iniciar Sesión</button>
+    </div>
+  `;
 }
 
 // Renderizar recetas
@@ -195,10 +168,11 @@ function renderizarRecetas(container, recetasList) {
         </div>
         <div class="receta-info-comunidad">
           <h3>${escapeHTML(r.titulo)}</h3>
-          <p class="receta-autor">
+          <p class="receta-autor" ${r.usuario_id || r.usuario?.id ? `onclick="event.stopPropagation(); window.location.href='perfil.html?id=${r.usuario_id || r.usuario?.id}'"` : ''} style="${r.usuario_id || r.usuario?.id ? 'cursor:pointer; color:#4caf50;' : 'color:#999;'}">
             👨‍🍳 ${escapeHTML(r.usuario?.username || 'Anónimo')}
             ${autorBadge}
           </p>
+          ${r.usuario?.rol === 'free' && !r.video_url && !r.video_youtube ? '<div style="font-size:0.65rem;color:#4caf50;margin-top:-5px;margin-bottom:5px">ℹ️ Sin video - Usuario Free</div>' : ''}
           <div class="receta-stats">
             <span class="receta-precio">💰 ${escapeHTML(r.precio || '$$')}</span>
             <span class="receta-tiempo">⏱️ ${escapeHTML(r.tiempo || '30 min')}</span>
@@ -245,7 +219,7 @@ function renderizarActividad(comentarios) {
         <div class="actividad-avatar">${avatar}</div>
         <div class="actividad-contenido">
           <div class="actividad-header">
-            <span class="actividad-autor">${escapeHTML(c.usuario?.username || 'Usuario')} <span style="font-size:0.7rem">${autorBadge}</span></span>
+            <span class="actividad-autor" onclick="window.location.href='perfil.html?id=${c.usuario_id || c.usuario?.id || ''}'" style="cursor:pointer; color:#4caf50;">${escapeHTML(c.usuario?.username || 'Usuario')} <span style="font-size:0.7rem">${autorBadge}</span></span>
             <span class="actividad-fecha">${formatFecha(c.fecha)}</span>
           </div>
           <div class="actividad-texto">"${escapeHTML(c.texto.substring(0, 100))}"</div>
@@ -261,7 +235,7 @@ function renderizarActividad(comentarios) {
 function renderizarActividadPersonal(activity) {
   if (!actividadContainer) return;
   actividadContainer.innerHTML = '<h4 style="margin-bottom:15px; color:#2e7d32">Tu actividad reciente:</h4>' + activity.map(a => {
-    const iconos = { like: '❤️', favorito: '⭐', comentario: '💬', receta: '📝' };
+    const iconos = { like: '❤️', favorito: '⭐', comentario: '💬', receta: '📝', punto: '🪙' };
     return `
       <div class="actividad-item personal">
         <div class="actividad-icon" style="font-size:1.5rem; margin-right:15px">${iconos[a.tipo] || '📌'}</div>
@@ -353,41 +327,31 @@ async function cargarComentarios(recipeId) {
   lista.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa">Cargando…</div>';
   
   try {
-    const { data, error } = await supabase
-      .from('comentarios')
-      .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol)')
-      .eq('receta_id', recipeId)
-      .is('padre_id', null)
-      .order('fecha', { ascending: true });
+    const res = await fetch(`${API_BASE}/recipes/${recipeId}/comments`);
+    if (!res.ok) throw new Error('Error al cargar comentarios');
     
-    if (error) throw error;
+    const allComments = await res.json();
     
-    if (!data?.length) {
+    if (!allComments?.length) {
       lista.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa">Sin comentarios. ¡Sé el primero! 🍳</div>';
       return;
     }
     
-    lista.innerHTML = await Promise.all(data.map(async (c) => {
-      const respuestas = await cargarRespuestas(c.id);
-      return renderComentario(c, respuestas);
-    })).then(results => results.join(''));
+    // Construir árbol en memoria
+    const padres = allComments.filter(c => !c.padre_id);
+    const hijosPorPadre = {};
+    
+    allComments.filter(c => c.padre_id).forEach(c => {
+      if (!hijosPorPadre[c.padre_id]) hijosPorPadre[c.padre_id] = [];
+      hijosPorPadre[c.padre_id].push(c);
+    });
+    
+    lista.innerHTML = padres.map(p => renderComentario(p, hijosPorPadre[p.id] || [])).join('');
     
   } catch (error) {
     console.error('Error cargando comentarios:', error);
     lista.innerHTML = '<div style="text-align:center;padding:20px;color:#e53935">Error al cargar comentarios</div>';
   }
-}
-
-// Cargar respuestas de un comentario
-async function cargarRespuestas(padreId) {
-  const { data, error } = await supabase
-    .from('comentarios')
-    .select('*, usuario:usuario_id(id, username, foto_perfil, es_premium, rol)')
-    .eq('padre_id', padreId)
-    .order('fecha', { ascending: true });
-  
-  if (error) return [];
-  return data || [];
 }
 
 // Renderizar comentario individual
@@ -401,13 +365,13 @@ function renderComentario(comentario, respuestas = []) {
   const puedeResponder = currentUser?.es_premium || false;
   
   const avatarHTML = foto
-    ? `<img src="${foto}" alt="${escapeHTML(uname)}">`
+    ? `<img src="${foto}" alt="${escapeHTML(uname)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
     : `<div class="avatar-placeholder">${inicial}</div>`;
   
   let respuestasHTML = '';
   if (respuestas.length > 0) {
     respuestasHTML = `
-      <div style="margin-top: 12px; margin-left: 32px;">
+      <div style="margin-top: 12px; margin-left: 32px; border-left: 2px solid #eee; padding-left: 10px;">
         ${respuestas.map(r => renderComentarioRespuesta(r)).join('')}
       </div>
     `;
@@ -415,16 +379,16 @@ function renderComentario(comentario, respuestas = []) {
   
   return `
     <div class="comentario-item" data-id="${comentario.id}">
-      <div class="comentario-avatar">${avatarHTML}</div>
+      <div class="comentario-avatar" style="width: 40px; height: 40px; flex-shrink: 0;">${avatarHTML}</div>
       <div class="comentario-contenido">
         <div class="comentario-header">
           <strong>${escapeHTML(uname)} ${autorBadge}</strong>
           <small>${formatFecha(comentario.fecha)}</small>
         </div>
-        <p>${escapeHTML(comentario.texto)}</p>
+        <p style="font-style: ${comentario.texto === '🚫 [Comentario eliminado]' ? 'italic' : 'normal'}; color: ${comentario.texto === '🚫 [Comentario eliminado]' ? '#999' : 'inherit'};">${escapeHTML(comentario.texto)}</p>
         <div class="comentario-acciones">
-          ${puedeResponder ? `<button class="btn-responder" onclick="window.abrirResponder(${comentario.id}, '${escapeHTML(uname)}')">💬 Responder</button>` : ''}
-          ${esPropio ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${comentario.id}', this)">🗑️</button>` : ''}
+          ${puedeResponder && comentario.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-responder" onclick="window.abrirResponder(${comentario.id}, '${escapeHTML(uname)}')">💬 Responder</button>` : ''}
+          ${esPropio && comentario.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${comentario.id}', this)">🗑️</button>` : ''}
         </div>
         ${respuestasHTML}
       </div>
@@ -441,20 +405,20 @@ function renderComentarioRespuesta(respuesta) {
   const esPropio = currentUser && respuesta.usuario?.id === currentUser.id;
   
   const avatarHTML = foto
-    ? `<img src="${foto}" alt="${escapeHTML(uname)}">`
+    ? `<img src="${foto}" alt="${escapeHTML(uname)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
     : `<div class="avatar-placeholder">${inicial}</div>`;
   
   return `
-    <div class="comentario-item respuesta" data-id="${respuesta.id}">
-      <div class="comentario-avatar">${avatarHTML}</div>
+    <div class="comentario-item respuesta" data-id="${respuesta.id}" style="margin-top: 10px;">
+      <div class="comentario-avatar" style="width: 30px; height: 30px; flex-shrink: 0;">${avatarHTML}</div>
       <div class="comentario-contenido">
         <div class="comentario-header">
           <strong>${escapeHTML(uname)} <span style="font-size:0.7rem">${autorBadge}</span></strong>
           <small>${formatFecha(respuesta.fecha)}</small>
         </div>
-        <p>${escapeHTML(respuesta.texto)}</p>
+        <p style="font-style: ${respuesta.texto === '🚫 [Comentario eliminado]' ? 'italic' : 'normal'}; color: ${respuesta.texto === '🚫 [Comentario eliminado]' ? '#999' : 'inherit'};">${escapeHTML(respuesta.texto)}</p>
         <div class="comentario-acciones">
-          ${esPropio ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${respuesta.id}', this)">🗑️</button>` : ''}
+          ${esPropio && respuesta.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${respuesta.id}', this)">🗑️</button>` : ''}
         </div>
       </div>
     </div>
@@ -578,9 +542,8 @@ async function eliminarComentario(commentId, btn) {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('Error');
-    const comentarioDiv = btn.closest('.comentario-item');
-    if (comentarioDiv) comentarioDiv.remove();
     showToast('Comentario eliminado');
+    await cargarComentarios(recetaModalId);
   } catch (error) {
     console.error('Error al eliminar:', error);
     showToast('Error al eliminar', true);

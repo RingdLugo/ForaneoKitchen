@@ -95,28 +95,59 @@ async function verificarSesion() {
   const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
   if (!userId || !token) { window.location.href = 'login.html'; return false; }
-  currentUser = {
-    id: userId,
-    es_premium: localStorage.getItem('userPremium') === 'true',
-    puntos: parseInt(localStorage.getItem('userPuntos') || 0),
-    rol: localStorage.getItem('userRol'),
-    username: localStorage.getItem('userName')
-  };
-  if (puntosMonto) puntosMonto.textContent = currentUser.puntos || 0;
-  if (currentUser.es_premium) {
-    freeRestriction.style.display = 'none';
-    premiumForm.style.display = 'block';
+  
+  try {
+    const res = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      localStorage.clear();
+      window.location.href = 'login.html';
+      return false;
+    }
+    currentUser = await res.json();
+    const isPremium = currentUser.es_premium || currentUser.esPremium;
+    
+    // Sincronizar puntos en la UI
+    if (puntosMonto) puntosMonto.textContent = currentUser.puntos || 0;
+    
+    // Siempre mostrar el formulario
+    if (premiumForm) premiumForm.style.display = 'block';
+
+    // Restringir video si no es premium
+    if (!isPremium) {
+      if (videoInput) {
+        videoInput.disabled = true;
+        videoInput.placeholder = "🔒 Solo disponible para Premium";
+      }
+      const videoSection = document.getElementById('video-section');
+      if (videoSection) videoSection.style.opacity = '0.6';
+      const videoHint = document.getElementById('video-hint');
+      if (videoHint) videoHint.innerHTML = "🌟 ¡Hazte Premium para subir videos de tus recetas!";
+      
+      // Permitir marcar como Premium aunque sea Free (para ganar más puntos)
+      const premiumCheckboxLabel = document.querySelector('.checkbox-premium');
+      if (premiumCheckboxLabel) {
+        premiumCheckboxLabel.style.display = 'flex';
+        premiumCheckboxLabel.style.opacity = '1';
+      }
+      const premiumCheckboxHint = premiumCheckboxLabel?.nextElementSibling;
+      if (premiumCheckboxHint && premiumCheckboxHint.classList.contains('input-hint')) {
+        premiumCheckboxHint.style.display = 'block';
+        premiumCheckboxHint.innerHTML = "✨ Las recetas Premium te dan <strong>30 puntos</strong> (pero no podrás subir video)";
+      }
+    }
+
     return true;
-  } else {
-    freeRestriction.style.display = 'block';
-    premiumForm.style.display = 'none';
+  } catch (e) {
+    console.error('Error verificando sesión:', e);
     return false;
   }
 }
 
 // Publicar receta
 async function publicarReceta() {
-  if (!currentUser?.es_premium) { mostrarNotificacion('Solo Premium', 'error'); return; }
+  if (!currentUser) { mostrarNotificacion('Debes iniciar sesión', 'error'); return; }
   const tV = validarTitulo(tituloInput.value); if (!tV.valido) { mostrarNotificacion(tV.mensaje, 'error'); return; }
   const pV = validarPrecio(precioInput.value); if (!pV.valido) { mostrarNotificacion(pV.mensaje, 'error'); return; }
   const tiV = validarTiempo(tiempoInput.value); if (!tiV.valido) { mostrarNotificacion(tiV.mensaje, 'error'); return; }
@@ -126,41 +157,77 @@ async function publicarReceta() {
   const esPremiumReceta = esPremiumCheckbox?.checked || false;
   const youtubeId = extractYouTubeId(videoInput?.value);
   
+  // Recopilar etiquetas
+  const etiquetas = Array.from(document.querySelectorAll('#receta-etiquetas input:checked')).map(cb => cb.value);
+  
   publicarBtn.disabled = true;
   publicarBtn.textContent = 'Publicando...';
   
   try {
-    const { data: receta, error: insertError } = await supabase.from('recetas').insert({
-      titulo: tV.valor, ingredientes: iV.valor, pasos: paV.valor,
-      precio: pV.valor, precio_numerico: pV.valorNumerico,
-      tiempo: tiV.valor, tiempo_numerico: tiV.valorNumerico,
-      video_youtube: youtubeId, video_url: videoInput?.value,
-      es_premium: esPremiumReceta, autor: currentUser.username,
-      usuario_id: currentUser.id, likes: 0, fecha: new Date().toISOString()
-    }).select().single();
-    
-    if (insertError) throw insertError;
-    
+    let finalImage = null;
     if (imagenSeleccionada) {
-      const imgUrl = await uploadImage(imagenSeleccionada, currentUser.id, receta.id);
-      if (imgUrl) await supabase.from('recetas').update({ imagen: imgUrl }).eq('id', receta.id);
+      finalImage = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(imagenSeleccionada);
+      });
     }
-    
-    if (videoSeleccionado && currentUser.es_premium) {
-      const vidUrl = await uploadVideo(videoSeleccionado, currentUser.id, receta.id);
-      if (vidUrl) await supabase.from('recetas').update({ video_url: vidUrl }).eq('id', receta.id);
+
+    let videoUrl = videoInput?.value || null;
+    let videoYoutubeId = youtubeId;
+
+    // Si hay archivo de video, subirlo (solo Premium)
+    if (videoSeleccionado && (currentUser.es_premium || currentUser.esPremium)) {
+      mostrarNotificacion('Subiendo video...', 'info');
+      // Subir a Storage y obtener URL
+      const fileName = `${currentUser.id}/${Date.now()}-${videoSeleccionado.name}`;
+      const { data, error: uploadError } = await supabase.storage.from('recetas-videos').upload(fileName, videoSeleccionado);
+      if (uploadError) {
+        console.warn('Error subiendo video a storage:', uploadError);
+      } else {
+        const { data: { publicUrl } } = supabase.storage.from('recetas-videos').getPublicUrl(fileName);
+        videoUrl = publicUrl;
+        videoYoutubeId = null; // Priorizar archivo sobre URL si ambos existen
+      }
     }
+
+    const res = await fetch('/api/recipes', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        titulo: tV.valor,
+        ingredientes: iV.valor,
+        pasos: paV.valor,
+        precio: pV.valor,
+        precioNumerico: pV.valorNumerico,
+        tiempo: tiV.valor,
+        tiempoNumerico: tiV.valorNumerico,
+        imagen: finalImage,
+        videoUrl: videoUrl,
+        videoYoutube: videoYoutubeId,
+        esPremium: esPremiumReceta,
+        etiquetas: etiquetas
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al publicar');
+    }
+
+    const receta = await res.json();
     
-    const pts = esPremiumReceta ? 30 : 20;
-    const nPts = (currentUser.puntos || 0) + pts;
-    await supabase.from('usuarios').update({ puntos: nPts }).eq('id', currentUser.id);
-    await supabase.from('puntos_log').insert({ usuario_id: currentUser.id, accion: 'subir_receta', puntos: pts, descripcion: `Receta: ${tV.valor}` });
+    // El backend ya debería haber otorgado los puntos por la receta.
+    // Pero si el frontend manejaba algo manual, lo quitamos para centralizar.
     
-    mostrarNotificacion(`✅ ¡Receta publicada! +${pts} pts`, 'success');
+    mostrarNotificacion(`✅ ¡Receta publicada!`, 'success');
     setTimeout(() => { window.location.href = 'home.html'; }, 2000);
   } catch (error) {
     console.error(error);
-    mostrarNotificacion('Error al publicar', 'error');
+    mostrarNotificacion('Error: ' + error.message, 'error');
   } finally {
     publicarBtn.disabled = false;
     publicarBtn.textContent = 'Publicar receta →';

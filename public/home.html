@@ -67,6 +67,7 @@
       display: block;
     }
   </style>
+  <link rel="stylesheet" href="css/bottom-nav.css">
 </head>
 <body>
   <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
@@ -103,6 +104,7 @@
       </div>
       <div class="filter-tags">
         <button class="tag active-filter" data-filter="todas">🍽️ Todas</button>
+        <button class="tag" data-filter="populares">🔥 Populares</button>
         <button class="tag" data-filter="economicas">💰 Económicas (-$35)</button>
         <button class="tag" data-filter="rapidas">⚡ Rápidas (-20min)</button>
       </div>
@@ -113,9 +115,6 @@
     <div id="recetas" class="recipes-list">
       <div class="loading-spinner"></div>
     </div>
-
-    <!-- Cerrar sesión -->
-    <button id="cerrar-sesion-btn" style="display:none;">🚪 Cerrar Sesión</button>
 
     <!-- Navegación inferior -->
     <nav class="bottom-nav">
@@ -160,3 +159,4 @@
   <script src="js/dark-mode.js"></script>
 </body>
 </html>
+

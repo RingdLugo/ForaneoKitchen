@@ -101,6 +101,21 @@ body.dark-mode ::-webkit-scrollbar-track {
 }
 
 /* Botones */
+button {
+  font-family: 'Inter', sans-serif;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+button:active {
+  transform: scale(0.95) !important;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #4caf50, #2e7d32);
   color: white;

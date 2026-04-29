@@ -36,7 +36,7 @@ async function cargarUsuario() {
   const token = localStorage.getItem('token');
   if (userId && token) {
     currentUser = {
-      id: parseInt(userId),
+      id: userId,
       es_premium: localStorage.getItem('userPremium') === 'true',
       puntos: parseInt(localStorage.getItem('userPuntos') || 0),
       username: localStorage.getItem('userName')
@@ -48,21 +48,22 @@ async function cargarUsuario() {
 async function cargarPlanDesdeSupabase() {
   if (!currentUser) return;
   
-  const { data, error } = await supabase
-    .from('planes_semanales')
-    .select('*')
-    .eq('usuario_id', currentUser.id)
-    .maybeSingle();
-  
-  if (error) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/users/me/planner', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar plan');
+    
+    const data = await response.json();
+    if (data && data.plan) {
+      planSemanal = data.plan;
+    } else {
+      planSemanal = initPlanSemanal();
+    }
+  } catch (error) {
     console.error('Error al cargar plan:', error);
-    planSemanal = initPlanSemanal();
-    return;
-  }
-  
-  if (data && data.plan) {
-    planSemanal = data.plan;
-  } else {
     planSemanal = initPlanSemanal();
   }
   
@@ -89,23 +90,24 @@ async function cargarPlanDesdeSupabase() {
 async function guardarPlanEnSupabase() {
   if (!currentUser) return;
   
-  const { error } = await supabase
-    .from('planes_semanales')
-    .upsert({
-      usuario_id: currentUser.id,
-      plan: planSemanal,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'usuario_id' });
-  
-  if (error) {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/users/me/planner', {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ plan: planSemanal })
+    });
+    
+    if (!response.ok) throw new Error('Error al guardar plan');
+    
+    mostrarNotificacion('Plan guardado. La lista de compras se sincronizará automáticamente.', false);
+  } catch (error) {
     console.error('Error al guardar plan:', error);
+    mostrarNotificacion('Error al guardar el plan', true);
   }
-}
-
-// Guardar preferencias UI
-function guardarPreferenciasUI() {
-  localStorage.setItem('diasAbiertos', JSON.stringify(diasAbiertos));
-  localStorage.setItem('presupuesto', presupuesto);
 }
 
 // Alternar día abierto/cerrado
@@ -115,15 +117,21 @@ function toggleDia(dia) {
   renderizarPlanificador();
 }
 
+// Guardar preferencias UI
+function guardarPreferenciasUI() {
+  localStorage.setItem('diasAbiertos', JSON.stringify(diasAbiertos));
+  localStorage.setItem('presupuesto', presupuesto);
+}
+
 // Calcular gastos
 function calcularGastoTotal() {
   let total = 0;
   for (const dia of diasLista) {
     for (const comida of comidasLista) {
-      const recetas = planSemanal[dia][comida] || [];
-      for (const receta of recetas) {
+      const recetas = planSemanal[dia]?.[comida] || [];
+      recetas.forEach(receta => {
         total += receta.precio_numerico || 0;
-      }
+      });
     }
   }
   return total;
@@ -132,20 +140,20 @@ function calcularGastoTotal() {
 function calcularGastoDia(dia) {
   let total = 0;
   for (const comida of comidasLista) {
-    const recetas = planSemanal[dia][comida] || [];
-    for (const receta of recetas) {
+    const recetas = planSemanal[dia]?.[comida] || [];
+    recetas.forEach(receta => {
       total += receta.precio_numerico || 0;
-    }
+    });
   }
   return total;
 }
 
 function calcularGastoComida(dia, comida) {
   let total = 0;
-  const recetas = planSemanal[dia][comida] || [];
-  for (const receta of recetas) {
+  const recetas = planSemanal[dia]?.[comida] || [];
+  recetas.forEach(receta => {
     total += receta.precio_numerico || 0;
-  }
+  });
   return total;
 }
 
@@ -165,32 +173,36 @@ function actualizarPresupuesto() {
 
 // Mostrar notificación
 function mostrarNotificacion(mensaje, esError = false) {
-  const notif = document.createElement('div');
-  notif.className = 'notification';
+  let notif = document.getElementById('plan-notif');
+  if (!notif) {
+    notif = document.createElement('div');
+    notif.id = 'plan-notif';
+    notif.className = 'notification-toast';
+    document.body.appendChild(notif);
+  }
   notif.textContent = mensaje;
   notif.style.background = esError ? '#ff5252' : '#4caf50';
-  document.body.appendChild(notif);
-  setTimeout(() => notif.remove(), 3000);
+  notif.classList.add('show');
+  setTimeout(() => notif.classList.remove('show'), 3000);
 }
 
-// Cargar recetas desde Supabase
+// Cargar recetas desde el API
 async function cargarRecetas() {
   try {
-    let query = supabase.from('recetas').select('*');
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     
-    // Si no es Premium, filtrar recetas Premium
-    if (!currentUser?.es_premium) {
-      query = query.eq('es_premium', false);
-    }
+    // El API ya filtra por permisos si se le pide, pero para el planificador 
+    // queremos ver todas las que el usuario puede planear (ignoramos filtros de dieta).
+    const response = await fetch('/api/recipes?ignorePrefs=true', { headers });
+    if (!response.ok) throw new Error('Error en API');
     
-    const { data, error } = await query.order('titulo');
-    
-    if (error) throw error;
-    todasLasRecetas = data || [];
+    todasLasRecetas = await response.json();
     renderizarModalRecetas(todasLasRecetas);
   } catch (err) {
     console.error('Error cargando recetas:', err);
-    mostrarNotificacion('Error al cargar recetas', true);
+    mostrarNotificacion('Error al cargar recetas para el planificador', true);
   }
 }
 
@@ -283,7 +295,6 @@ async function agregarReceta(dia, comida, receta) {
   await guardarPlanEnSupabase();
   renderizarPlanificador();
   actualizarPresupuesto();
-  mostrarNotificacion(`✓ "${receta.titulo}" agregada a ${nombresDias[dia]} - ${nombresComidas[comida]}`);
 }
 
 // Eliminar receta del plan
@@ -293,7 +304,6 @@ async function eliminarReceta(dia, comida, index) {
     await guardarPlanEnSupabase();
     renderizarPlanificador();
     actualizarPresupuesto();
-    mostrarNotificacion('Receta eliminada');
   }
 }
 
@@ -301,7 +311,6 @@ async function eliminarReceta(dia, comida, index) {
 async function exportarPDF() {
   const { jsPDF } = window.jspdf;
   
-  // Crear elemento temporal para el PDF
   const pdfContent = document.createElement('div');
   pdfContent.style.padding = '20px';
   pdfContent.style.fontFamily = 'Arial, sans-serif';
@@ -383,7 +392,7 @@ function renderizarPlanificador() {
     
     let comidasHTML = '';
     for (const comida of comidasLista) {
-      const recetas = planSemanal[dia][comida] || [];
+      const recetas = planSemanal[dia]?.[comida] || [];
       const gastoComida = calcularGastoComida(dia, comida);
       
       let recetasHTML = '';

@@ -39,10 +39,10 @@ let formVisible = false;
 
 // Definición de recompensas
 const REWARDS = [
-  { id: '1day', name: '1 día Premium', points: 100, icon: '👑', benefit: 'Acceso Premium por 1 día', days: 1 },
-  { id: '3days', name: '3 días Premium', points: 300, icon: '👑✨', benefit: 'Acceso Premium por 3 días', days: 3 },
-  { id: 'videos', name: 'Desbloquear Videos', points: 500, icon: '🎥', benefit: 'Acceso a videos de recetas', type: 'videos' },
-  { id: 'recipes', name: 'Desbloquear Recetas Premium', points: 700, icon: '🔓', benefit: 'Acceso a recetas exclusivas', type: 'recipes' },
+  { id: 'comentarios_1d', name: 'Permiso Comentarios (1 día)', points: 50, icon: '💬', benefit: 'Comenta en cualquier receta por 24h', days: 1, type: 'permiso_comentarios' },
+  { id: 'historial_1d', name: 'Ver Historial (1 día)', points: 40, icon: '📜', benefit: 'Acceso a tu historial de vistas por 24h', days: 1, type: 'permiso_historial' },
+  { id: '1day', name: '1 día Premium', points: 120, icon: '👑', benefit: 'Acceso Premium TOTAL por 1 día', days: 1 },
+  { id: 'videos', name: 'Desbloquear Videos', points: 500, icon: '🎥', benefit: 'Acceso a videos de recetas permanentemente', type: 'videos' },
   { id: '7days', name: '7 días Premium', points: 700, icon: '👑🌟', benefit: 'Acceso Premium por 7 días', days: 7 }
 ];
 
@@ -66,10 +66,13 @@ function imgPlaceholder() {
 
 // Cargar perfil usando el endpoint /api/auth/me con el token JWT propio
 async function cargarPerfil() {
-  const userId = localStorage.getItem('userId');
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetUserId = urlParams.get('id');
+  const myUserId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
+  const esPerfilAjeno = targetUserId && targetUserId !== myUserId && targetUserId !== 'null' && targetUserId !== 'undefined';
   
-  if (!userId || !token) {
+  if (!myUserId && !esPerfilAjeno) {
     window.location.href = 'login.html';
     return;
   }
@@ -79,13 +82,35 @@ async function cargarPerfil() {
       ? 'http://localhost:3000/api'
       : window.location.origin + '/api';
 
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    let res;
+    if (esPerfilAjeno) {
+      res = await fetch(`${API_BASE}/users/${targetUserId}/profile`);
+      // Ocultar edición
+      if (avatarOverlay) avatarOverlay.style.display = 'none';
+      if (toggleFormBtn) toggleFormBtn.style.display = 'none';
+      if (rewardsSection) rewardsSection.style.display = 'none';
+      const headerH1 = document.querySelector('.perfil-header h1');
+      if (headerH1) headerH1.textContent = '👤 Perfil de Usuario';
+      
+      // Ocultar tabs privadas
+      const favBtn = document.getElementById('btn-favoritos');
+      const histBtn = document.getElementById('btn-historial');
+      if (favBtn) favBtn.style.display = 'none';
+      if (histBtn) histBtn.style.display = 'none';
+    } else {
+      if (!token) { window.location.href = 'login.html'; return; }
+      res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    }
 
     if (!res.ok) {
-      localStorage.clear();
-      window.location.href = 'login.html';
+      if (!esPerfilAjeno) {
+        localStorage.clear();
+        window.location.href = 'login.html';
+      } else {
+        showToast('Usuario no encontrado', true);
+      }
       return;
     }
 
@@ -102,7 +127,8 @@ async function cargarPerfil() {
   displayBio.textContent = currentUser.bio || 'Sin biografía aún.';
   
   // Badge de rol
-  if (currentUser.es_premium) {
+  const esPremium = currentUser.es_premium || currentUser.esPremium;
+  if (esPremium) {
     roleBadge.textContent = '👑 Premium';
     roleBadge.classList.remove('free');
   } else {
@@ -117,46 +143,66 @@ async function cargarPerfil() {
   if (currentUser.foto_perfil) {
     avatarImg.src = currentUser.foto_perfil;
   } else {
-    avatarImg.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%234caf50'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='white' font-size='45'%3E${(currentUser.nombre?.charAt(0) || 'U')}%3C/text%3E%3C/svg%3E`;
+    avatarImg.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%234caf50'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='white' font-size='45'%3E${(currentUser.nombre?.charAt(0) || currentUser.username?.charAt(0) || 'U').toUpperCase()}%3C/text%3E%3C/svg%3E`;
   }
   
-  // Formulario
-  perfilNombre.value = currentUser.nombre || '';
-  perfilApellido.value = currentUser.apellido || '';
-  perfilUsername.value = currentUser.username || currentUser.email?.split('@')[0] || '';
-  perfilEmail.value = currentUser.email || '';
-  perfilBio.value = currentUser.bio || '';
-  
-  // Preferencias
-  preferenciasSeleccionadas = currentUser.preferencias || [];
-  renderPreferencias();
-  
-  // Mostrar/ocultar sección de recompensas (solo Free)
-  if (!currentUser.es_premium && rewardsSection) {
-    rewardsSection.style.display = 'block';
-    renderRewards();
-  } else if (rewardsSection) {
-    rewardsSection.style.display = 'none';
-  }
-  
-  // Mostrar botón de historial solo para Premium
-  const historialBtn = document.getElementById('btn-historial');
-  if (historialBtn) {
-    historialBtn.style.display = currentUser.es_premium ? 'flex' : 'none';
-  }
-  
-  // Cargar estadísticas y recetas
-  await cargarMisRecetas();
-  await cargarFavoritos();
-  if (currentUser.es_premium) {
+  if (!esPerfilAjeno) {
+    // Formulario
+    perfilNombre.value = currentUser.nombre || '';
+    perfilApellido.value = currentUser.apellido || '';
+    perfilUsername.value = currentUser.username || currentUser.email?.split('@')[0] || '';
+    perfilEmail.value = currentUser.email || '';
+    perfilBio.value = currentUser.bio || '';
+    
+    // Preferencias
+    preferenciasSeleccionadas = currentUser.preferencias || [];
+    renderPreferencias();
+    
+    // Mostrar/ocultar sección de recompensas (solo Free)
+    if (!esPremium && rewardsSection) {
+      rewardsSection.style.display = 'block';
+      renderRewards();
+    } else if (rewardsSection) {
+      rewardsSection.style.display = 'none';
+    }
+    
+    // Mostrar botón de historial solo para Premium
+    const historialBtn = document.getElementById('btn-historial');
+    if (historialBtn) {
+      historialBtn.style.display = esPremium ? 'flex' : 'none';
+    }
+    
+    await cargarFavoritos();
     await cargarHistorial();
   }
   
-  // Actualizar stats (opcional si ya vienen en cargarPerfil)
-  if (currentUser.stats) {
-    statsRecetas.textContent = currentUser.stats.recetas || 0;
-    statsFavoritos.textContent = currentUser.stats.favoritos || 0;
-    statsVisitas.textContent = currentUser.stats.historial || 0;
+  // Cargar estadísticas y recetas
+  await cargarMisRecetas(esPerfilAjeno ? currentUser.id : null);
+}
+
+// Cargar mis recetas usando la API del backend
+async function cargarMisRecetas(targetUserId = null) {
+  const token = localStorage.getItem('token');
+  try {
+    let url;
+    if (targetUserId) {
+      // Perfil ajeno: usar endpoint público
+      url = `/api/users/${targetUserId}/recipes`;
+    } else {
+      // Mis recetas: usar endpoint autenticado
+      url = '/api/users/me/recipes';
+    }
+
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error('Error al cargar recetas');
+    const data = await res.json();
+
+    renderGrid('mis-recetas-grid', data || [], !targetUserId);
+    if (statsRecetas) statsRecetas.textContent = data?.length || 0;
+  } catch (error) {
+    console.error('Error al cargar recetas:', error);
+    renderGrid('mis-recetas-grid', [], !targetUserId);
   }
 }
 
@@ -226,8 +272,8 @@ async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) 
     
     if (updateError) throw updateError;
     
-    // Si es canje de días Premium
-    if (diasPremium > 0) {
+    // Si es canje de días Premium (Acceso Total)
+    if (diasPremium > 0 && !type) {
       let premiumHasta = new Date();
       if (currentUser.premium_hasta && new Date(currentUser.premium_hasta) > new Date()) {
         premiumHasta = new Date(currentUser.premium_hasta);
@@ -244,10 +290,22 @@ async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) 
         .eq('id', currentUser.id);
       
       showToast(`🎉 ¡${diasPremium} días Premium activados!`, false);
-    } else if (type === 'videos') {
+    } 
+    // Permisos específicos (Tags)
+    else if (type && type.startsWith('permiso_')) {
+      const expira = new Date(Date.now() + diasPremium * 24 * 60 * 60 * 1000).toISOString();
+      const tag = `${type.toUpperCase()}:${expira}`;
+      const nuevasPrefs = [...(currentUser.preferencias || []), tag];
+      
+      await supabase
+        .from('usuarios')
+        .update({ preferencias: nuevasPrefs })
+        .eq('id', currentUser.id);
+      
+      showToast(`🔓 ¡${rewardId} activado hasta ${new Date(expira).toLocaleDateString()}!`, false);
+    }
+    else if (type === 'videos') {
       showToast(`🎥 ¡Videos Premium desbloqueados permanentemente!`, false);
-    } else if (type === 'recipes') {
-      showToast(`🔓 ¡Recetas Premium desbloqueadas!`, false);
     } else {
       showToast(`✅ Recompensa canjeada: ${rewardId}`, false);
     }
@@ -268,39 +326,45 @@ async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) 
   }
 }
 
-// Cargar mis recetas
-async function cargarMisRecetas() {
-  const { data, error } = await supabase
-    .from('recetas')
-    .select('*')
-    .eq('usuario_id', currentUser.id)
-    .order('fecha', { ascending: false });
-  
-  if (error) {
-    console.error('Error al cargar recetas:', error);
-    renderGrid('mis-recetas-grid', [], true);
-    return;
+// Actualizar estadísticas usando la API del backend
+async function actualizarStats() {
+  if (!currentUser) return;
+  const token = localStorage.getItem('token');
+  const headers = { 'Authorization': `Bearer ${token}` };
+
+  try {
+    // Cargar recetas, favoritos e historial en paralelo
+    const [recetasRes, favRes, histRes] = await Promise.all([
+      fetch('/api/users/me/recipes', { headers }),
+      fetch('/api/users/me/favorites', { headers }),
+      fetch('/api/users/me/history', { headers }).catch(() => ({ ok: false }))
+    ]);
+
+    const recetas = recetasRes.ok ? await recetasRes.json() : [];
+    const favoritos = favRes.ok ? await favRes.json() : [];
+    const historial = histRes.ok ? await histRes.json() : [];
+
+    if (statsRecetas) statsRecetas.textContent = recetas.length || 0;
+    if (statsFavoritos) statsFavoritos.textContent = favoritos.length || 0;
+    if (statsVisitas) statsVisitas.textContent = historial.length || 0;
+  } catch (error) {
+    console.error('Error al actualizar stats:', error);
   }
-  
-  renderGrid('mis-recetas-grid', data || [], true);
-  statsRecetas.textContent = data?.length || 0;
 }
 
 // Cargar favoritos
 async function cargarFavoritos() {
   const token = localStorage.getItem('token');
-  const API_BASE = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1'))
-    ? 'http://localhost:3000/api'
-    : window.location.origin + '/api';
+  const API_BASE = '/api';
 
   try {
     const res = await fetch(`${API_BASE}/users/me/favorites`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('Error');
+    if (!res.ok) throw new Error('Error al cargar favoritos');
     const recetas = await res.json();
-    renderGrid('favoritos-grid', recetas, false);
-    statsFavoritos.textContent = recetas.length;
+    renderGrid('favoritos-grid', recetas || [], false);
+    if (statsFavoritos) statsFavoritos.textContent = recetas.length || 0;
   } catch (e) {
     console.error('Error al cargar favoritos:', e);
     renderGrid('favoritos-grid', [], false);
@@ -309,37 +373,19 @@ async function cargarFavoritos() {
 
 // Cargar historial (solo Premium)
 async function cargarHistorial() {
-  if (!currentUser?.es_premium) return;
-  
-  const { data, error } = await supabase
-    .from('historial')
-    .select('receta:receta_id(*)')
-    .eq('usuario_id', currentUser.id)
-    .order('fecha', { ascending: false })
-    .limit(30);
-  
-  if (error) {
-    console.error('Error al cargar historial:', error);
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/users/me/history', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Error en API');
+    const history = await res.json();
+    renderGrid('historial-grid', history || [], false);
+    if (statsVisitas) statsVisitas.textContent = history.length || 0;
+  } catch (e) {
+    console.error('Error al cargar historial:', e);
     renderGrid('historial-grid', [], false);
-    return;
   }
-  
-  const recetas = (data || []).map(h => h.receta).filter(r => r);
-  renderGrid('historial-grid', recetas, false);
-  statsVisitas.textContent = recetas.length;
-}
-
-// Actualizar estadísticas
-async function actualizarStats() {
-  const [{ count: recetas }, { count: favoritos }, { count: visitas }] = await Promise.all([
-    supabase.from('recetas').select('id', { count: 'exact', head: true }).eq('usuario_id', currentUser.id),
-    supabase.from('favoritos').select('id', { count: 'exact', head: true }).eq('usuario_id', currentUser.id),
-    supabase.from('historial').select('id', { count: 'exact', head: true }).eq('usuario_id', currentUser.id)
-  ]);
-  
-  statsRecetas.textContent = recetas || 0;
-  statsFavoritos.textContent = favoritos || 0;
-  statsVisitas.textContent = visitas || 0;
 }
 
 // Render grid de recetas
@@ -389,7 +435,7 @@ function renderGrid(containerId, recetas, misRecetas) {
     });
   });
   
-  // Eliminar receta (solo mis recetas)
+  // Eliminar receta usando la API del backend (solo mis recetas)
   if (misRecetas) {
     container.querySelectorAll('.btn-eliminar-receta-overlay').forEach(btn => {
       btn.addEventListener('click', async (e) => {
@@ -397,44 +443,42 @@ function renderGrid(containerId, recetas, misRecetas) {
         if (!confirm('¿Eliminar esta receta? Esta acción no se puede deshacer.')) return;
         
         const id = btn.dataset.id;
-        const { error } = await supabase
-          .from('recetas')
-          .delete()
-          .eq('id', id)
-          .eq('usuario_id', currentUser.id);
-        
-        if (error) {
-          showToast('Error al eliminar', true);
-        } else {
+        const token = localStorage.getItem('token');
+        try {
+          const res = await fetch(`/api/recipes/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Error al eliminar');
+          }
           showToast('Receta eliminada');
           await cargarMisRecetas();
           await actualizarStats();
+        } catch (error) {
+          console.error(error);
+          showToast(error.message || 'Error al eliminar', true);
         }
       });
     });
   }
 }
 
-// Registrar vista en historial
+// Registrar vista en historial usando la API
 async function registrarVista(recetaId) {
-  if (!currentUser?.es_premium) return;
-  
-  const { error } = await supabase
-    .from('historial')
-    .insert({
-      receta_id: parseInt(recetaId),
-      usuario_id: currentUser.id,
-      fecha: new Date().toISOString()
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  try {
+    await fetch('/api/users/me/history', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ recipeId: parseInt(recetaId) })
     });
-  
-  if (error) {
-    // Si ya existe, actualizar fecha
-    await supabase
-      .from('historial')
-      .update({ fecha: new Date().toISOString() })
-      .eq('receta_id', parseInt(recetaId))
-      .eq('usuario_id', currentUser.id);
-  }
+  } catch { /* silencioso */ }
 }
 
 // Guardar perfil
@@ -452,28 +496,25 @@ async function guardarPerfil() {
   guardarPerfilBtn.textContent = 'Guardando...';
   
   const token = localStorage.getItem('token');
-  const API_BASE = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1'))
-    ? 'http://localhost:3000/api'
-    : window.location.origin + '/api';
+  const API_BASE = '/api';
 
-  const res = await fetch(`${API_BASE}/auth/me`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify({ nombre, apellido, bio, preferencias: preferenciasSeleccionadas })
-  }).catch(() => null);
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${token}` 
+      },
+      body: JSON.stringify({ 
+        nombre, 
+        apellido, 
+        bio, 
+        preferencias: preferenciasSeleccionadas 
+      })
+    });
 
-  if (!res || !res.ok) {
-    // Fallback: intentar con Supabase directamente
-    const { error } = await supabase.from('usuarios').update({ nombre, apellido, bio, preferencias: preferenciasSeleccionadas }).eq('id', currentUser.id);
-    if (error) {
-      showToast('Error al guardar', true);
-      guardarPerfilBtn.disabled = false;
-      guardarPerfilBtn.textContent = '💾 Guardar cambios';
-      return;
-    }
-  }
+    if (!res.ok) throw new Error('Error en API');
 
-  if (true) {
     showToast('✅ Perfil actualizado');
     displayNombre.textContent = `${nombre} ${apellido}`;
     displayBio.textContent = bio || 'Sin biografía aún.';
@@ -482,10 +523,13 @@ async function guardarPerfil() {
     currentUser.bio = bio;
     currentUser.preferencias = preferenciasSeleccionadas;
     ocultarForm();
+  } catch (err) {
+    console.error('Error al guardar perfil:', err);
+    showToast('Error al guardar perfil', true);
+  } finally {
+    guardarPerfilBtn.disabled = false;
+    guardarPerfilBtn.textContent = '💾 Guardar cambios';
   }
-  
-  guardarPerfilBtn.disabled = false;
-  guardarPerfilBtn.textContent = '💾 Guardar cambios';
 }
 
 // Cambiar avatar
@@ -589,6 +633,15 @@ function initEventListeners() {
       }
     });
   });
+
+  const btnCerrarSesion = document.getElementById('cerrar-sesion-btn');
+  if (btnCerrarSesion) {
+    btnCerrarSesion.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      window.location.href = 'index.html';
+    });
+  }
 }
 
 // Inicializar

@@ -16,39 +16,43 @@ const categorias = {
   'Otros': []
 };
 
-// Cargar usuario (usa JWT propio, no Supabase auth)
+// Cargar usuario
 async function cargarUsuario() {
   const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
   if (userId && token) {
-    currentUser = {
-      id: parseInt(userId),
-      es_premium: localStorage.getItem('userPremium') === 'true',
-      puntos: parseInt(localStorage.getItem('userPuntos') || 0),
-      username: localStorage.getItem('userName')
-    };
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        currentUser = await res.json();
+      }
+    } catch (e) {
+      console.error('Error cargando usuario:', e);
+    }
   }
 }
 
-// Cargar plan semanal desde Supabase
+// Cargar plan semanal
 async function cargarPlanSemanal() {
   if (!currentUser) return null;
-  
-  const { data, error } = await supabase
-    .from('planes_semanales')
-    .select('plan')
-    .eq('usuario_id', currentUser.id)
-    .maybeSingle();
-  
-  if (error) {
-    console.error('Error al cargar plan:', error);
-    return null;
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/users/me/planner', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.plan || null;
+    }
+  } catch (e) {
+    console.error('Error cargando plan:', e);
   }
-  
-  return data?.plan || null;
+  return null;
 }
 
-// Extraer cantidad del ingrediente
+// Extraer cantidad
 function extraerCantidad(nombreIngrediente) {
   const regex = /^(\d+(?:\.\d+)?(?:\s*(?:g|kg|ml|l|taza|cucharada|cucharadita|unidad|pieza|pizca|cdita|cdta|cda|gr|kilo|litro))?)\s+(.+)$/i;
   const match = nombreIngrediente.match(regex);
@@ -58,304 +62,101 @@ function extraerCantidad(nombreIngrediente) {
   return { cantidad: '', nombre: nombreIngrediente.trim() };
 }
 
-// Combinar cantidades
-function combinarCantidades(cant1, cant2) {
-  if (!cant1 && !cant2) return '';
-  if (!cant1) return cant2;
-  if (!cant2) return cant1;
-  
-  const num1 = parseFloat(cant1);
-  const num2 = parseFloat(cant2);
-  const unidad1 = cant1.match(/[a-z]+$/i)?.[0] || '';
-  const unidad2 = cant2.match(/[a-z]+$/i)?.[0] || '';
-  
-  if (!isNaN(num1) && !isNaN(num2)) {
-    if (unidad1 === unidad2 || (unidad1 && unidad2 && unidad1 === unidad2)) {
-      return (num1 + num2) + (unidad1 || '');
-    }
-  }
-  return `${cant1} + ${cant2}`;
-}
-
-// Obtener categoría del ingrediente
+// Obtener categoría
 function obtenerCategoria(ingrediente) {
   const lower = ingrediente.toLowerCase();
   for (const [categoria, palabras] of Object.entries(categorias)) {
     for (const palabra of palabras) {
-      if (lower.includes(palabra)) {
-        return categoria;
-      }
+      if (lower.includes(palabra)) return categoria;
     }
   }
   return 'Otros';
 }
 
-// Generar lista de compras desde el plan semanal
-async function generarListaCompras() {
+// Sincronización inteligente basada en recetas del plan
+async function sincronizarInteligente() {
   const plan = await cargarPlanSemanal();
-  if (!plan) return [];
-  
-  const ingredientesMap = new Map();
+  if (!plan) return;
+
+  const itemsPlan = [];
   const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
   const comidas = ['desayuno', 'comida', 'cena', 'merienda', 'snack'];
-  
-  for (const dia of dias) {
-    if (!plan[dia]) continue;
-    for (const comida of comidas) {
-      let recetas = plan[dia][comida];
-      if (recetas && !Array.isArray(recetas)) {
-        recetas = [recetas];
-      }
+
+  dias.forEach(dia => {
+    comidas.forEach(comida => {
+      let recetas = plan[dia]?.[comida];
+      if (!recetas) return;
+      if (!Array.isArray(recetas)) recetas = [recetas];
       
-      if (recetas && Array.isArray(recetas)) {
-        for (const receta of recetas) {
-          if (receta && receta.ingredientes) {
-            const items = receta.ingredientes.split(',').map(i => i.trim()).filter(i => i);
-            for (const item of items) {
-              const key = item.toLowerCase().replace(/[0-9]/g, '').replace(/[^a-záéíóúñ]/g, '').trim();
-              const { cantidad, nombre } = extraerCantidad(item);
-              
-              if (ingredientesMap.has(key)) {
-                const existente = ingredientesMap.get(key);
-                existente.cantidad = combinarCantidades(existente.cantidad, cantidad);
-                existente.count++;
-                if (!existente.recetas.includes(receta.titulo)) {
-                  existente.recetas.push(receta.titulo);
-                }
-              } else {
-                ingredientesMap.set(key, {
-                  id: Date.now() + Math.random() * 10000,
-                  nombre: nombre,
-                  cantidad: cantidad,
-                  count: 1,
-                  categoria: obtenerCategoria(nombre),
-                  recetas: [receta.titulo],
-                  completado: false
-                });
-              }
-            }
-          }
+      recetas.forEach(receta => {
+        if (receta && receta.ingredientes) {
+          // Separar ingredientes por coma o por líneas
+          const ingredientesRaw = receta.ingredientes.includes('\n') 
+            ? receta.ingredientes.split('\n') 
+            : receta.ingredientes.split(',');
+            
+          ingredientesRaw.map(i => i.trim()).filter(i => i).forEach(ing => {
+            const { cantidad, nombre } = extraerCantidad(ing);
+            itemsPlan.push({ nombre, cantidad, recetaTitulo: receta.titulo });
+          });
         }
+      });
+    });
+  });
+
+  let modificado = false;
+  itemsPlan.forEach(newItem => {
+    const nombreNormalizado = newItem.nombre.toLowerCase().trim();
+    // Buscar si ya existe el ingrediente (sin importar la receta)
+    let existente = itemsCompra.find(i => i.nombre.toLowerCase().trim() === nombreNormalizado);
+    
+    if (!existente) {
+      itemsCompra.push({
+        id: Date.now() + Math.random(),
+        nombre: newItem.nombre,
+        cantidad: newItem.cantidad,
+        completado: false,
+        categoria: obtenerCategoria(newItem.nombre),
+        recetas: [newItem.recetaTitulo]
+      });
+      modificado = true;
+    } else {
+      // Si ya existe, nos aseguramos de que la receta esté en la lista
+      if (!existente.recetas) existente.recetas = [];
+      if (!existente.recetas.includes(newItem.recetaTitulo)) {
+        existente.recetas.push(newItem.recetaTitulo);
+        modificado = true;
       }
     }
+  });
+
+  if (modificado) {
+    await guardarItemsEnSupabase(itemsCompra);
+    renderizarLista();
   }
-  
-  const items = Array.from(ingredientesMap.values());
-  return items.sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
-// Cargar items guardados desde Supabase
+// Cargar items desde Supabase
 async function cargarItemsDesdeSupabase() {
   if (!currentUser) return [];
-  
   const { data, error } = await supabase
     .from('lista_compras')
     .select('items')
     .eq('usuario_id', currentUser.id)
     .maybeSingle();
-  
-  if (error) {
-    console.error('Error al cargar lista:', error);
-    return [];
-  }
-  
-  if (data && data.items && data.items.length > 0) {
-    return data.items;
-  }
-  
-  // Si no hay lista guardada, generar desde plan
-  const nuevosItems = await generarListaCompras();
-  await guardarItemsEnSupabase(nuevosItems);
-  return nuevosItems;
+  return data?.items || [];
 }
 
 // Guardar items en Supabase
 async function guardarItemsEnSupabase(items) {
   if (!currentUser) return;
-  
-  const { error } = await supabase
+  await supabase
     .from('lista_compras')
     .upsert({
       usuario_id: currentUser.id,
       items: items,
       updated_at: new Date().toISOString()
     }, { onConflict: 'usuario_id' });
-  
-  if (error) {
-    console.error('Error al guardar lista:', error);
-  }
-}
-
-// Sincronizar con planificador
-async function sincronizarConPlanificador() {
-  const nuevosItems = await generarListaCompras();
-  const nuevosItemsMap = new Map();
-  
-  for (const item of nuevosItems) {
-    nuevosItemsMap.set(item.nombre.toLowerCase(), item);
-  }
-  
-  // Mantener estado de completado de items existentes
-  for (const item of itemsCompra) {
-    if (nuevosItemsMap.has(item.nombre.toLowerCase())) {
-      const nuevoItem = nuevosItemsMap.get(item.nombre.toLowerCase());
-      nuevoItem.completado = item.completado;
-      nuevoItem.id = item.id;
-      nuevosItemsMap.set(item.nombre.toLowerCase(), nuevoItem);
-    }
-  }
-  
-  itemsCompra = Array.from(nuevosItemsMap.values());
-  await guardarItemsEnSupabase(itemsCompra);
-  renderizarLista();
-  actualizarProgreso();
-  mostrarNotificacion('Lista sincronizada con el planificador');
-}
-
-// Marcar item como completado
-async function toggleCompletado(id) {
-  const item = itemsCompra.find(i => i.id === id);
-  if (item) {
-    item.completado = !item.completado;
-    await guardarItemsEnSupabase(itemsCompra);
-    renderizarLista();
-    actualizarProgreso();
-  }
-}
-
-// Editar cantidad
-async function editarCantidad(id) {
-  const item = itemsCompra.find(i => i.id === id);
-  if (!item) return;
-  
-  const nuevaCantidad = prompt('Editar cantidad (ej: 200g, 1kg, 2 piezas):', item.cantidad || '');
-  if (nuevaCantidad !== null) {
-    item.cantidad = nuevaCantidad;
-    await guardarItemsEnSupabase(itemsCompra);
-    renderizarLista();
-    mostrarNotificacion('Cantidad actualizada');
-  }
-}
-
-// Eliminar item manual
-async function eliminarItem(id) {
-  if (confirm('¿Eliminar este producto de la lista?')) {
-    itemsCompra = itemsCompra.filter(i => i.id !== id);
-    await guardarItemsEnSupabase(itemsCompra);
-    renderizarLista();
-    actualizarProgreso();
-    mostrarNotificacion('Producto eliminado');
-  }
-}
-
-// Actualizar barra de progreso
-function actualizarProgreso() {
-  const total = itemsCompra.length;
-  const completados = itemsCompra.filter(item => item.completado).length;
-  const porcentaje = total > 0 ? (completados / total) * 100 : 0;
-  
-  const textoProgreso = document.getElementById('progreso-texto');
-  const fillProgreso = document.getElementById('progreso-fill');
-  
-  if (textoProgreso) textoProgreso.textContent = `${completados} de ${total} completados`;
-  if (fillProgreso) fillProgreso.style.width = `${porcentaje}%`;
-}
-
-// Exportar a PDF
-async function exportarPDF() {
-  const { jsPDF } = window.jspdf;
-  
-  const pdfContent = document.createElement('div');
-  pdfContent.style.padding = '20px';
-  pdfContent.style.fontFamily = 'Arial, sans-serif';
-  pdfContent.style.backgroundColor = 'white';
-  
-  const completados = itemsCompra.filter(item => item.completado).length;
-  const total = itemsCompra.length;
-  
-  let html = `
-    <div style="text-align: center; margin-bottom: 30px;">
-      <h1 style="color: #2e7d32;">🛒 Lista de Compras</h1>
-      <p style="color: #666;">Fecha: ${new Date().toLocaleDateString()}</p>
-      <p style="color: #666;">✅ ${completados} de ${total} completados</p>
-    </div>
-  `;
-  
-  // Agrupar por categoría
-  const itemsPorCategoria = {};
-  for (const item of itemsCompra) {
-    if (!itemsPorCategoria[item.categoria]) itemsPorCategoria[item.categoria] = [];
-    itemsPorCategoria[item.categoria].push(item);
-  }
-  
-  const categoriasOrdenadas = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
-  
-  for (const categoria of categoriasOrdenadas) {
-    const items = itemsPorCategoria[categoria];
-    if (items && items.length > 0) {
-      const icono = categoria === 'Abarrotes' ? '🛒' : categoria === 'Lacteos' ? '🥛' : categoria === 'Verduras' ? '🥬' : categoria === 'Frutas' ? '🍎' : categoria === 'Carnes' ? '🍗' : '📦';
-      html += `
-        <div style="margin-bottom: 20px;">
-          <div style="background: #e8f5e9; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px;">
-            <h3 style="color: #2e7d32; margin: 0;">${icono} ${categoria}</h3>
-          </div>
-          <table style="width: 100%; border-collapse: collapse;">
-      `;
-      
-      for (const item of items) {
-        const check = item.completado ? '✓' : '○';
-        html += `
-          <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 8px; width: 30px;">${check}</td>
-            <td style="padding: 8px;"><strong>${escapeHTML(item.nombre)}</strong></td>
-            <td style="padding: 8px; text-align: right;">${item.cantidad ? escapeHTML(item.cantidad) : ''}</td>
-          </tr>
-        `;
-      }
-      
-      html += `</table></div>`;
-    }
-  }
-  
-  pdfContent.innerHTML = html;
-  document.body.appendChild(pdfContent);
-  
-  try {
-    const canvas = await html2canvas(pdfContent, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 190;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-    pdf.save(`lista-compras-${new Date().toISOString().slice(0, 10)}.pdf`);
-    mostrarNotificacion('PDF generado correctamente');
-  } catch (error) {
-    console.error('Error al generar PDF:', error);
-    mostrarNotificacion('Error al generar PDF', true);
-  } finally {
-    document.body.removeChild(pdfContent);
-  }
-}
-
-// Mostrar notificación
-function mostrarNotificacion(mensaje, esError = false) {
-  const notif = document.createElement('div');
-  notif.className = 'notification-toast';
-  notif.textContent = mensaje;
-  notif.style.background = esError ? '#ff5252' : '#4caf50';
-  document.body.appendChild(notif);
-  setTimeout(() => notif.classList.add('show'), 10);
-  setTimeout(() => {
-    notif.classList.remove('show');
-    setTimeout(() => notif.remove(), 300);
-  }, 3000);
-}
-
-// Escapar HTML
-function escapeHTML(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // Renderizar lista
@@ -364,110 +165,182 @@ function renderizarLista() {
   if (!container) return;
   
   if (itemsCompra.length === 0) {
-    container.innerHTML = `
-      <div class="vacio-mensaje">
-        <span>🛒</span>
-        <p>Tu lista de compras está vacía</p>
-        <small>Agrega recetas desde el planificador semanal</small>
-        <button id="sincronizar-vacio-btn" class="btn-sincronizar">🔄 Sincronizar con planificador</button>
-      </div>
-    `;
-    const sincronizarBtn = document.getElementById('sincronizar-vacio-btn');
-    if (sincronizarBtn) sincronizarBtn.addEventListener('click', sincronizarConPlanificador);
+    container.innerHTML = `<div class="vacio-mensaje"><span>🛒</span><p>Tu lista está vacía</p></div>`;
     actualizarProgreso();
     return;
   }
   
   const itemsPorCategoria = {};
-  for (const item of itemsCompra) {
+  itemsCompra.forEach(item => {
     if (!itemsPorCategoria[item.categoria]) itemsPorCategoria[item.categoria] = [];
     itemsPorCategoria[item.categoria].push(item);
-  }
+  });
   
-  const categoriasOrdenadas = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
+  const ordenCategorias = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
   let html = '';
   
-  for (const categoria of categoriasOrdenadas) {
-    const items = itemsPorCategoria[categoria];
+  ordenCategorias.forEach(cat => {
+    const items = itemsPorCategoria[cat];
     if (items && items.length > 0) {
-      const icono = categoria === 'Abarrotes' ? '🛒' : categoria === 'Lacteos' ? '🥛' : categoria === 'Verduras' ? '🥬' : categoria === 'Frutas' ? '🍎' : categoria === 'Carnes' ? '🍗' : '📦';
-      html += `
-        <div class="categoria-grupo">
-          <div class="categoria-titulo">
-            <span>${icono}</span> ${categoria}
-          </div>
-          <ul class="items-lista">
-      `;
-      
-      for (const item of items) {
+      const icono = { Abarrotes:'🛒', Lacteos:'🥛', Verduras:'🥬', Frutas:'🍎', Carnes:'🍗', Otros:'📦' }[cat];
+      html += `<div class="categoria-grupo"><div class="categoria-titulo"><span>${icono}</span> ${cat}</div><ul class="items-lista">`;
+      items.forEach(item => {
         html += `
           <li class="item-compra ${item.completado ? 'completado' : ''}" data-id="${item.id}">
             <input type="checkbox" class="item-checkbox" data-id="${item.id}" ${item.completado ? 'checked' : ''}>
             <div class="item-contenido">
               <div class="item-nombre">${escapeHTML(item.nombre)}</div>
               ${item.cantidad ? `<div class="item-cantidad">📦 ${escapeHTML(item.cantidad)}</div>` : ''}
-              ${item.recetas && item.recetas.length > 0 ? `<div class="item-recetas">📖 ${escapeHTML(item.recetas.slice(0, 2).join(', '))}${item.recetas.length > 2 ? ` +${item.recetas.length - 2}` : ''}</div>` : ''}
+              ${item.recetas && item.recetas.length > 0 ? `<div class="item-recetas">📖 ${escapeHTML(item.recetas.join(', '))}</div>` : ''}
             </div>
-            <div class="item-acciones">
-              <button class="btn-editar-cantidad" data-id="${item.id}" title="Editar cantidad">✏️</button>
-            </div>
-          </li>
-        `;
-      }
-      
+            <button class="btn-eliminar-item" data-id="${item.id}">✖</button>
+          </li>`;
+      });
       html += `</ul></div>`;
     }
-  }
+  });
   
   container.innerHTML = html;
   
-  // Event listeners
-  document.querySelectorAll('.item-checkbox').forEach(cb => {
+  // Eventos
+  container.querySelectorAll('.item-checkbox').forEach(cb => {
     cb.addEventListener('change', async (e) => {
-      e.stopPropagation();
-      const id = parseFloat(cb.dataset.id);
-      await toggleCompletado(id);
+      const id = parseFloat(e.target.dataset.id);
+      const item = itemsCompra.find(i => i.id === id);
+      if (item) {
+        item.completado = e.target.checked;
+        await guardarItemsEnSupabase(itemsCompra);
+        renderizarLista();
+        actualizarProgreso();
+      }
     });
   });
-  
-  document.querySelectorAll('.btn-editar-cantidad').forEach(btn => {
+
+  container.querySelectorAll('.btn-eliminar-item').forEach(btn => {
     btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const id = parseFloat(btn.dataset.id);
-      await editarCantidad(id);
+      const id = parseFloat(e.target.dataset.id);
+      itemsCompra = itemsCompra.filter(i => i.id !== id);
+      await guardarItemsEnSupabase(itemsCompra);
+      renderizarLista();
+      actualizarProgreso();
     });
   });
   
   actualizarProgreso();
 }
 
-// Inicializar
-async function init() {
-  await cargarUsuario();
+function actualizarProgreso() {
+  const total = itemsCompra.length;
+  const completados = itemsCompra.filter(i => i.completado).length;
+  const porcentaje = total > 0 ? (completados / total) * 100 : 0;
+  const fill = document.getElementById('progreso-fill');
+  const texto = document.getElementById('progreso-texto');
+  if (fill) fill.style.width = `${porcentaje}%`;
+  if (texto) texto.textContent = `${completados} de ${total} completados`;
+}
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Exportar PDF
+async function exportarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
   
-  if (!currentUser) {
-    window.location.href = 'login.html';
+  // Filtrar solo items seleccionados (no completados)
+  const itemsPendientes = itemsCompra.filter(item => !item.completado);
+  
+  if (itemsPendientes.length === 0) {
+    alert("No hay artículos pendientes para exportar.");
     return;
   }
   
-  itemsCompra = await cargarItemsDesdeSupabase();
+  doc.setFontSize(20);
+  doc.setTextColor(26, 60, 52);
+  doc.text("Lista de Compras - ForaneoKitchen", 20, 20);
   
-  // Sincronización automática: Si la lista está vacía pero hay un plan, generar
-  if (itemsCompra.length === 0) {
-    itemsCompra = await generarListaCompras();
-    if (itemsCompra.length > 0) {
-      await guardarItemsEnSupabase(itemsCompra);
-    }
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text(`Generada el: ${new Date().toLocaleDateString()}`, 20, 30);
+  
+  let y = 45;
+  
+  // Agrupar por categoría para el PDF
+  const agrupados = {};
+  itemsPendientes.forEach(item => {
+    const cat = item.categoria || 'Otros';
+    if (!agrupados[cat]) agrupados[cat] = [];
+    agrupados[cat].push(item);
+  });
+  
+  for (const [cat, items] of Object.entries(agrupados)) {
+    if (y > 270) { doc.addPage(); y = 20; }
+    
+    doc.setFontSize(14);
+    doc.setTextColor(76, 175, 80);
+    doc.text(cat, 20, y);
+    y += 8;
+    
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    items.forEach(item => {
+      if (y > 280) { doc.addPage(); y = 20; }
+      const text = `- [ ] ${item.cantidad ? item.cantidad + ' ' : ''}${item.nombre}`;
+      doc.text(text, 25, y);
+      y += 7;
+    });
+    y += 5;
   }
   
+  doc.save(`Lista_Compras_${new Date().getTime()}.pdf`);
+}
+
+async function agregarItemManual() {
+  const input = document.getElementById('input-item');
+  const nombre = input?.value.trim();
+  if (!nombre) return;
+  
+  const { cantidad, nombre: nombreSolo } = extraerCantidad(nombre);
+  itemsCompra.push({
+    id: Date.now(),
+    nombre: nombreSolo,
+    cantidad: cantidad,
+    completado: false,
+    categoria: obtenerCategoria(nombreSolo),
+    recetas: []
+  });
+  
+  input.value = '';
+  await guardarItemsEnSupabase(itemsCompra);
+  renderizarLista();
+}
+
+// Inicializar
+async function init() {
+  await cargarUsuario();
+  if (!currentUser) { window.location.href = 'login.html'; return; }
+  
+  // 1. Cargar items existentes
+  itemsCompra = await cargarItemsDesdeSupabase();
+  
+  // 2. Sincronizar con el plan actual
+  await sincronizarInteligente(); 
+  
+  // 3. Renderizar
   renderizarLista();
   
-  // Event listeners
-  const exportarBtn = document.getElementById('exportar-pdf-btn');
-  if (exportarBtn) exportarBtn.addEventListener('click', exportarPDF);
-  
-  const sincronizarBtn = document.getElementById('sincronizar-btn');
-  if (sincronizarBtn) sincronizarBtn.addEventListener('click', sincronizarConPlanificador);
+  // Eventos
+  document.getElementById('add-item-btn')?.addEventListener('click', agregarItemManual);
+  document.getElementById('input-item')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') agregarItemManual();
+  });
+  document.getElementById('sync-btn')?.addEventListener('click', async () => {
+    await sincronizarInteligente();
+    renderizarLista();
+  });
+  document.getElementById('exportar-pdf-btn')?.addEventListener('click', exportarPDF);
 }
 
 init();

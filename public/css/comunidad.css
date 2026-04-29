@@ -227,6 +227,20 @@
   border-left: 4px solid #4caf50;
 }
 
+.actividad-item.personal {
+  border-left-color: #ff9800;
+  background: #fffdf9;
+}
+
+.actividad-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
 .actividad-avatar {
   width: 48px;
   height: 48px;

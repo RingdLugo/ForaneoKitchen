@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/receta.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <link rel="stylesheet" href="css/bottom-nav.css">
 </head>
 <body>
   <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
@@ -29,6 +30,21 @@
       <a href="comunidad.html" class="nav-item"><span>👥</span><span>Comunidad</span></a>
       <a href="perfil.html" class="nav-item"><span>👤</span><span>Perfil</span></a>
     </nav>
+
+    <!-- Modal para responder comentario -->
+    <div id="modal-respuesta" class="modal-comentarios" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+      <div class="modal-content" style="background: var(--card-bg, #fff); width: 90%; max-width: 500px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color, #eee); padding-bottom: 15px; margin-bottom: 15px;">
+          <h3 style="margin: 0; font-size: 1.2rem;">💬 Responder comentario</h3>
+          <button class="close-respuesta-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+        </div>
+        <div class="respuesta-contexto" id="respuesta-contexto" style="margin-bottom: 15px; font-size: 0.9rem; color: #666; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 8px;"></div>
+        <div class="nuevo-comentario-area" style="display: flex; flex-direction: column; gap: 10px;">
+          <textarea id="respuesta-texto" placeholder="Escribe tu respuesta..." rows="3" maxlength="500" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color, #e0e0e0); background: var(--input-bg, #f5f7fa); resize: none;"></textarea>
+          <button id="enviar-respuesta" style="background: #4caf50; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; align-self: flex-end;">Responder</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="js/supabaseClient.js" type="module"></script>

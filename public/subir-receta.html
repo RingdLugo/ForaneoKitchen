@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/subir-receta.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <link rel="stylesheet" href="css/bottom-nav.css">
 </head>
 <body>
   <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
@@ -20,15 +21,7 @@
       <p>Comparte tus creaciones culinarias con la comunidad</p>
     </header>
 
-    <!-- Mensaje de restricción para usuarios Free -->
-    <div id="free-restriction" class="free-restriction" style="display:none;">
-      <div class="restriction-card">
-        <span class="restriction-icon">🔒</span>
-        <h3>Acceso restringido</h3>
-        <p>Solo usuarios Premium pueden subir recetas.</p>
-        <button id="upgrade-btn" class="btn-upgrade">🌟 Mejorar a Premium</button>
-      </div>
-    </div>
+    <!-- Formulario para todos los usuarios (Video restringido a Premium) -->
 
     <!-- Formulario para usuarios Premium -->
     <div id="premium-form" class="form-container" style="display:none;">
@@ -37,6 +30,19 @@
         <span>⭐ Tus puntos acumulados:</span>
         <span class="puntos-valor" id="puntos-monto">0</span>
         <span style="font-size: 0.8rem;">+20 pts por receta publicada</span>
+      </div>
+
+      <!-- Campo: Etiquetas -->
+      <div class="form-group">
+        <label>🏷️ Etiquetas / Categorías</label>
+        <div class="tags-selector" id="receta-etiquetas">
+          <label class="tag-check"><input type="checkbox" value="fitness"> ⚡ Fitness</label>
+          <label class="tag-check"><input type="checkbox" value="vegetariano"> 🌱 Vegetariano</label>
+          <label class="tag-check"><input type="checkbox" value="vegano"> 🌿 Vegano</label>
+          <label class="tag-check"><input type="checkbox" value="sin gluten"> 🚫 Sin gluten</label>
+          <label class="tag-check"><input type="checkbox" value="keto"> 🥑 Keto</label>
+          <label class="tag-check"><input type="checkbox" value="alto proteina"> 💪 Alto proteina</label>
+        </div>
       </div>
 
       <!-- Campo: Título -->
@@ -75,10 +81,10 @@
       </div>
 
       <!-- Campo: Video (solo Premium) -->
-      <div class="form-group premium-video">
-        <label for="video">🎥 Video de la receta (opcional)</label>
+      <div class="form-group premium-video" id="video-section">
+        <label for="video">🎥 Video de la receta (solo Premium 👑)</label>
         <input id="video" type="text" placeholder="https://youtube.com/watch?v=... o sube tu video">
-        <small class="input-hint">📹 Sube un video o pega enlace de YouTube</small>
+        <small class="input-hint" id="video-hint">📹 Sube un video o pega enlace de YouTube</small>
         <div id="video-upload-area" class="video-upload-area" style="display:none;">
           <input type="file" id="video-file" accept="video/*">
           <div id="video-preview" class="video-preview"></div>

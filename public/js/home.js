@@ -59,8 +59,12 @@ async function cargarUsuario() {
 
     // Avatar
     const avatarImg = document.getElementById('user-avatar');
-    if (avatarImg && currentUser.foto_perfil) {
-      avatarImg.src = currentUser.foto_perfil;
+    if (avatarImg) {
+      if (currentUser.foto_perfil) {
+        avatarImg.src = currentUser.foto_perfil;
+      } else {
+        avatarImg.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%234caf50'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='white' font-size='45'%3E${(currentUser.nombre?.charAt(0) || currentUser.username?.charAt(0) || 'U').toUpperCase()}%3C/text%3E%3C/svg%3E`;
+      }
     }
 
     // Mostrar botón cerrar sesión solo si está logueado
@@ -73,12 +77,40 @@ async function cargarUsuario() {
       const chatBtn = document.getElementById('chat-boton');
       if (chatBtn) chatBtn.style.display = 'block';
     }
+
+    // Notificaciones
+    await verificarNotificaciones();
     
     return true;
   } catch (error) {
     console.error('❌ Error:', error);
     return false;
   }
+}
+
+async function verificarNotificaciones() {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const res = await fetch('/api/users/me/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const notifs = await res.json();
+      if (notifs.length > 0) {
+        notifs.forEach((n, index) => {
+          setTimeout(() => {
+            showToast(`🔔 ${n.mensaje}`);
+          }, index * 3200);
+        });
+        fetch('/api/users/me/notifications/read', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
+    }
+  } catch (e) { console.warn('Notif check error:', e); }
 }
 
 async function toggleLike(id, btn) {
@@ -153,7 +185,10 @@ async function cargarRecetas(params = {}) {
     
     // Algoritmo: Si hay usuario logueado, pasar sus preferencias
     if (currentUser && currentUser.preferencias && currentUser.preferencias.length > 0) {
-      url += `preferencias=${currentUser.preferencias.join(',')}&`;
+      const prefs = currentUser.preferencias.filter(p => !p.startsWith('PERMISO_'));
+      if (prefs.length > 0) {
+        url += `preferencias=${encodeURIComponent(prefs.join(','))}&`;
+      }
     }
     
     const headers = {};
@@ -173,8 +208,16 @@ function renderizarRecetas(recetas) {
   const container = document.getElementById('recetas');
   if (!container) return;
   
-  if (!recetas.length) {
-    container.innerHTML = '<div class="no-results"><span>🍳</span><p>No hay recetas</p></div>';
+  if (recetas.length === 0) {
+    const hasPrefs = currentUser && currentUser.preferencias && currentUser.preferencias.length > 0;
+    container.innerHTML = `
+      <div class="vacio-mensaje" style="text-align:center; padding: 40px 20px; background: var(--card-bg, #fff); border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin: 20px auto; max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+        <span style="font-size: 60px; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">🥗</span>
+        <h3 style="margin: 0; font-size: 1.5rem; color: var(--text-color, #333);">No hay recetas disponibles</h3>
+        <p style="margin: 0; color: #666; font-size: 1rem; line-height: 1.5;">${hasPrefs ? 'No encontramos recetas que coincidan con tus preferencias alimenticias. Prueba cambiando tus preferencias en el perfil.' : 'Vuelve más tarde para descubrir nuevas delicias.'}</p>
+        ${hasPrefs ? '<a href="perfil.html" class="btn-primary" style="margin-top: 10px; text-decoration: none; display: inline-block;">Editar Preferencias</a>' : ''}
+      </div>
+    `;
     return;
   }
   
@@ -183,11 +226,12 @@ function renderizarRecetas(recetas) {
     const favCls = r.esFavorito ? 'favorited' : '';
     const premiumBadge = r.es_premium ? '<span class="badge-premium">👑 Premium</span>' : '';
     return `
-      <div class="recipe-card" data-id="${r.id}">
+      <div class="recipe-card" data-id="${r.id}" onclick="window.location.href='receta.html?id=${r.id}'">
         <div class="recipe-image"><img src="${r.imagen || PLACEHOLDER}" alt="${escapeHTML(r.titulo)}" loading="lazy">${premiumBadge}</div>
         <div class="recipe-content">
           <h3>${escapeHTML(r.titulo)}</h3>
-          <div class="recipe-autor">👨‍🍳 ${escapeHTML(r.autor)}</div>
+          <div class="recipe-autor" ${r.usuario_id ? `onclick="event.stopPropagation(); window.location.href='perfil.html?id=${r.usuario_id}'"` : ''} style="${r.usuario_id ? 'cursor:pointer; color:#4caf50;' : 'color:#999;'}">👨‍🍳 ${escapeHTML(r.usuario?.username || r.autor || 'Anónimo')} ${r.autorRol === 'free' ? '<span style="font-size:0.7rem;color:#999">(Free)</span>' : ''}</div>
+          ${r.autorRol === 'free' && !r.video_url && !r.video_youtube ? '<div style="font-size:0.65rem;color:#4caf50;margin-top:2px">ℹ️ Sin video - Usuario Free</div>' : ''}
           <div class="recipe-meta"><span class="recipe-price">💰 ${escapeHTML(r.precio || '$$')}</span><span class="recipe-time">⏱️ ${escapeHTML(r.tiempo || '30 min')}</span></div>
           <div class="recipe-social">
             <button class="btn-like-mini ${likedCls}" data-id="${r.id}" data-liked="${r.usuarioLike ? 1 : 0}" onclick="event.stopPropagation();window.toggleLike(${r.id}, this)">
@@ -197,14 +241,13 @@ function renderizarRecetas(recetas) {
               ${r.esFavorito ? '⭐' : '☆'}
             </button>
           </div>
-          <button class="btn-ver-mas" data-id="${r.id}">Ver receta →</button>
+          <button class="btn-ver-mas" onclick="event.stopPropagation(); window.location.href='receta.html?id=${r.id}'">Ver receta →</button>
         </div>
       </div>`;
   }).join('');
   
-  document.querySelectorAll('.recipe-card').forEach(card => {
-    card.addEventListener('click', () => window.location.href = `receta.html?id=${card.dataset.id}`);
-  });
+  // No es necesario el listener por el onclick inline
+
 }
 
 function obtenerFiltros() {
@@ -214,6 +257,7 @@ function obtenerFiltros() {
   if (q) params.q = q;
   if (filtroActivo === 'economicas') params.maxPrecio = 35;
   if (filtroActivo === 'rapidas') params.maxTiempo = 20;
+  if (filtroActivo === 'populares') params.orden = 'likes';
   return params;
 }
 
