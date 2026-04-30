@@ -76,8 +76,8 @@ function tienePermiso(u, p) {
 
 async function optAuth(req, res, next) {
   const t = req.headers.authorization?.split(' ')[1];
-  if (t) { 
-    const d = decodeToken(t); 
+  if (t) {
+    const d = decodeToken(t);
     if (d) {
       req.userId = d.id;
       // Opcional: cargar datos del usuario para permisos
@@ -400,98 +400,98 @@ app.post('/api/users/me/canjear-premium', authMW, async (req, res) => {
 //  RECETAS - Formatear para que el frontend lo lea fácil
 // ────────────────────────────────────────────────────────────────────────────
 app.get('/api/recipes', optAuth, async (req, res) => {
-try {
-  const { q, tag, sort, maxPrecio, maxTiempo, preferencias, orden, ignorePrefs } = req.query;
-  let query = supabase.from('recetas').select('*');
+  try {
+    const { q, tag, sort, maxPrecio, maxTiempo, preferencias, orden, ignorePrefs } = req.query;
+    let query = supabase.from('recetas').select('*');
 
-  if (q) query = query.or(`titulo.ilike.%${q}%,ingredientes.ilike.%${q}%`);
-  if (tag) query = query.contains('etiquetas', [tag]);
+    if (q) query = query.or(`titulo.ilike.%${q}%,ingredientes.ilike.%${q}%`);
+    if (tag) query = query.contains('etiquetas', [tag]);
 
-  if (sort === 'popular' || orden === 'likes') {
-    query = query.order('likes', { ascending: false });
-  } else {
-    query = query.order('fecha', { ascending: false });
-  }
+    if (sort === 'popular' || orden === 'likes') {
+      query = query.order('likes', { ascending: false });
+    } else {
+      query = query.order('fecha', { ascending: false });
+    }
 
-  const { data, error } = await query;
-  if (error) throw error;
+    const { data, error } = await query;
+    if (error) throw error;
 
-  let recetasFinales = data || [];
+    let recetasFinales = data || [];
 
-  // Algoritmo de recomendación y Filtrado Estricto
-  if (preferencias && recetasFinales.length > 0 && ignorePrefs !== 'true') {
-    const tags = (typeof preferencias === 'string' ? preferencias : Array.isArray(preferencias) ? preferencias.join(',') : '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-    
-    if (tags.length > 0) {
-      // Filtrado estricto: si el usuario tiene preferencias, solo mostrar lo que coincida
-      recetasFinales = recetasFinales.filter(r => {
-        const titulo = (r.titulo || '').toLowerCase();
-        const ingredientes = (r.ingredientes || '').toLowerCase();
-        const etiquetas = Array.isArray(r.etiquetas) ? r.etiquetas.map(e => e.toLowerCase()) : [];
-        
-        let match = false;
-        let score = 0;
-        
-        tags.forEach(tag => {
-          const hasTag = etiquetas.includes(tag) || titulo.includes(tag) || ingredientes.includes(tag);
-          if (hasTag) {
-            match = true;
-            if (etiquetas.includes(tag)) score += 10;
-            else if (titulo.includes(tag)) score += 5;
-            else score += 2;
-          }
+    // Algoritmo de recomendación y Filtrado Estricto
+    if (preferencias && recetasFinales.length > 0 && ignorePrefs !== 'true') {
+      const tags = (typeof preferencias === 'string' ? preferencias : Array.isArray(preferencias) ? preferencias.join(',') : '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+
+      if (tags.length > 0) {
+        // Filtrado estricto: si el usuario tiene preferencias, solo mostrar lo que coincida
+        recetasFinales = recetasFinales.filter(r => {
+          const titulo = (r.titulo || '').toLowerCase();
+          const ingredientes = (r.ingredientes || '').toLowerCase();
+          const etiquetas = Array.isArray(r.etiquetas) ? r.etiquetas.map(e => e.toLowerCase()) : [];
+
+          let match = false;
+          let score = 0;
+
+          tags.forEach(tag => {
+            const hasTag = etiquetas.includes(tag) || titulo.includes(tag) || ingredientes.includes(tag);
+            if (hasTag) {
+              match = true;
+              if (etiquetas.includes(tag)) score += 10;
+              else if (titulo.includes(tag)) score += 5;
+              else score += 2;
+            }
+          });
+
+          r._score = score;
+          return match;
         });
-        
-        r._score = score;
-        return match;
-      });
 
-      // Si no quedó nada tras el filtro estricto, podrías querer mostrar todo o nada.
-      // El usuario pidió "solo deben mostrarse esas", así que lo dejamos así.
-      
-      if (!sort && !orden) {
-        recetasFinales.sort((a, b) => (b._score || 0) - (a._score || 0));
+        // Si no quedó nada tras el filtro estricto, podrías querer mostrar todo o nada.
+        // El usuario pidió "solo deben mostrarse esas", así que lo dejamos así.
+
+        if (!sort && !orden) {
+          recetasFinales.sort((a, b) => (b._score || 0) - (a._score || 0));
+        }
       }
     }
+
+    let likesSet = new Set(), favsSet = new Set();
+    if (req.userId) {
+      const [{ data: lks }, { data: fvs }] = await Promise.all([
+        supabase.from('likes').select('receta_id').eq('usuario_id', req.userId),
+        supabase.from('favoritos').select('receta_id').eq('usuario_id', req.userId)
+      ]);
+      (lks || []).forEach(l => likesSet.add(l.receta_id));
+      (fvs || []).forEach(f => favsSet.add(f.receta_id));
+    }
+
+    const recetas = recetasFinales.map(r => ({
+      id: r.id,
+      titulo: r.titulo,
+      ingredientes: r.ingredientes,
+      precio: r.precio,
+      precio_numerico: r.precio_numerico,
+      tiempo: r.tiempo,
+      tiempo_numerico: r.tiempo_numerico,
+      imagen: r.imagen,
+      video_url: r.video_url,
+      video_youtube: r.video_youtube,
+      es_premium: r.es_premium,
+      etiquetas: r.etiquetas || [],
+      likes: r.likes || 0,
+      autor: r.autor || 'Anónimo',
+      usuario_id: r.usuario_id,
+      usuario: { id: r.usuario_id, username: r.autor || 'Anónimo' },
+      fecha: r.fecha,
+      usuarioLike: likesSet.has(r.id),
+      esFavorito: favsSet.has(r.id)
+    }));
+
+    res.json(recetas);
+  } catch (err) {
+    console.error('API Error /recipes:', err);
+    res.status(500).json({ error: 'Error al cargar recetas' });
   }
-
-  let likesSet = new Set(), favsSet = new Set();
-  if (req.userId) {
-    const [{ data: lks }, { data: fvs }] = await Promise.all([
-      supabase.from('likes').select('receta_id').eq('usuario_id', req.userId),
-      supabase.from('favoritos').select('receta_id').eq('usuario_id', req.userId)
-    ]);
-    (lks || []).forEach(l => likesSet.add(l.receta_id));
-    (fvs || []).forEach(f => favsSet.add(f.receta_id));
-  }
-
-  const recetas = recetasFinales.map(r => ({
-    id: r.id,
-    titulo: r.titulo,
-    ingredientes: r.ingredientes,
-    precio: r.precio,
-    precio_numerico: r.precio_numerico,
-    tiempo: r.tiempo,
-    tiempo_numerico: r.tiempo_numerico,
-    imagen: r.imagen,
-    video_url: r.video_url,
-    video_youtube: r.video_youtube,
-    es_premium: r.es_premium,
-    etiquetas: r.etiquetas || [],
-    likes: r.likes || 0,
-    autor: r.autor || 'Anónimo',
-    usuario_id: r.usuario_id,
-    usuario: { id: r.usuario_id, username: r.autor || 'Anónimo' },
-    fecha: r.fecha,
-    usuarioLike: likesSet.has(r.id),
-    esFavorito: favsSet.has(r.id)
-  }));
-
-  res.json(recetas);
-} catch (err) {
-  console.error('API Error /recipes:', err);
-  res.status(500).json({ error: 'Error al cargar recetas' });
-}
 });
 
 
@@ -557,6 +557,14 @@ app.post('/api/recipes', authMW, async (req, res) => {
   if (!titulo || !ingredientes || !pasos)
     return res.status(400).json({ error: 'TÃ­tulo, ingredientes y pasos son obligatorios' });
 
+  // Control de video para usuarios Premium
+  const esPremiumUser = req.user.es_premium || req.user.rol === 'premium';
+  const hasVideo = videoUrl || videoYoutube;
+
+  if (hasVideo && !esPremiumUser) {
+    return res.status(403).json({ error: 'Solo usuarios Premium pueden incluir videos en sus recetas 👑' });
+  }
+
   // Construir objeto sin usuario_id (columna UUID incompatible)
   const recetaData = {
     titulo: titulo.trim(),
@@ -567,9 +575,9 @@ app.post('/api/recipes', authMW, async (req, res) => {
     tiempo: tiempo || '',
     tiempo_numerico: parseInt(String(tiempo).replace(/[^0-9]/g, '')) || tiempoNumerico || 0,
     imagen: imagen || null,
-    video_url: videoUrl || null,
-    video_youtube: videoYoutube || null,
-    es_premium: esPremium || false,
+    video_url: esPremiumUser ? (videoUrl || null) : null,
+    video_youtube: esPremiumUser ? (videoYoutube || null) : null,
+    es_premium: esPremiumUser ? (esPremium || false) : false,
     etiquetas: etiquetas || [],
     autor: req.user.username,
     usuario_id: req.user.id,
@@ -639,7 +647,7 @@ app.post('/api/recipes/:id/like', authMW, async (req, res) => {
         usuario_id: autorUser.id,
         tipo: 'like_recibido',
         leida: false,
-        mensaje: `@${req.user.username} le dio â¤ï¸ a tu receta: ${r.titulo}`,
+        mensaje: `@${req.user.username} le dio â ¤ï¸  a tu receta: ${r.titulo}`,
         metadata: { receta_id: recipeId }
       });
     }
@@ -679,10 +687,10 @@ app.get('/api/recipes/:id/comments', async (req, res) => {
 
 app.post('/api/recipes/:id/comments', authMW, async (req, res) => {
   const { texto, padre_id } = req.body;
-  
-  // Lógica de permisos: Free puede comentar, Premium puede comentar y responder
-  if (padre_id && !req.user.es_premium && req.user.rol !== 'premium') {
-    return res.status(403).json({ error: 'Solo usuarios Premium pueden responder comentarios.' });
+
+  // Lógica de permisos estricta: Solo Premium puede comentar o responder
+  if (!req.user.es_premium && req.user.rol !== 'premium') {
+    return res.status(403).json({ error: 'Solo usuarios Premium pueden comentar en las recetas 👑' });
   }
 
   if (!texto?.trim()) return res.status(400).json({ error: 'Comentario vacío' });
@@ -737,7 +745,7 @@ app.delete('/api/comments/:id', authMW, async (req, res) => {
   const { data } = await supabase.from('comentarios').select('usuario_id, texto').eq('id', req.params.id).maybeSingle();
   if (!data) return res.status(404).json({ error: 'No encontrado' });
   if (data.usuario_id !== req.user.id) return res.status(403).json({ error: 'Sin permiso' });
-  
+
   // En lugar de borrar la fila (que rompería el hilo de respuestas), 
   // actualizamos el texto a "eliminado"
   await supabase.from('comentarios').update({ texto: '🚫 [Comentario eliminado]' }).eq('id', req.params.id);
@@ -849,7 +857,7 @@ app.get('/api/users/me/notifications', authMW, async (req, res) => {
     const { data, error } = await supabase
       .from('notificaciones')
       .select('*')
-      .eq('usuario_id', req.userId)
+      .eq('usuario_id', req.user.id)
       .eq('leida', false)
       .order('created_at', { ascending: false });
     
@@ -870,7 +878,7 @@ app.get('/api/users/me/planner', authMW, async (req, res) => {
       .select('*')
       .eq('usuario_id', req.user.id)
       .maybeSingle();
-      
+
     if (error) throw error;
     res.json(data || { plan: null });
   } catch (error) {
@@ -888,7 +896,7 @@ app.post('/api/users/me/planner', authMW, async (req, res) => {
         plan: plan,
         updated_at: new Date().toISOString()
       }, { onConflict: 'usuario_id' });
-      
+
     if (error) throw error;
     res.json({ success: true });
   } catch (error) {
@@ -902,13 +910,58 @@ app.get('/api/users/me/points', authMW, async (req, res) => {
     const { data, error } = await supabase
       .from('usuarios')
       .select('puntos')
-      .eq('id', req.userId)
+      .eq('id', req.user.id)
       .maybeSingle();
 
     if (error) throw error;
     res.json({ puntos: data?.puntos || 0 });
   } catch (error) {
     res.status(500).json({ error: 'Error al cargar puntos' });
+  }
+});
+
+app.post('/api/users/me/redeem', authMW, async (req, res) => {
+  const { rewardId, points, days, type } = req.body;
+  if (!rewardId || points === undefined) return res.status(400).json({ error: 'Faltan datos' });
+
+  const currentPoints = req.user.puntos || 0;
+  if (currentPoints < points) return res.status(400).json({ error: 'Puntos insuficientes' });
+
+  try {
+    const newPoints = currentPoints - points;
+    const updates = { puntos: newPoints };
+
+    if (days > 0 && !type) {
+      let premiumHasta = new Date();
+      if (req.user.premium_hasta && new Date(req.user.premium_hasta) > new Date()) {
+        premiumHasta = new Date(req.user.premium_hasta);
+      }
+      premiumHasta.setDate(premiumHasta.getDate() + days);
+      updates.es_premium = true;
+      updates.rol = 'premium';
+      updates.premium_hasta = premiumHasta.toISOString();
+    } else if (type && type.startsWith('permiso_')) {
+      const expira = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      const tag = `${type.toUpperCase()}:${expira}`;
+      updates.preferencias = [...(req.user.preferencias || []), tag];
+    }
+
+    const { error: upErr } = await supabase.from('usuarios').update(updates).eq('id', req.user.id);
+    if (upErr) throw upErr;
+
+    // Log
+    await supabase.from('puntos_log').insert({
+      usuario_id: req.user.id,
+      accion: 'canje',
+      puntos: -points,
+      descripcion: `Canje: ${rewardId}`,
+      fecha: new Date().toISOString()
+    });
+
+    res.json({ success: true, points: newPoints, message: 'Canje exitoso' });
+  } catch (error) {
+    console.error('Redeem error:', error);
+    res.status(500).json({ error: 'Error al procesar el canje' });
   }
 });
 
@@ -1019,6 +1072,137 @@ app.post('/api/users/me/shopping-list', authMW, async (req, res) => {
 
 // ────────────────────────────────────────────────────────────────────────────
 //  SERVIDOR - Formatear para que el frontend lo lea fácil
+// ────────────────────────────────────────────────────────────────────────────
+//  CHATBOT IA (solo Premium) - Formatear para que el frontend lo lea fácil
+// ────────────────────────────────────────────────────────────────────────────
+
+// Algoritmo de similitud coseno para matching de texto
+function tokenize(text) {
+  return String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\W+/).filter(w => w.length > 2);
+}
+
+function cosineSimilarity(tokensA, tokensB) {
+  const setA = new Set(tokensA);
+  const setB = new Set(tokensB);
+  const allTokens = new Set([...setA, ...setB]);
+  let dot = 0, magA = 0, magB = 0;
+  allTokens.forEach(t => {
+    const a = setA.has(t) ? 1 : 0;
+    const b = setB.has(t) ? 1 : 0;
+    dot += a * b;
+    magA += a * a;
+    magB += b * b;
+  });
+  return magA && magB ? dot / (Math.sqrt(magA) * Math.sqrt(magB)) : 0;
+}
+
+// Clasificador de intencion (NLU basado en reglas + keywords)
+function clasificarIntencion(mensaje) {
+  const m = mensaje.toLowerCase();
+  if (/recomienda|sugiere|que (cocin|prepar|hag)|quiero (cocinar|hacer|comer)|dame una receta/i.test(m)) return 'recomendar';
+  if (/semana|especial|mejor de la semana/i.test(m)) return 'receta_semana';
+  if (/ingrediente|tengo|con .*(pollo|arroz|huevo|carne|papa|frijol|pasta|queso|leche|tomate)/i.test(m)) return 'por_ingrediente';
+  if (/barato|economi|poco dinero|presupuesto/i.test(m)) return 'economica';
+  if (/rapid|facil|sencill|poco tiempo|minutos/i.test(m)) return 'rapida';
+  if (/saludable|dieta|vegano|vegetariano|light|fitness|keto|bajar de peso/i.test(m)) return 'saludable';
+  if (/popular|mejor|top|mas likeada/i.test(m)) return 'popular';
+  if (/planificador|compras|como (uso|funciona|hago)/i.test(m)) return 'ayuda_funcional';
+  if (/hola|buenos|buenas|hey|saludos/i.test(m)) return 'saludo';
+  if (/gracias|chido|genial|perfecto/i.test(m)) return 'agradecimiento';
+  if (/ayuda|que puedes|que haces|funciones/i.test(m)) return 'ayuda';
+  return 'buscar';
+}
+
+app.post('/api/chatbot', authMW, async (req, res) => {
+  console.log(`[Chatbot] Mensaje de @${req.user.username}: ${req.body.mensaje}`);
+  // Solo Premium
+  if (!req.user.es_premium && req.user.rol !== 'premium') {
+    return res.status(403).json({ error: 'El Chef IA es exclusivo para usuarios Premium' });
+  }
+
+  const { mensaje } = req.body;
+  if (!mensaje || !mensaje.trim()) return res.status(400).json({ error: 'Mensaje vacio' });
+
+  const intencion = clasificarIntencion(mensaje);
+  console.log(`[Chatbot] Intencion detectada: ${intencion}`);
+
+  if (intencion === 'saludo') {
+    return res.json({ respuesta: 'Hola ' + (req.user.nombre || req.user.username) + '! Soy tu Chef IA. Puedo recomendarte recetas, buscarte algo por ingredientes o sugerirte lo mas popular. Que se te antoja?', recetas: [] });
+  }
+  if (intencion === 'agradecimiento') {
+    return res.json({ respuesta: 'Con gusto! Si necesitas mas ideas, aqui estare!', recetas: [] });
+  }
+  if (intencion === 'ayuda') {
+    return res.json({ respuesta: 'Chef IA - Funciones:\n- "Recomiendame algo" = Receta aleatoria\n- "Tengo pollo y arroz" = Busco por ingredientes\n- "Algo barato" = Recetas economicas\n- "Algo rapido" = Recetas de menos de 20 min\n- "Lo mas popular" = Top recetas\n- "La receta de la semana" = Nuestra favorita', recetas: [] });
+  }
+  if (intencion === 'ayuda_funcional') {
+    return res.json({ respuesta: 'Puedes usar el **Planificador** para organizar tus comidas de la semana. Solo busca una receta y haz clic en "Al plan". Tu **Lista de Compras** se actualizará solita con los ingredientes necesarios. ¡Es genial!', recetas: [] });
+  }
+
+  try {
+    let query = supabase.from('recetas').select('id, titulo, ingredientes, precio, precio_numerico, tiempo, tiempo_numerico, imagen, likes, etiquetas');
+    
+    if (intencion === 'receta_semana' || intencion === 'popular') query = query.order('likes', { ascending: false });
+    else if (intencion === 'economica') query = query.lte('precio_numerico', 35).order('precio_numerico', { ascending: true });
+    else if (intencion === 'rapida') query = query.lte('tiempo_numerico', 20).order('tiempo_numerico', { ascending: true });
+    else query = query.order('likes', { ascending: false });
+
+    query = query.limit(50);
+    const { data: recetas, error: queryError } = await query;
+
+    if (queryError) throw queryError;
+
+    if (!recetas || recetas.length === 0) {
+      return res.json({ respuesta: 'No encontre recetas en este momento.', recetas: [] });
+    }
+
+    let resultados = recetas;
+    let respuestaTexto = '';
+
+    if (intencion === 'por_ingrediente' || intencion === 'buscar') {
+      const queryTokens = tokenize(mensaje);
+      const scored = recetas.map(r => {
+        const recipeTokens = tokenize((r.titulo || '') + ' ' + (r.ingredientes || '') + ' ' + JSON.stringify(r.etiquetas || []));
+        return { ...r, score: cosineSimilarity(queryTokens, recipeTokens) };
+      }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+      resultados = scored.slice(0, 5);
+      if (resultados.length === 0) {
+        resultados = recetas.filter(r => {
+          const text = ((r.titulo || '') + ' ' + (r.ingredientes || '')).toLowerCase();
+          return queryTokens.some(p => text.includes(p));
+        }).slice(0, 5);
+      }
+    }
+
+    if (intencion === 'recomendar') { resultados = recetas.sort(() => Math.random() - 0.5).slice(0, 3); respuestaTexto = 'Te recomiendo estas recetas!'; }
+    else if (intencion === 'receta_semana') { resultados = [recetas[0]]; respuestaTexto = 'Nuestra receta estrella de esta semana es:'; }
+    else if (intencion === 'economica') { resultados = resultados.slice(0, 5); respuestaTexto = 'Las mas economicas:'; }
+    else if (intencion === 'rapida') { resultados = resultados.slice(0, 5); respuestaTexto = 'Rapidisimas de preparar:'; }
+    else if (intencion === 'popular') { resultados = resultados.slice(0, 5); respuestaTexto = 'Las mas populares!'; }
+    else if (intencion === 'saludable') {
+      const qt = tokenize('saludable vegano vegetariano light ensalada fitness keto baja calorias');
+      resultados = recetas.map(r => {
+        const rt = tokenize((r.titulo || '') + ' ' + (r.descripcion || '') + ' ' + (r.ingredientes || ''));
+        return { ...r, score: cosineSimilarity(qt, rt) };
+      }).filter(r => r.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+      respuestaTexto = 'Opciones ideales para tu dieta y estilo de vida:';
+    } else if (intencion === 'por_ingrediente') {
+      respuestaTexto = resultados.length > 0 ? 'Encontre ' + resultados.length + ' receta(s) con esos ingredientes:' : 'No encontre recetas con esos ingredientes.';
+    } else {
+      respuestaTexto = resultados.length > 0 ? 'Esto encontre para tu busqueda:' : 'No encontre resultados. Prueba con otra busqueda.';
+    }
+
+    const recetasFormateadas = resultados.slice(0, 5).map(r => ({
+      id: r.id, titulo: r.titulo, imagen: r.imagen, precio: r.precio, tiempo: r.tiempo, likes: r.likes || 0
+    }));
+
+    res.json({ respuesta: respuestaTexto, recetas: recetasFormateadas });
+  } catch (error) {
+    console.error('Error chatbot:', error);
+    res.status(500).json({ error: 'Error interno del Chef IA' });
+  }
+});
+
 // ────────────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {

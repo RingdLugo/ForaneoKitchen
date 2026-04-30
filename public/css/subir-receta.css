@@ -439,34 +439,33 @@ body {
 /* Notificación */
 .temp-notification {
   position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  background: #4caf50;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 50px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 2000;
+  top: 24px;
+  right: 24px;
+  transform: translateX(120%);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #1a3c34;
+  padding: 16px 24px;
+  border-radius: 20px;
+  font-weight: 600;
+  z-index: 10000;
   opacity: 0;
-  transition: all 0.3s ease;
-  pointer-events: none;
-  font-size: 0.9rem;
-  white-space: nowrap;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  max-width: 400px;
 }
-
-.temp-notification.show {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-}
-
-.temp-notification.success {
-  background: linear-gradient(135deg, #4caf50, #45a049);
-}
-
-.temp-notification.error {
-  background: linear-gradient(135deg, #ff5252, #ff3838);
+.temp-notification.show { transform: translateX(0); opacity: 1; }
+.temp-notification.success { border-left: 4px solid #4caf50; }
+.temp-notification.error { border-left: 4px solid #ff5252; }
+.temp-notification::before {
+  content: '🔔';
+  font-size: 1.2rem;
 }
 
 /* Responsive */

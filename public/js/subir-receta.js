@@ -90,6 +90,13 @@ function validarPasos(pasos) {
   return { valido: true, valor: pasos.trim() };
 }
 
+// Moderación básica de contenido
+function moderarContenido(texto) {
+  const palabrasProhibidas = ['nude', 'sexo', 'porn', 'insulto_prohibido']; // Ejemplo
+  const minus = texto.toLowerCase();
+  return !palabrasProhibidas.some(p => minus.includes(p));
+}
+
 // Verificar sesión
 async function verificarSesion() {
   const userId = localStorage.getItem('userId');
@@ -149,6 +156,8 @@ async function verificarSesion() {
 async function publicarReceta() {
   if (!currentUser) { mostrarNotificacion('Debes iniciar sesión', 'error'); return; }
   const tV = validarTitulo(tituloInput.value); if (!tV.valido) { mostrarNotificacion(tV.mensaje, 'error'); return; }
+  if (!moderarContenido(tV.valor)) { mostrarNotificacion('El título contiene palabras no permitidas', 'error'); return; }
+
   const pV = validarPrecio(precioInput.value); if (!pV.valido) { mostrarNotificacion(pV.mensaje, 'error'); return; }
   const tiV = validarTiempo(tiempoInput.value); if (!tiV.valido) { mostrarNotificacion(tiV.mensaje, 'error'); return; }
   const iV = validarIngredientes(ingredientesTextarea.value); if (!iV.valido) { mostrarNotificacion(iV.mensaje, 'error'); return; }
@@ -238,7 +247,15 @@ function setupImageUpload() {
   if (!imagenInput) return;
   imagenInput.addEventListener('change', e => {
     const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        mostrarNotificacion('El archivo debe ser una imagen', 'error');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        mostrarNotificacion('La imagen no debe superar los 5MB', 'error');
+        return;
+      }
       imagenSeleccionada = file;
       const reader = new FileReader();
       reader.onload = ev => {
@@ -272,7 +289,15 @@ function setupVideoUpload() {
   if (vFile) {
     vFile.addEventListener('change', e => {
       const file = e.target.files[0];
-      if (file && file.type.startsWith('video/')) {
+      if (file) {
+        if (!file.type.startsWith('video/')) {
+          mostrarNotificacion('El archivo debe ser un video', 'error');
+          return;
+        }
+        if (file.size > 15 * 1024 * 1024) { // 15MB max para videos
+          mostrarNotificacion('El video no debe superar los 15MB', 'error');
+          return;
+        }
         videoSeleccionado = file;
         const prev = document.getElementById('video-preview');
         if (prev) {

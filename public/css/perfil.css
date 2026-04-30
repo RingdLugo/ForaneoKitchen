@@ -190,6 +190,26 @@ body {
   font-family: inherit;
 }
 .btn-editar-perfil:hover { background: #e0e0e0; }
+ 
+.btn-logout-main {
+  background: #fff0f0;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-logout-main:hover {
+  background: #c62828;
+  color: white;
+  transform: scale(1.05);
+}
 
 /* FORMULARIO EDICIÓN */
 .perfil-form-section {
@@ -357,55 +377,45 @@ body {
   border-color: #ff9800;
 }
 
-.reward-icon {
-  font-size: 2.5rem;
-  display: block;
-  margin-bottom: 12px;
+.reward-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  transition: all .3s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
 }
-
-.reward-title {
-  font-weight: 700;
-  font-size: 1rem;
-  color: #1a1a2e;
-  margin-bottom: 8px;
+.reward-card.active {
+  border-color: #4caf50;
+  background: #f1f8e9;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
 }
-
-.reward-points {
-  color: #ff9800;
-  font-weight: 700;
-  font-size: 1.2rem;
-  margin-bottom: 12px;
-}
-
-.reward-benefit {
-  font-size: 0.75rem;
-  color: #666;
-  margin-bottom: 16px;
-}
-
+.reward-icon { font-size: 2.2rem; margin-bottom: 5px; }
+.reward-title { font-weight: 700; font-size: 1rem; color: #1a3c34; }
+.reward-points { color: #4caf50; font-weight: 700; font-size: 1.1rem; }
+.reward-benefit { font-size: 0.8rem; color: #666; min-height: 32px; }
 .reward-btn {
-  background: linear-gradient(135deg, #ff9800, #f57c00);
-  color: white;
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
   border: none;
-  padding: 8px 16px;
-  border-radius: 30px;
-  font-size: 0.8rem;
+  background: #4caf50;
+  color: white;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
+  transition: all .2s;
 }
-
-.reward-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(255,152,0,0.3);
+.reward-btn:disabled { background: #ccc; cursor: not-allowed; }
+.reward-btn.active {
+  background: #e8f5e9;
+  color: #2e7d32;
+  cursor: default;
 }
-
-.reward-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
+.reward-btn:not(:disabled):hover { background: #388e3c; transform: translateY(-2px); }
 
 /* TABS */
 .secciones-perfil {
@@ -553,19 +563,36 @@ body {
 .nav-item.active { background: #e8f5e9; color: #4caf50; }
 .nav-item:hover { color: #4caf50; }
 
-/* TOAST */
+/* TOAST - Estilo Premium Centralizado */
 .notification-toast {
   position: fixed;
-  bottom: 110px; left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: #4caf50; color: white;
-  padding: 12px 24px; border-radius: 50px;
-  z-index: 2000; font-weight: 600; font-size: 0.9rem;
-  opacity: 0; pointer-events: none;
-  transition: all .3s; box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  top: 24px;
+  right: 24px;
+  transform: translateX(120%);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #1a3c34;
+  padding: 16px 24px;
+  border-radius: 20px;
+  font-weight: 600;
+  z-index: 10000;
+  opacity: 0;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  max-width: 400px;
 }
-.notification-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-.notification-toast.error { background: #f44336; }
+.notification-toast.show { transform: translateX(0); opacity: 1; }
+.notification-toast.error { border-left: 4px solid #f44336; }
+.notification-toast::before {
+  content: '🔔';
+  font-size: 1.2rem;
+}
 
 /* RESPONSIVE */
 @media (max-width: 768px) {

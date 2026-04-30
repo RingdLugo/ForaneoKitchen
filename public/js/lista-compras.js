@@ -105,9 +105,15 @@ async function sincronizarInteligente() {
   });
 
   let modificado = false;
+  
+  // Limpiar recetas previas de los items existentes para re-sincronizar
+  itemsCompra.forEach(item => {
+    if (item.recetas) item.recetas = [];
+  });
+
   itemsPlan.forEach(newItem => {
     const nombreNormalizado = newItem.nombre.toLowerCase().trim();
-    // Buscar si ya existe el ingrediente (sin importar la receta)
+    // Buscar si ya existe el ingrediente
     let existente = itemsCompra.find(i => i.nombre.toLowerCase().trim() === nombreNormalizado);
     
     if (!existente) {
@@ -121,7 +127,11 @@ async function sincronizarInteligente() {
       });
       modificado = true;
     } else {
-      // Si ya existe, nos aseguramos de que la receta esté en la lista
+      // Si ya existe, actualizamos cantidad si estaba vacío y agregamos receta
+      if (!existente.cantidad && newItem.cantidad) {
+        existente.cantidad = newItem.cantidad;
+        modificado = true;
+      }
       if (!existente.recetas) existente.recetas = [];
       if (!existente.recetas.includes(newItem.recetaTitulo)) {
         existente.recetas.push(newItem.recetaTitulo);
@@ -130,10 +140,9 @@ async function sincronizarInteligente() {
     }
   });
 
-  if (modificado) {
-    await guardarItemsEnSupabase(itemsCompra);
-    renderizarLista();
-  }
+  // Nota: Siempre guardamos para asegurar persistencia del estado actual
+  await guardarItemsEnSupabase(itemsCompra);
+  renderizarLista();
 }
 
 // Cargar items desde Supabase

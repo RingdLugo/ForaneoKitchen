@@ -300,10 +300,44 @@ async function agregarReceta(dia, comida, receta) {
 // Eliminar receta del plan
 async function eliminarReceta(dia, comida, index) {
   if (confirm('¿Eliminar esta receta del plan?')) {
+    if (!planSemanal[dia]) planSemanal[dia] = {};
+    if (!planSemanal[dia][comida]) planSemanal[dia][comida] = [];
+    
     planSemanal[dia][comida].splice(index, 1);
     await guardarPlanEnSupabase();
     renderizarPlanificador();
     actualizarPresupuesto();
+  }
+}
+
+// Función auxiliar para manejar el agregado desde URL
+async function manejarAgregadoDesdeURL() {
+  const params = new URLSearchParams(window.location.search);
+  const agregarId = params.get('agregar');
+  
+  if (agregarId) {
+    try {
+      const id = parseInt(agregarId);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/recipes/${id}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      
+      if (res.ok) {
+        const receta = await res.json();
+        // Por defecto lo agregamos al Lunes - Comida si viene de URL
+        // o abrimos el modal para que el usuario elija
+        diaActual = 'lunes';
+        comidaActual = 'comida';
+        await agregarReceta(diaActual, comidaActual, receta);
+        
+        // Limpiar URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        mostrarNotificacion(`Receta "${receta.titulo}" agregada al Lunes`);
+      }
+    } catch (e) {
+      console.error('Error agregando desde URL:', e);
+    }
   }
 }
 
@@ -465,6 +499,10 @@ async function init() {
   await cargarUsuario();
   await cargarPlanDesdeSupabase();
   await cargarRecetas();
+  
+  // Manejar si viene de la página de receta
+  await manejarAgregadoDesdeURL();
+  
   renderizarPlanificador();
   setupModalSearch();
   

@@ -122,8 +122,11 @@ async function cargarPerfil() {
   }
 
   // Mostrar información
-  displayUsername.textContent = `@${currentUser.username || currentUser.email?.split('@')[0]}`;
-  displayNombre.textContent = `${currentUser.nombre || ''} ${currentUser.apellido || ''}`;
+  const username = currentUser.username || currentUser.email?.split('@')[0] || 'usuario';
+  displayUsername.textContent = `@${username}`;
+  
+  const nombreCompleto = `${currentUser.nombre || ''} ${currentUser.apellido || ''}`.trim();
+  displayNombre.textContent = nombreCompleto || 'Usuario sin nombre';
   displayBio.textContent = currentUser.bio || 'Sin biografía aún.';
   
   // Badge de rol
@@ -137,7 +140,9 @@ async function cargarPerfil() {
   }
   
   // Puntos
-  puntosBadge.textContent = `⭐ ${currentUser.puntos || 0} pts`;
+  const puntosActuales = currentUser.puntos || 0;
+  puntosBadge.textContent = `⭐ ${puntosActuales} pts`;
+  localStorage.setItem('userPoints', puntosActuales); // Sincronizar con local por si acaso
   
   // Avatar
   if (currentUser.foto_perfil) {
@@ -172,12 +177,18 @@ async function cargarPerfil() {
       historialBtn.style.display = esPremium ? 'flex' : 'none';
     }
     
-    await cargarFavoritos();
-    await cargarHistorial();
+    // Cargar estadísticas y recetas en paralelo
+    await Promise.all([
+      cargarMisRecetas(),
+      cargarFavoritos(),
+      cargarHistorial(),
+      actualizarStats()
+    ]);
+  } else {
+    // Perfil ajeno
+    await cargarMisRecetas(currentUser.id);
+    await actualizarStatsAjeno(currentUser.id);
   }
-  
-  // Cargar estadísticas y recetas
-  await cargarMisRecetas(esPerfilAjeno ? currentUser.id : null);
 }
 
 // Cargar mis recetas usando la API del backend
@@ -219,17 +230,33 @@ function renderRewards() {
   if (!rewardsContainer) return;
   
   const puntosActuales = currentUser?.puntos || 0;
+  const esPremium = currentUser?.es_premium || currentUser?.rol === 'premium';
+  const prefs = currentUser?.preferencias || [];
   
   rewardsContainer.innerHTML = REWARDS.map(reward => {
     const canAfford = puntosActuales >= reward.points;
+    let isActive = false;
+    
+    if (reward.id === '1day' || reward.id === '7days') {
+      isActive = esPremium;
+    } else if (reward.type && reward.type.startsWith('permiso_')) {
+      const tagPrefix = `${reward.type.toUpperCase()}:`;
+      isActive = prefs.some(p => typeof p === 'string' && p.startsWith(tagPrefix));
+    }
+    
     return `
-      <div class="reward-card">
+      <div class="reward-card ${isActive ? 'active' : ''}">
         <span class="reward-icon">${reward.icon}</span>
         <div class="reward-title">${reward.name}</div>
         <div class="reward-points">${reward.points} pts</div>
         <div class="reward-benefit">${reward.benefit}</div>
-        <button class="reward-btn" data-reward-id="${reward.id}" data-points="${reward.points}" data-days="${reward.days || 0}" data-type="${reward.type || ''}" ${!canAfford ? 'disabled' : ''}>
-          ${canAfford ? 'Canjear' : 'Puntos insuficientes'}
+        <button class="reward-btn ${isActive ? 'active' : ''}" 
+          data-reward-id="${reward.id}" 
+          data-points="${reward.points}" 
+          data-days="${reward.days || 0}" 
+          data-type="${reward.type || ''}" 
+          ${!canAfford || isActive ? 'disabled' : ''}>
+          ${isActive ? '✅ Activo' : canAfford ? 'Canjear' : 'Puntos insuficientes'}
         </button>
       </div>
     `;
@@ -264,66 +291,60 @@ async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) 
   try {
     const nuevosPuntos = puntosActuales - puntosRequeridos;
     
-    // Actualizar puntos en Supabase
-    const { error: updateError } = await supabase
-      .from('usuarios')
-      .update({ puntos: nuevosPuntos })
-      .eq('id', currentUser.id);
-    
-    if (updateError) throw updateError;
-    
-    // Si es canje de días Premium (Acceso Total)
-    if (diasPremium > 0 && !type) {
-      let premiumHasta = new Date();
-      if (currentUser.premium_hasta && new Date(currentUser.premium_hasta) > new Date()) {
-        premiumHasta = new Date(currentUser.premium_hasta);
-      }
-      premiumHasta.setDate(premiumHasta.getDate() + diasPremium);
-      
-      await supabase
-        .from('usuarios')
-        .update({ 
-          es_premium: true, 
-          rol: 'premium',
-          premium_hasta: premiumHasta.toISOString()
-        })
-        .eq('id', currentUser.id);
-      
-      showToast(`🎉 ¡${diasPremium} días Premium activados!`, false);
-    } 
-    // Permisos específicos (Tags)
-    else if (type && type.startsWith('permiso_')) {
-      const expira = new Date(Date.now() + diasPremium * 24 * 60 * 60 * 1000).toISOString();
-      const tag = `${type.toUpperCase()}:${expira}`;
-      const nuevasPrefs = [...(currentUser.preferencias || []), tag];
-      
-      await supabase
-        .from('usuarios')
-        .update({ preferencias: nuevasPrefs })
-        .eq('id', currentUser.id);
-      
-      showToast(`🔓 ¡${rewardId} activado hasta ${new Date(expira).toLocaleDateString()}!`, false);
-    }
-    else if (type === 'videos') {
-      showToast(`🎥 ¡Videos Premium desbloqueados permanentemente!`, false);
-    } else {
-      showToast(`✅ Recompensa canjeada: ${rewardId}`, false);
-    }
-    
-    // Actualizar UI
+    // Actualización optimista de la UI
     currentUser.puntos = nuevosPuntos;
     puntosBadge.textContent = `⭐ ${nuevosPuntos} pts`;
+    renderRewards(); 
+
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/users/me/redeem', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ rewardId, points: puntosRequeridos, days: diasPremium, type })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al canjear');
+    }
+
+    const data = await res.json();
+    showToast(`✅ ${data.message || 'Canje exitoso'}`);
     
-    // Recargar recompensas
-    renderRewards();
+    // Sincronizar localmente con los datos finales del servidor
+    currentUser.puntos = data.points;
+    puntosBadge.textContent = `⭐ ${data.points} pts`;
+    localStorage.setItem('userPoints', data.points);
     
-    // Recargar perfil completo para reflejar cambios
-    setTimeout(() => cargarPerfil(), 1000);
+    // Recargar perfil completo para reflejar cambios de rol/permisos
+    await cargarPerfil();
     
   } catch (error) {
     console.error('Error al canjear:', error);
-    showToast('Error al procesar el canje', true);
+    showToast(error.message || 'Error al procesar el canje', true);
+    
+    // Revertir UI en caso de error
+    currentUser.puntos = puntosActuales;
+    puntosBadge.textContent = `⭐ ${puntosActuales} pts`;
+    renderRewards();
   }
+}
+
+// Actualizar estadísticas ajenas
+async function actualizarStatsAjeno(userId) {
+  try {
+    const [recetasRes] = await Promise.all([
+      fetch(`/api/users/${userId}/recipes`)
+    ]);
+    const recetas = recetasRes.ok ? await recetasRes.json() : [];
+    if (statsRecetas) statsRecetas.textContent = recetas.length || 0;
+    // Favoritos y visitas son privados
+    if (statsFavoritos) statsFavoritos.textContent = '-';
+    if (statsVisitas) statsVisitas.textContent = '-';
+  } catch (e) { console.error(e); }
 }
 
 // Actualizar estadísticas usando la API del backend
@@ -333,7 +354,6 @@ async function actualizarStats() {
   const headers = { 'Authorization': `Bearer ${token}` };
 
   try {
-    // Cargar recetas, favoritos e historial en paralelo
     const [recetasRes, favRes, histRes] = await Promise.all([
       fetch('/api/users/me/recipes', { headers }),
       fetch('/api/users/me/favorites', { headers }),
@@ -378,6 +398,14 @@ async function cargarHistorial() {
     const res = await fetch('/api/users/me/history', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+    
+    if (res.status === 403) {
+      // Usuario no es Premium, no es un error real para nosotros
+      renderGrid('historial-grid', [], false);
+      if (statsVisitas) statsVisitas.textContent = '0';
+      return;
+    }
+
     if (!res.ok) throw new Error('Error en API');
     const history = await res.json();
     renderGrid('historial-grid', history || [], false);
@@ -612,7 +640,9 @@ function initEventListeners() {
   });
   
   guardarPerfilBtn?.addEventListener('click', guardarPerfil);
-  cerrarSesionBtn?.addEventListener('click', cerrarSesion);
+  
+  const btnLogoutMain = document.getElementById('cerrar-sesion-main-btn');
+  btnLogoutMain?.addEventListener('click', cerrarSesion);
   
   avatarOverlay?.addEventListener('click', () => avatarInput?.click());
   avatarInput?.addEventListener('change', e => cambiarAvatar(e.target.files[0]));
@@ -633,15 +663,6 @@ function initEventListeners() {
       }
     });
   });
-
-  const btnCerrarSesion = document.getElementById('cerrar-sesion-btn');
-  if (btnCerrarSesion) {
-    btnCerrarSesion.addEventListener('click', () => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('userId');
-      window.location.href = 'index.html';
-    });
-  }
 }
 
 // Inicializar

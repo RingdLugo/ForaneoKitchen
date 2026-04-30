@@ -11,8 +11,11 @@ function escapeHTML(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;
 function showToast(m, err = false) {
   let t = document.getElementById('receta-toast');
   if (!t) { t = document.createElement('div'); t.id = 'receta-toast'; t.className = 'notification-toast'; document.body.appendChild(t); }
-  t.textContent = m; t.style.background = err ? '#e53935' : '#4caf50';
-  t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3000);
+  t.textContent = m;
+  t.classList.toggle('error', err);
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 function tienePermiso(u, p) {
@@ -137,14 +140,19 @@ async function toggleFav() {
 }
 
 // ── Historial ──────────────────────────────────────────────────────────────────
+// Registrar vista en historial usando la API del backend
 async function registrarVista(id) {
-  const userId = localStorage.getItem('userId');
-  if (!userId || (!currentUser?.es_premium && !currentUser?.esPremium)) return;
+  const token = localStorage.getItem('token');
+  if (!token) return;
   try {
-    await supabase.from('historial').upsert(
-      { usuario_id: userId, receta_id: id, fecha: new Date().toISOString() },
-      { onConflict: 'usuario_id,receta_id' }
-    );
+    await fetch('/api/users/me/history', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ recipeId: id })
+    });
   } catch { /* silencioso */ }
 }
 
@@ -429,7 +437,6 @@ function renderizarReceta(r) {
   const esPropio = userId && String(r.usuario_id) === String(userId);
 
   container.innerHTML = `
-    <button class="back-btn" onclick="window.history.back()">← Volver</button>
     <div class="receta-container">
       <div class="receta-imagen">
         <img src="${imagenSrc}"
@@ -517,7 +524,7 @@ function renderizarReceta(r) {
           <div id="comentarios-lista" class="comentarios-lista">
             <div style="text-align:center;padding:20px;">Cargando comentarios...</div>
           </div>
-          ${userId ? `
+          ${userId && (currentUser?.es_premium || currentUser?.rol === 'premium' || tienePermiso(currentUser, 'comentarios')) ? `
             <div class="nuevo-comentario-area" style="display:flex;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #eee;">
               <textarea id="nuevo-comentario" 
                 placeholder="Escribe un comentario..." 
@@ -527,9 +534,13 @@ function renderizarReceta(r) {
                 style="padding:8px 20px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:white;border:none;border-radius:30px;cursor:pointer;font-weight:500;white-space:nowrap;">
                 Enviar
               </button>
+            </div>` : userId ? `
+            <div class="premium-lock-box" style="text-align:center;padding:20px;background:#f9f9f9;border-radius:16px;margin-top:16px;border:1px dashed #4caf50;">
+              <p style="margin:0;color:#666;font-size:0.9rem;">🔒 Los comentarios son exclusivos para usuarios <strong>Premium</strong> 👑</p>
+              <p style="margin:5px 0 0 0;font-size:0.8rem;color:#888;">¡Canjea tus puntos por un pase de comentarios en tu perfil!</p>
             </div>` : `
             <p style="text-align:center;color:#aaa;margin-top:16px;">
-              <a href="login.html" style="color:#4caf50;font-weight:600;">Inicia sesión</a> para comentar
+              <a href="login.html" style="color:#4caf50;font-weight:600;">Inicia sesión</a> para participar
             </p>`}
         </div>
       </div>
@@ -545,7 +556,6 @@ function mostrarError(msg) {
     <div class="error-message">
       <span class="error-icon">😕</span>
       <p>${escapeHTML(msg)}</p>
-      <button onclick="window.location.href='home.html'">← Volver al inicio</button>
     </div>`;
 }
 
