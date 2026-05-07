@@ -62,28 +62,47 @@ async function authMW(req, res, next) {
 }
 
 function tienePermiso(u, p) {
-  if (!u) return false;
-  if (u.es_premium) return true;
-  if (!u.preferencias || !Array.isArray(u.preferencias)) return false;
+  if (!u) {
+    console.warn(`[tienePermiso] No hay usuario para verificar permiso: ${p}`);
+    return false;
+  }
+  // Admins y Premium siempre tienen permiso
+  const esPrem = u.es_premium === true || u.rol === 'admin' || u.rol === 'premium';
+  if (esPrem) return true;
+  
+  const prefs = Array.isArray(u.preferencias) ? u.preferencias : [];
+  if (prefs.length === 0) return false;
+  
   const tagPrefix = `PERMISO_${p.toUpperCase()}:`;
-  const tag = u.preferencias.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
+  const tag = prefs.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
+  
   if (tag) {
-    const expira = new Date(tag.split(':')[1]);
+    const parts = tag.split(':');
+    if (parts.length < 2) return false;
+    
+    const expiraStr = parts[1];
+    if (expiraStr === 'PERMANENT') return true;
+    
+    const expira = new Date(expiraStr);
     return expira > new Date();
   }
   return false;
 }
 
 async function optAuth(req, res, next) {
-  const t = req.headers.authorization?.split(' ')[1];
-  if (t) {
-    const d = decodeToken(t);
-    if (d) {
-      req.userId = d.id;
-      // Opcional: cargar datos del usuario para permisos
-      const { data } = await supabase.from('usuarios').select('*').eq('id', d.id).maybeSingle();
-      if (data) req.user = data;
+  try {
+    const t = req.headers.authorization?.split(' ')[1];
+    if (t) {
+      const d = decodeToken(t);
+      if (d && d.id) {
+        req.userId = d.id;
+        // Solo cargar datos básicos del usuario para preferencias
+        const { data } = await supabase.from('usuarios').select('id, rol, es_premium, preferencias').eq('id', d.id).maybeSingle();
+        if (data) req.user = data;
+      }
     }
+  } catch (e) {
+    console.error('optAuth Error:', e);
   }
   next();
 }
@@ -376,7 +395,7 @@ app.post('/api/users/me/canjear-premium', authMW, async (req, res) => {
   const { dias } = req.body;
   const costos = { 7: COSTO_PREMIUM_7D, 30: COSTO_PREMIUM_30D, 90: COSTO_PREMIUM_90D };
   const costo = costos[dias];
-  if (!costo) return res.status(400).json({ error: 'OpciÃ³n invÃ¡lida. Elige 7, 30 o 90 dÃ­as.' });
+  if (!costo) return res.status(400).json({ error: 'Opción inválida. Elige 7, 30 o 90 días.' });
   const puntosActuales = req.user.puntos || 0;
   if (puntosActuales < costo)
     return res.status(400).json({ error: `Necesitas ${costo} puntos. Tienes ${puntosActuales}.` });
@@ -390,107 +409,61 @@ app.post('/api/users/me/canjear-premium', authMW, async (req, res) => {
   }).eq('id', req.user.id);
   await supabase.from('puntos_log').insert({
     usuario_id: req.user.id, accion: 'canjear',
-    puntos: -costo, descripcion: `${dias} dÃ­as Premium`,
+    puntos: -costo, descripcion: `${dias} días Premium`,
     fecha: new Date().toISOString()
   });
-  res.json({ mensaje: `âœ… Â¡${dias} dÃ­as Premium activados!`, premiumHasta: hasta, puntosRestantes: puntosActuales - costo });
+  res.json({ mensaje: `✅ ¡${dias} días Premium activados!`, premiumHasta: hasta, puntosRestantes: puntosActuales - costo });
 });
 
-// ────────────────────────────────────────────────────────────────────────────
-//  RECETAS - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-app.get('/api/recipes', optAuth, async (req, res) => {
+app.get('/api/tags', async (req, res) => {
   try {
-    const { q, tag, sort, maxPrecio, maxTiempo, preferencias, orden, ignorePrefs } = req.query;
+    const { data, error } = await supabase.from('recetas').select('etiquetas');
+    if (error) throw error;
+    
+    const allTags = new Set();
+    // Agregar etiquetas fijas por defecto
+    ['fitness', 'vegetariano', 'vegano', 'sin gluten', 'keto', 'alto proteina', 'mexicana', 'postre'].forEach(t => allTags.add(t));
+    
+    data.forEach(r => {
+      if (Array.isArray(r.etiquetas)) {
+        r.etiquetas.forEach(t => allTags.add(t.toLowerCase().trim()));
+      }
+    });
+    
+    res.json(Array.from(allTags).sort());
+  } catch (error) {
+    console.error('API Error tags:', error);
+    res.status(500).json({ error: 'Error al obtener etiquetas' });
+  }
+});
+
+app.get('/api/recipes', async (req, res) => {
+  try {
+    const { q, orden, limit } = req.query;
     let query = supabase.from('recetas').select('*');
 
-    if (q) query = query.or(`titulo.ilike.%${q}%,ingredientes.ilike.%${q}%`);
-    if (tag) query = query.contains('etiquetas', [tag]);
+    if (q) {
+      query = query.or(`titulo.ilike.%${q}%,ingredientes.ilike.%${q}%`);
+    }
 
-    if (sort === 'popular' || orden === 'likes') {
+    if (orden === 'likes') {
       query = query.order('likes', { ascending: false });
     } else {
-      query = query.order('fecha', { ascending: false });
+      query = query.order('id', { ascending: false });
+    }
+
+    if (limit) {
+      query = query.limit(parseInt(limit));
+    } else {
+      query = query.limit(50);
     }
 
     const { data, error } = await query;
     if (error) throw error;
-
-    let recetasFinales = data || [];
-
-    // Algoritmo de recomendación y Filtrado Estricto
-    if (preferencias && recetasFinales.length > 0 && ignorePrefs !== 'true') {
-      const tags = (typeof preferencias === 'string' ? preferencias : Array.isArray(preferencias) ? preferencias.join(',') : '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-
-      if (tags.length > 0) {
-        // Filtrado estricto: si el usuario tiene preferencias, solo mostrar lo que coincida
-        recetasFinales = recetasFinales.filter(r => {
-          const titulo = (r.titulo || '').toLowerCase();
-          const ingredientes = (r.ingredientes || '').toLowerCase();
-          const etiquetas = Array.isArray(r.etiquetas) ? r.etiquetas.map(e => e.toLowerCase()) : [];
-
-          let match = false;
-          let score = 0;
-
-          tags.forEach(tag => {
-            const hasTag = etiquetas.includes(tag) || titulo.includes(tag) || ingredientes.includes(tag);
-            if (hasTag) {
-              match = true;
-              if (etiquetas.includes(tag)) score += 10;
-              else if (titulo.includes(tag)) score += 5;
-              else score += 2;
-            }
-          });
-
-          r._score = score;
-          return match;
-        });
-
-        // Si no quedó nada tras el filtro estricto, podrías querer mostrar todo o nada.
-        // El usuario pidió "solo deben mostrarse esas", así que lo dejamos así.
-
-        if (!sort && !orden) {
-          recetasFinales.sort((a, b) => (b._score || 0) - (a._score || 0));
-        }
-      }
-    }
-
-    let likesSet = new Set(), favsSet = new Set();
-    if (req.userId) {
-      const [{ data: lks }, { data: fvs }] = await Promise.all([
-        supabase.from('likes').select('receta_id').eq('usuario_id', req.userId),
-        supabase.from('favoritos').select('receta_id').eq('usuario_id', req.userId)
-      ]);
-      (lks || []).forEach(l => likesSet.add(l.receta_id));
-      (fvs || []).forEach(f => favsSet.add(f.receta_id));
-    }
-
-    const recetas = recetasFinales.map(r => ({
-      id: r.id,
-      titulo: r.titulo,
-      ingredientes: r.ingredientes,
-      precio: r.precio,
-      precio_numerico: r.precio_numerico,
-      tiempo: r.tiempo,
-      tiempo_numerico: r.tiempo_numerico,
-      imagen: r.imagen,
-      video_url: r.video_url,
-      video_youtube: r.video_youtube,
-      es_premium: r.es_premium,
-      etiquetas: r.etiquetas || [],
-      likes: r.likes || 0,
-      autor: r.autor || 'Anónimo',
-      usuario_id: r.usuario_id,
-      usuario: { id: r.usuario_id, username: r.autor || 'Anónimo' },
-      fecha: r.fecha,
-      usuarioLike: likesSet.has(r.id),
-      esFavorito: favsSet.has(r.id)
-    }));
-
-    res.json(recetas);
-  } catch (err) {
-    console.error('API Error /recipes:', err);
-    res.status(500).json({ error: 'Error al cargar recetas' });
+    res.json(data || []);
+  } catch (error) {
+    console.error('API Error recipes:', error);
+    res.status(500).json({ error: 'Error al obtener recetas' });
   }
 });
 
@@ -669,7 +642,12 @@ app.delete('/api/recipes/:id/like', authMW, async (req, res) => {
 //  COMENTARIOS - Formatear para que el frontend lo lea fácil
 // ────────────────────────────────────────────────────────────────────────────
 
-app.get('/api/recipes/:id/comments', async (req, res) => {
+app.get('/api/recipes/:id/comments', optAuth, async (req, res) => {
+  // Solo usuarios Premium o con permiso pueden ver comentarios
+  if (!tienePermiso(req.user, 'comentarios')) {
+    return res.status(403).json({ error: 'Solo usuarios Premium pueden ver comentarios 👑', isPremiumFeature: true });
+  }
+
   const { data } = await supabase.from('comentarios')
     .select('*')
     .eq('receta_id', parseInt(req.params.id))
@@ -688,9 +666,9 @@ app.get('/api/recipes/:id/comments', async (req, res) => {
 app.post('/api/recipes/:id/comments', authMW, async (req, res) => {
   const { texto, padre_id } = req.body;
 
-  // Lógica de permisos estricta: Solo Premium puede comentar o responder
-  if (!req.user.es_premium && req.user.rol !== 'premium') {
-    return res.status(403).json({ error: 'Solo usuarios Premium pueden comentar en las recetas 👑' });
+  // Lógica de permisos: Solo Premium o con permiso puede comentar o responder
+  if (!tienePermiso(req.user, 'comentarios')) {
+    return res.status(403).json({ error: '🔒 Opción bloqueada. ¡Cámbiate a Premium para participar!' });
   }
 
   if (!texto?.trim()) return res.status(400).json({ error: 'Comentario vacío' });
@@ -805,8 +783,7 @@ app.delete('/api/users/me/favorites/:recipeId', authMW, async (req, res) => {
 // ────────────────────────────────────────────────────────────────────────────
 
 app.get('/api/users/me/history', authMW, async (req, res) => {
-  if (!tienePermiso(req.user, 'historial'))
-    return res.status(403).json({ error: 'El historial es exclusivo para usuarios Premium o con permiso temporal', isPremiumFeature: true });
+  // Historial disponible para todos los usuarios
 
   const { data: hist } = await supabase.from('historial')
     .select('receta_id, fecha').eq('usuario_id', req.user.id)
@@ -829,7 +806,7 @@ app.post('/api/users/me/history', authMW, async (req, res) => {
 
   await otorgarPuntos(req.user.id, 'ver_receta', `Vista receta ${recipeId}`);
 
-  if (!tienePermiso(req.user, 'historial')) return res.json({ mensaje: 'OK (no Premium/Permiso)' });
+  // Guardar en historial para todos los usuarios
 
   const { data: ex } = await supabase.from('historial')
     .select('id').eq('receta_id', recipeId).eq('usuario_id', req.user.id).maybeSingle();
@@ -940,10 +917,17 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
       updates.es_premium = true;
       updates.rol = 'premium';
       updates.premium_hasta = premiumHasta.toISOString();
-    } else if (type && type.startsWith('permiso_')) {
-      const expira = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    } else if (type) {
+      // Cualquier otro tipo (permiso_comentarios, videos, etc.) se guarda como tag
+      const expira = days > 0 
+        ? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+        : 'PERMANENT';
       const tag = `${type.toUpperCase()}:${expira}`;
-      updates.preferencias = [...(req.user.preferencias || []), tag];
+      
+      const currentPrefs = Array.isArray(req.user.preferencias) ? req.user.preferencias : [];
+      // Evitar duplicados del mismo tipo (reemplazar el anterior si existe)
+      const filteredPrefs = currentPrefs.filter(p => typeof p === 'string' && !p.startsWith(`${type.toUpperCase()}:`));
+      updates.preferencias = [...filteredPrefs, tag];
     }
 
     const { error: upErr } = await supabase.from('usuarios').update(updates).eq('id', req.user.id);
@@ -958,7 +942,14 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
       fecha: new Date().toISOString()
     });
 
-    res.json({ success: true, points: newPoints, message: 'Canje exitoso' });
+    res.json({ 
+      success: true, 
+      points: newPoints, 
+      message: 'Canje exitoso',
+      es_premium: updates.es_premium,
+      rol: updates.rol,
+      preferencias: updates.preferencias
+    });
   } catch (error) {
     console.error('Redeem error:', error);
     res.status(500).json({ error: 'Error al procesar el canje' });
@@ -1001,7 +992,12 @@ app.get('/api/users/me/activity', authMW, async (req, res) => {
 //  ACTIVIDAD RECIENTE (para comunidad) - Formatear para que el frontend lo lea fácil
 // ────────────────────────────────────────────────────────────────────────────
 
-app.get('/api/activity', async (req, res) => {
+app.get('/api/activity', optAuth, async (req, res) => {
+  // Solo usuarios Premium o con permiso pueden ver la actividad global (comentarios)
+  if (!tienePermiso(req.user, 'comentarios')) {
+    return res.status(403).json({ error: '🔒 Opción bloqueada. ¡Cámbiate a Premium para ver la actividad!', isPremiumFeature: true });
+  }
+
   // Comentarios recientes de todos los usuarios
   const { data: comentarios } = await supabase.from('comentarios')
     .select('id, texto, fecha, receta_id, usuario_id')

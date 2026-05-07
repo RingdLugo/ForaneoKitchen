@@ -20,12 +20,24 @@ function showToast(m, err = false) {
 
 function tienePermiso(u, p) {
   if (!u) return false;
-  if (u.es_premium || u.esPremium) return true;
-  if (!u.preferencias || !Array.isArray(u.preferencias)) return false;
+  // Admins y Premium siempre tienen permiso (manejo flexible de tipos)
+  const esPrem = u.es_premium === true || u.es_premium === 'true' || u.esPremium === true || u.esPremium === 'true';
+  if (esPrem || u.rol === 'admin' || u.rol === 'premium') return true;
+  
+  const prefs = Array.isArray(u.preferencias) ? u.preferencias : [];
+  if (prefs.length === 0) return false;
+  
   const tagPrefix = `PERMISO_${p.toUpperCase()}:`;
-  const tag = u.preferencias.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
+  const tag = prefs.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
+  
   if (tag) {
-    const expira = new Date(tag.split(':')[1]);
+    const parts = tag.split(':');
+    if (parts.length < 2) return false;
+    
+    const expiraStr = parts[1];
+    if (expiraStr === 'PERMANENT') return true;
+    
+    const expira = new Date(expiraStr);
     return expira > new Date();
   }
   return false;
@@ -39,15 +51,44 @@ function formatFecha(f) {
   return d.toLocaleDateString('es-MX');
 }
 
+// Estado para Planificador
+let diaPlanSeleccionado = null;
+let comidaPlanSeleccionada = null;
+
+// Cache de Recetas para velocidad
+const cacheRecetas = {};
+
 // ── Cargar usuario desde localStorage ─────────────────────────────────────────
 async function cargarUsuario() {
   const userId = localStorage.getItem('userId');
   if (!userId) return;
   try {
-    // Intentar con el id numérico o como string
-    const { data } = await supabase.from('usuarios').select('*').eq('id', userId).single();
-    currentUser = data;
-  } catch { currentUser = null; }
+    // Intentar con el id como UUID string
+    const { data, error } = await supabase.from('usuarios').select('*').eq('id', userId).maybeSingle();
+    if (data) {
+      currentUser = data;
+    } else {
+      // Fallback a localStorage si falla la red o DB
+      currentUser = {
+        id: userId,
+        es_premium: localStorage.getItem('userPremium') === 'true',
+        rol: localStorage.getItem('userRol') || 'free',
+        username: localStorage.getItem('userName')
+      };
+    }
+  } catch (e) {
+    console.warn('Fallback a localStorage:', e);
+    let prefs = [];
+    try { prefs = JSON.parse(localStorage.getItem('userPrefs') || '[]'); } catch { prefs = []; }
+    
+    currentUser = {
+      id: userId,
+      es_premium: localStorage.getItem('userPremium') === 'true',
+      rol: localStorage.getItem('userRol') || 'free',
+      username: localStorage.getItem('userName'),
+      preferencias: prefs
+    };
+  }
 }
 
 // ── Cargar receta ──────────────────────────────────────────────────────────────
@@ -56,30 +97,47 @@ async function cargarReceta() {
   const container = document.getElementById('receta-container');
   if (!id) { mostrarError('No se especificó la receta'); return; }
 
-  container.innerHTML = `<div class="receta-loading"><div class="loading-spinner"></div><p>Cargando...</p></div>`;
+  // OPTIMIZACIÓN: Cargar desde cache si existe
+  const cached = localStorage.getItem(`recipe_${id}`);
+  if (cached) {
+    try {
+      recetaActual = JSON.parse(cached);
+      renderizarReceta(recetaActual);
+      cargarComentarios(id);
+    } catch(e) {}
+  } else {
+    container.innerHTML = `<div class="receta-loading"><div class="loading-spinner"></div><p>Cargando...</p></div>`;
+  }
 
   try {
     const token = localStorage.getItem('token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     const response = await fetch(`/api/recipes/${id}`, { headers });
-    
-    if (response.status === 403) {
-      const data = await response.json();
-      mostrarError(data.error || 'Esta receta es exclusiva para usuarios Premium 👑');
-      return;
+    if (!response.ok) {
+      if (response.status === 403) throw new Error('Esta receta es exclusiva para usuarios Premium 👑');
+      throw new Error('Error al conectar con el servidor');
     }
     
-    if (!response.ok) throw new Error('Receta no encontrada');
-
-    recetaActual = await response.json();
-    renderizarReceta(recetaActual);
+    const freshData = await response.json();
     
-    if (currentUser) await registrarVista(recetaActual.id);
-    await cargarComentarios(recetaActual.id);
-  } catch (e) {
-    console.error('Error cargando receta:', e);
-    mostrarError('Receta no encontrada o sin acceso');
+    // Solo actualizar si no hay cache o los datos cambiaron
+    if (!recetaActual || JSON.stringify(freshData) !== JSON.stringify(recetaActual)) {
+      recetaActual = freshData;
+      try {
+        localStorage.setItem(`recipe_${id}`, JSON.stringify(freshData));
+      } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+          console.warn('Almacenamiento lleno, no se guardó el cache de esta receta');
+          // No borrar todo para no cerrar sesión
+        }
+      }
+      renderizarReceta(recetaActual);
+      cargarComentarios(id);
+    }
+  } catch (error) {
+    console.error('Error cargando receta:', error);
+    if (!recetaActual) mostrarError(error.message || 'Error al cargar la receta');
   }
 }
 
@@ -99,9 +157,9 @@ async function toggleLike() {
 
   try {
     if (liked) {
-      await supabase.rpc('eliminar_like', { p_receta_id: recetaActual.id, p_usuario_id: parseInt(userId) });
+      await supabase.rpc('eliminar_like', { p_receta_id: recetaActual.id, p_usuario_id: userId });
     } else {
-      await supabase.rpc('agregar_like',  { p_receta_id: recetaActual.id, p_usuario_id: parseInt(userId) });
+      await supabase.rpc('agregar_like',  { p_receta_id: recetaActual.id, p_usuario_id: userId });
     }
     const { data } = await supabase.from('recetas').select('likes').eq('id', recetaActual.id).single();
     if (data) countEl.textContent = data.likes;
@@ -168,7 +226,15 @@ async function cargarComentarios(recipeId) {
   const lista = document.getElementById('comentarios-lista');
   if (!lista) return;
   try {
-    const response = await fetch(`/api/recipes/${recipeId}/comments`);
+    const response = await fetch(`/api/recipes/${recipeId}/comments`, {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+    });
+    
+    if (response.status === 403) {
+      lista.innerHTML = ''; // Limpiar si es premium lock
+      return;
+    }
+    
     if (!response.ok) throw new Error('Error en API de comentarios');
     
     const allComments = await response.json();
@@ -374,7 +440,7 @@ async function enviarComentario() {
     }
   } catch (error) {
     console.error(error);
-    showToast('Error al publicar comentario', true);
+    showToast('🔒 Opción bloqueada. ¡Cámbiate a Premium para participar!', true);
   }
 }
 
@@ -521,10 +587,10 @@ function renderizarReceta(r) {
 
         <div class="seccion">
           <h2>💬 Comentarios</h2>
-          <div id="comentarios-lista" class="comentarios-lista">
-            <div style="text-align:center;padding:20px;">Cargando comentarios...</div>
-          </div>
-          ${userId && (currentUser?.es_premium || currentUser?.rol === 'premium' || tienePermiso(currentUser, 'comentarios')) ? `
+          ${(userId && tienePermiso(currentUser, 'comentarios')) ? `
+            <div id="comentarios-lista" class="comentarios-lista">
+              <div style="text-align:center;padding:20px;">Cargando comentarios...</div>
+            </div>
             <div class="nuevo-comentario-area" style="display:flex;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #eee;">
               <textarea id="nuevo-comentario" 
                 placeholder="Escribe un comentario..." 
@@ -535,12 +601,14 @@ function renderizarReceta(r) {
                 Enviar
               </button>
             </div>` : userId ? `
-            <div class="premium-lock-box" style="text-align:center;padding:20px;background:#f9f9f9;border-radius:16px;margin-top:16px;border:1px dashed #4caf50;">
-              <p style="margin:0;color:#666;font-size:0.9rem;">🔒 Los comentarios son exclusivos para usuarios <strong>Premium</strong> 👑</p>
-              <p style="margin:5px 0 0 0;font-size:0.8rem;color:#888;">¡Canjea tus puntos por un pase de comentarios en tu perfil!</p>
+            <div class="premium-lock-box" style="text-align:center;padding:40px 20px;background:#f9f9f9;border-radius:24px;margin-top:16px;border:2px dashed #4caf50;">
+              <div style="font-size:3rem;margin-bottom:15px;">🔒</div>
+              <h3 style="color:#1b5e20;margin-bottom:10px;">¡Únete a la conversación!</h3>
+              <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">Los comentarios y consejos del Chef IA son exclusivos para usuarios <strong>Premium</strong> 👑</p>
+              <button onclick="window.location.href='perfil.html'" style="margin-top:20px;padding:10px 25px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;transition:all .3s;">Actualizar a Premium</button>
             </div>` : `
-            <p style="text-align:center;color:#aaa;margin-top:16px;">
-              <a href="login.html" style="color:#4caf50;font-weight:600;">Inicia sesión</a> para participar
+            <p style="text-align:center;color:#aaa;margin-top:16px;padding:20px;background:#f5f5f5;border-radius:12px;">
+              <a href="login.html" style="color:#4caf50;font-weight:600;">Inicia sesión</a> para ver y participar en los comentarios.
             </p>`}
         </div>
       </div>
@@ -562,13 +630,132 @@ function mostrarError(msg) {
 // Formatear para que el frontend lo lea fácil
 window.toggleLike = toggleLike;
 window.toggleFav = toggleFav;
-window.agregarAPlan = agregarAPlan;
 window.eliminarComentario = eliminarComentario;
 window.eliminarReceta = eliminarReceta;
 window.enviarComentario = enviarComentario;
 
+// ── AGREGAR AL PLAN SEMANAL ──────────────────────────────────────────────────
+async function guardarEnPlan(dia, comida) {
+  const token = localStorage.getItem('token');
+  if (!token || !recetaActual) {
+    showToast('Error: Datos insuficientes', true);
+    return;
+  }
+
+  // Feedback inmediato (Optimistic)
+  const modal = document.getElementById('modal-plan');
+  const originalContent = document.getElementById('plan-paso-2').innerHTML;
+  document.getElementById('plan-paso-2').innerHTML = `<div style="text-align:center;padding:20px;"><div class="loading-spinner" style="width:30px;height:30px;"></div><p>Guardando en tu plan...</p></div>`;
+
+  try {
+    const resGet = await fetch('/api/users/me/planner', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    let planData = await resGet.json();
+    let plan = planData.plan || {};
+
+    const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    const comidas = ['desayuno', 'comida', 'cena', 'merienda', 'snack'];
+    
+    dias.forEach(d => {
+      if (!plan[d]) plan[d] = {};
+      comidas.forEach(c => {
+        if (!plan[d][c]) plan[d][c] = [];
+      });
+    });
+
+    const existe = plan[dia][comida].some(r => r.id === recetaActual.id);
+    if (existe) {
+      showToast(`Esta receta ya está en tu plan del ${dia}`, true);
+      modal.style.display = 'none';
+      document.getElementById('plan-paso-2').innerHTML = originalContent;
+      return;
+    }
+
+    plan[dia][comida].push({
+      id: recetaActual.id,
+      titulo: recetaActual.titulo,
+      imagen: recetaActual.imagen,
+      precio: recetaActual.precio,
+      precio_numerico: recetaActual.precio_numerico || 0,
+      tiempo: recetaActual.tiempo
+    });
+
+    const resPost = await fetch('/api/users/me/planner', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ plan })
+    });
+
+    if (resPost.ok) {
+      showToast(`✅ ¡Listo! Agregada al ${dia} (${comida})`);
+      modal.style.display = 'none';
+    } else {
+      throw new Error('Error al guardar');
+    }
+  } catch (error) {
+    console.error('Error planificador:', error);
+    showToast('Error al actualizar el planificador', true);
+  } finally {
+    document.getElementById('plan-paso-2').innerHTML = originalContent;
+    setupPlanEventListeners(); // Re-adjuntar eventos si el contenido cambió
+  }
+}
+
+window.agregarAPlan = function() {
+  if (!currentUser) {
+    showToast('Inicia sesión para planificar comidas', true);
+    return;
+  }
+  const modal = document.getElementById('modal-plan');
+  if (modal) {
+    modal.style.display = 'flex';
+    document.getElementById('plan-paso-1').style.display = 'block';
+    document.getElementById('plan-paso-2').style.display = 'none';
+  }
+};
+
+function setupPlanEventListeners() {
+  // Delegación de eventos para los botones de día y comida
+  const modal = document.getElementById('modal-plan');
+  if (!modal) return;
+
+  modal.onclick = (e) => {
+    const btnDia = e.target.closest('.btn-dia');
+    const btnComida = e.target.closest('.btn-comida');
+    const btnCerrar = e.target.closest('.close-plan-modal');
+    const btnVolver = e.target.closest('#btn-volver-paso-1');
+
+    if (btnDia) {
+      diaPlanSeleccionado = btnDia.dataset.dia;
+      const nombresDias = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
+      document.getElementById('texto-dia-seleccionado').textContent = `Agregando al ${nombresDias[diaPlanSeleccionado]}`;
+      document.getElementById('plan-paso-1').style.display = 'none';
+      document.getElementById('plan-paso-2').style.display = 'block';
+    }
+    
+    if (btnComida) {
+      const comida = btnComida.dataset.comida;
+      guardarEnPlan(diaPlanSeleccionado, comida);
+    }
+
+    if (btnCerrar || e.target === modal) {
+      modal.style.display = 'none';
+    }
+
+    if (btnVolver) {
+      document.getElementById('plan-paso-1').style.display = 'block';
+      document.getElementById('plan-paso-2').style.display = 'none';
+    }
+  };
+}
+
 async function init() {
   await cargarUsuario();
   await cargarReceta();
+  setupPlanEventListeners();
 }
 init();

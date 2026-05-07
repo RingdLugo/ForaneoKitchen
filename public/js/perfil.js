@@ -40,7 +40,6 @@ let formVisible = false;
 // Definición de recompensas
 const REWARDS = [
   { id: 'comentarios_1d', name: 'Permiso Comentarios (1 día)', points: 50, icon: '💬', benefit: 'Comenta en cualquier receta por 24h', days: 1, type: 'permiso_comentarios' },
-  { id: 'historial_1d', name: 'Ver Historial (1 día)', points: 40, icon: '📜', benefit: 'Acceso a tu historial de vistas por 24h', days: 1, type: 'permiso_historial' },
   { id: '1day', name: '1 día Premium', points: 120, icon: '👑', benefit: 'Acceso Premium TOTAL por 1 día', days: 1 },
   { id: 'videos', name: 'Desbloquear Videos', points: 500, icon: '🎥', benefit: 'Acceso a videos de recetas permanentemente', type: 'videos' },
   { id: '7days', name: '7 días Premium', points: 700, icon: '👑🌟', benefit: 'Acceso Premium por 7 días', days: 7 }
@@ -171,10 +170,10 @@ async function cargarPerfil() {
       rewardsSection.style.display = 'none';
     }
     
-    // Mostrar botón de historial solo para Premium
+    // Mostrar botón de historial para todos
     const historialBtn = document.getElementById('btn-historial');
     if (historialBtn) {
-      historialBtn.style.display = esPremium ? 'flex' : 'none';
+      historialBtn.style.display = 'flex';
     }
     
     // Cargar estadísticas y recetas en paralelo
@@ -317,7 +316,12 @@ async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) 
     // Sincronizar localmente con los datos finales del servidor
     currentUser.puntos = data.points;
     puntosBadge.textContent = `⭐ ${data.points} pts`;
-    localStorage.setItem('userPoints', data.points);
+    
+    // Guardar en localStorage para persistencia entre páginas
+    localStorage.setItem('userPuntos', data.points);
+    if (data.es_premium !== undefined) localStorage.setItem('userPremium', data.es_premium);
+    if (data.rol !== undefined) localStorage.setItem('userRol', data.rol);
+    if (data.preferencias !== undefined) localStorage.setItem('userPrefs', JSON.stringify(data.preferencias));
     
     // Recargar perfil completo para reflejar cambios de rol/permisos
     await cargarPerfil();
@@ -455,10 +459,8 @@ function renderGrid(containerId, recetas, misRecetas) {
   container.querySelectorAll('.receta-grid-item').forEach(el => {
     el.addEventListener('click', async (e) => {
       if (e.target.classList.contains('btn-eliminar-receta-overlay')) return;
-      // Registrar vista en historial (solo Premium)
-      if (currentUser?.es_premium) {
-        await registrarVista(el.dataset.id);
-      }
+      // Registrar vista en historial
+      await registrarVista(el.dataset.id);
       window.location.href = `receta.html?id=${el.dataset.id}`;
     });
   });
@@ -666,8 +668,42 @@ function initEventListeners() {
 }
 
 // Inicializar
+// Cargar etiquetas dinámicas para preferencias
+async function cargarEtiquetas() {
+  const container = document.getElementById('preferencias-tags');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/tags');
+    if (!res.ok) throw new Error('Error al cargar etiquetas');
+    const tags = await res.json();
+
+    container.innerHTML = tags.map(tag => {
+      const active = preferenciasSeleccionadas.includes(tag) ? 'active' : '';
+      return `<span class="pref-tag ${active}" data-pref="${tag}">${tag}</span>`;
+    }).join('');
+
+    // Re-vincular eventos click
+    container.querySelectorAll('.pref-tag').forEach(tag => {
+      tag.addEventListener('click', () => {
+        const pref = tag.dataset.pref;
+        if (preferenciasSeleccionadas.includes(pref)) {
+          preferenciasSeleccionadas = preferenciasSeleccionadas.filter(p => p !== pref);
+          tag.classList.remove('active');
+        } else {
+          preferenciasSeleccionadas.push(pref);
+          tag.classList.add('active');
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error cargando etiquetas:', error);
+  }
+}
+
 async function init() {
   await cargarPerfil();
+  await cargarEtiquetas();
   initEventListeners();
   cambiarSeccion('mis-recetas');
 }

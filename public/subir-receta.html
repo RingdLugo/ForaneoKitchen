@@ -43,6 +43,11 @@
           <label class="tag-check"><input type="checkbox" value="keto"> 🥑 Keto</label>
           <label class="tag-check"><input type="checkbox" value="alto proteina"> 💪 Alto proteina</label>
         </div>
+        <div class="custom-tags-area" style="margin-top:10px;">
+          <input type="text" id="custom-tag-input" placeholder="Agregar nueva categoría (Ej: Mexicana, Postre...)" style="width: calc(100% - 100px); display: inline-block;">
+          <button type="button" id="add-tag-btn" style="width: 90px; padding: 10px; border-radius: 8px; background: #4caf50; color: white; border: none; cursor: pointer;">Añadir</button>
+          <div id="selected-custom-tags" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;"></div>
+        </div>
       </div>
 
       <!-- Campo: Título -->
@@ -82,12 +87,30 @@
 
       <!-- Campo: Video (solo Premium) -->
       <div class="form-group premium-video" id="video-section">
-        <label for="video">🎥 Video de la receta (solo Premium 👑)</label>
-        <input id="video" type="text" placeholder="https://youtube.com/watch?v=... o sube tu video">
-        <small class="input-hint" id="video-hint">📹 Sube un video o pega enlace de YouTube</small>
-        <div id="video-upload-area" class="video-upload-area" style="display:none;">
-          <input type="file" id="video-file" accept="video/*">
-          <div id="video-preview" class="video-preview"></div>
+        <label>🎥 Video de la receta (solo Premium 👑)</label>
+        <div class="video-options" style="display: flex; gap: 10px; margin-bottom: 10px;">
+          <button type="button" class="video-opt-btn active" id="opt-youtube">Link YouTube</button>
+          <button type="button" class="video-opt-btn" id="opt-file">Subir Archivo</button>
+        </div>
+        
+        <div id="youtube-input-area">
+          <input id="video-youtube" type="text" placeholder="https://www.youtube.com/watch?v=...">
+          <small class="input-hint">Pega el enlace directo de YouTube</small>
+        </div>
+        
+        <div id="file-input-area" style="display:none;">
+          <div class="video-upload-area">
+            <label for="video-file" class="image-upload-label">
+              <span class="upload-icon">📹</span>
+              <span>Seleccionar archivo de video</span>
+              <span class="upload-hint">MP4, MOV (máx. 20MB)</span>
+            </label>
+            <input type="file" id="video-file" accept="video/*" style="display:none;">
+            <div id="video-preview-container" style="display:none; margin-top:10px;">
+              <video id="video-preview-player" controls style="width:100%; border-radius:12px;"></video>
+              <button type="button" id="remove-video-btn" style="margin-top:5px; background:#ff5252; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">Quitar video</button>
+            </div>
+          </div>
         </div>
       </div>
 

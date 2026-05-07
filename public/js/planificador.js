@@ -48,23 +48,36 @@ async function cargarUsuario() {
 async function cargarPlanDesdeSupabase() {
   if (!currentUser) return;
   
+  // OPTIMIZACIÓN: Cargar desde cache inmediatamente
+  const cached = localStorage.getItem('user_plan_cache');
+  if (cached) {
+    try {
+      planSemanal = JSON.parse(cached);
+      console.log('⚡ Plan semanal cargado desde cache');
+      renderizarPlanificador();
+    } catch(e) {}
+  }
+
   try {
     const token = localStorage.getItem('token');
     const response = await fetch('/api/users/me/planner', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
-    if (!response.ok) throw new Error('Error al cargar plan');
-    
-    const data = await response.json();
-    if (data && data.plan) {
-      planSemanal = data.plan;
-    } else {
-      planSemanal = initPlanSemanal();
+    if (response.ok) {
+      const data = await response.json();
+      const freshPlan = data.plan || initPlanSemanal();
+      
+      // Solo actualizar si cambió
+      if (JSON.stringify(freshPlan) !== JSON.stringify(planSemanal)) {
+        planSemanal = freshPlan;
+        localStorage.setItem('user_plan_cache', JSON.stringify(planSemanal));
+        renderizarPlanificador();
+      }
     }
   } catch (error) {
     console.error('Error al cargar plan:', error);
-    planSemanal = initPlanSemanal();
+    if (!planSemanal) planSemanal = initPlanSemanal();
   }
   
   // Cargar días abiertos desde localStorage (preferencia UI)

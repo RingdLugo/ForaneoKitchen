@@ -43,13 +43,14 @@ function showRegistroBox() {
 showRegisterLink?.addEventListener('click', e => { e.preventDefault(); showRegistroBox(); });
 showLoginLink?.addEventListener('click',    e => { e.preventDefault(); showLoginBox(); });
 
-function guardarSesion(id, username, rol, esPremium, puntos, token) {
+function guardarSesion(id, username, rol, esPremium, puntos, token, preferencias) {
   localStorage.setItem('token', token);
   localStorage.setItem('userId', id);
   localStorage.setItem('userName', username);
   localStorage.setItem('userRol', rol);
   localStorage.setItem('userPremium', esPremium);
   localStorage.setItem('userPuntos', puntos || 0);
+  localStorage.setItem('userPrefs', JSON.stringify(preferencias || []));
   
   console.log('✅ Sesión guardada:', { id, username, rol, token: token?.substring(0, 20) + '...' });
 }
@@ -141,7 +142,8 @@ async function loginUser() {
       data.user.rol, 
       data.user.esPremium, 
       data.user.puntos,
-      data.token
+      data.token,
+      data.user.preferencias
     );
 
     showToast(`¡Bienvenido, ${data.user.username}!`, 'success');

@@ -31,18 +31,45 @@
       <a href="perfil.html" class="nav-item"><span>👤</span><span>Perfil</span></a>
     </nav>
 
-    <!-- Modal para responder comentario -->
-    <div id="modal-respuesta" class="modal-comentarios" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
-      <div class="modal-content" style="background: var(--card-bg, #fff); width: 90%; max-width: 500px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color, #eee); padding-bottom: 15px; margin-bottom: 15px;">
-          <h3 style="margin: 0; font-size: 1.2rem;">💬 Responder comentario</h3>
-          <button class="close-respuesta-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+    <!-- Modal para agregar al plan semanal -->
+    <div id="modal-plan" class="modal-plan" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+      <div class="modal-content" style="background: var(--card-bg, #fff); width: 90%; max-width: 400px; border-radius: 24px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: slideUp 0.3s ease-out;">
+        
+        <!-- Paso 1: Elegir día -->
+        <div id="plan-paso-1">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0; font-size: 1.4rem; color: #1b5e20;">📅 Elegir día</h3>
+            <button class="close-plan-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+          </div>
+          <p style="color: #666; margin-bottom: 20px;">¿Qué día quieres cocinar esta receta?</p>
+          <div class="plan-grid" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+            <button class="btn-dia" data-dia="lunes">Lunes</button>
+            <button class="btn-dia" data-dia="martes">Martes</button>
+            <button class="btn-dia" data-dia="miercoles">Miércoles</button>
+            <button class="btn-dia" data-dia="jueves">Jueves</button>
+            <button class="btn-dia" data-dia="viernes">Viernes</button>
+            <button class="btn-dia" data-dia="sabado">Sábado</button>
+            <button class="btn-dia" data-dia="domingo">Domingo</button>
+          </div>
         </div>
-        <div class="respuesta-contexto" id="respuesta-contexto" style="margin-bottom: 15px; font-size: 0.9rem; color: #666; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 8px;"></div>
-        <div class="nuevo-comentario-area" style="display: flex; flex-direction: column; gap: 10px;">
-          <textarea id="respuesta-texto" placeholder="Escribe tu respuesta..." rows="3" maxlength="500" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color, #e0e0e0); background: var(--input-bg, #f5f7fa); resize: none;"></textarea>
-          <button id="enviar-respuesta" style="background: #4caf50; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; align-self: flex-end;">Responder</button>
+
+        <!-- Paso 2: Elegir comida -->
+        <div id="plan-paso-2" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <button id="btn-volver-paso-1" style="background: none; border: none; color: #4caf50; cursor: pointer; font-weight: 600;">← Volver</button>
+            <h3 style="margin: 0; font-size: 1.4rem; color: #1b5e20;">🥣 Momento</h3>
+            <button class="close-plan-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+          </div>
+          <p id="texto-dia-seleccionado" style="color: #666; margin-bottom: 20px; font-weight: 500; text-align: center; background: #f1f8e9; padding: 10px; border-radius: 12px;"></p>
+          <div class="plan-grid" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+            <button class="btn-comida" data-comida="desayuno">🥐 Desayuno</button>
+            <button class="btn-comida" data-comida="comida">🍲 Comida</button>
+            <button class="btn-comida" data-comida="cena">🍜 Cena</button>
+            <button class="btn-comida" data-comida="merienda">🍎 Merienda</button>
+            <button class="btn-comida" data-comida="snack">🍿 Snack</button>
+          </div>
         </div>
+
       </div>
     </div>
   </div>

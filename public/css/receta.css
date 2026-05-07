@@ -436,3 +436,93 @@ body.dark-mode .dark-mode-toggle {
     font-size: 1.2rem;
   }
 }
+/* Modal Planificador */
+.btn-dia, .btn-comida {
+  width: 100%;
+  padding: 14px;
+  background: #f1f8e9;
+  border: 2px solid #e8f5e9;
+  border-radius: 16px;
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-dia:hover, .btn-comida:hover {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+  transform: translateX(5px);
+}
+
+.btn-dia::after, .btn-comida::after {
+  content: '?';
+  font-size: 1.2rem;
+  opacity: 0.5;
+}
+
+.btn-dia:hover::after, .btn-comida:hover::after {
+  opacity: 1;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body.dark-mode .btn-dia, body.dark-mode .btn-comida {
+  background: #2a3a2a;
+  border-color: #3a4a3a;
+  color: #81c784;
+}
+
+body.dark-mode .btn-dia:hover, body.dark-mode .btn-comida:hover {
+  background: #4caf50;
+  color: white;
+}
+
+/* Notificaciones Toast */
+.notification-toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #333;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  z-index: 9999;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+  justify-content: center;
+}
+
+.notification-toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.notification-toast.error {
+  background: #e53935;
+}

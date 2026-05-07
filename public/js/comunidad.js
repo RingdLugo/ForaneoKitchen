@@ -29,12 +29,19 @@ async function cargarUsuario() {
   const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
   if (userId && token) {
+    const isPremium = localStorage.getItem('userPremium');
+    let prefs = [];
+    try { prefs = JSON.parse(localStorage.getItem('userPrefs') || '[]'); } catch { prefs = []; }
+
     currentUser = {
-      id: parseInt(userId),
-      es_premium: localStorage.getItem('userPremium') === 'true',
+      id: userId, // Mantener como UUID string
+      es_premium: isPremium === 'true' || isPremium === true,
+      rol: localStorage.getItem('userRol') || 'free',
       puntos: parseInt(localStorage.getItem('userPuntos') || 0),
-      username: localStorage.getItem('userName')
+      username: localStorage.getItem('userName'),
+      preferencias: prefs
     };
+    console.log('👤 Usuario cargado en comunidad:', currentUser);
   }
 }
 
@@ -58,6 +65,31 @@ function showToast(msg, isError = false) {
 function escapeHTML(s) {
   if (!s) return '';
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function tienePermiso(u, p) {
+  if (!u) return false;
+  // Admins y Premium siempre tienen permiso (manejo flexible de tipos)
+  const esPrem = u.es_premium === true || u.es_premium === 'true' || u.esPremium === true || u.esPremium === 'true';
+  if (esPrem || u.rol === 'admin' || u.rol === 'premium') return true;
+  
+  const prefs = Array.isArray(u.preferencias) ? u.preferencias : [];
+  if (prefs.length === 0) return false;
+  
+  const tagPrefix = `PERMISO_${p.toUpperCase()}:`;
+  const tag = prefs.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
+  
+  if (tag) {
+    const parts = tag.split(':');
+    if (parts.length < 2) return false;
+    
+    const expiraStr = parts[1];
+    if (expiraStr === 'PERMANENT') return true;
+    
+    const expira = new Date(expiraStr);
+    return expira > new Date();
+  }
+  return false;
 }
 
 // Formatear fecha
@@ -109,37 +141,40 @@ async function cargarActividadReciente() {
   if (!actividadContainer) return;
   actividadContainer.innerHTML = '<div class="loading-spinner"></div>';
   
-  const token = localStorage.getItem('token');
-  if (token) {
-    try {
-      const res = await fetch(`${API_BASE}/users/me/activity`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const activity = await res.json();
-        if (activity && activity.length > 0) {
-          renderizarActividadPersonal(activity);
-          return;
-        } else {
-          actividadContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Aún no tienes actividad registrada. ¡Empieza a explorar recetas!</div>';
-          return;
-        }
-      }
-    } catch (e) { 
-      console.error('Error personal activity:', e);
-      actividadContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Error al cargar tu actividad.</div>';
-      return;
-    }
+  if (!tienePermiso(currentUser, 'comentarios')) {
+    actividadContainer.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;border:2px dashed #4caf50;">
+        <span style="font-size:3rem">🔒</span>
+        <h3 style="color:#1b5e20;margin-top:15px">Actividad Exclusiva</h3>
+        <p style="margin:10px 0;color:#666;font-size:0.95rem;line-height:1.5;">La actividad de la comunidad y los comentarios son exclusivos para usuarios <strong>Premium</strong> 👑</p>
+        <button onclick="window.location.href='perfil.html'" class="tab-btn active" style="margin-top:20px;padding:10px 25px;border-radius:20px;">Mejorar a Premium</button>
+      </div>
+    `;
+    return;
   }
-
-  // Si no hay token, invitar a iniciar sesión
-  actividadContainer.innerHTML = `
-    <div style="text-align:center;padding:60px;color:#999">
-      <span style="font-size:3rem">🔒</span>
-      <p style="margin-top:15px">Inicia sesión para ver tu actividad personal.</p>
-      <button onclick="window.location.href='login.html'" class="tab-btn active" style="margin-top:20px">Iniciar Sesión</button>
-    </div>
-  `;
+  
+  const token = localStorage.getItem('token');
+  try {
+    // Cargar actividad global (comentarios recientes)
+    const res = await fetch(`/api/activity`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (res.status === 403) {
+      throw new Error('Forbidden');
+    }
+    
+    if (res.ok) {
+      const data = await res.json();
+      comentariosRecientes = data || [];
+      renderizarActividad(comentariosRecientes);
+    } else {
+      throw new Error('Error en API');
+    }
+  } catch (e) { 
+    console.error('Error community activity:', e);
+    actividadContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Error al cargar la actividad de la comunidad.</div>';
+  }
 }
 
 // Renderizar recetas
@@ -316,7 +351,26 @@ async function abrirComentarios(recipeId, titulo) {
   recetaModalId = recipeId;
   comentarioPadreId = null;
   document.getElementById('modal-comentarios-titulo').textContent = `💬 ${escapeHTML(titulo)}`;
+  
+  const lista = document.getElementById('comentarios-lista');
+  const inputArea = document.querySelector('.modal-input-area');
+  
   modalComentarios.classList.add('active');
+  
+  if (!tienePermiso(currentUser, 'comentarios')) {
+    lista.innerHTML = `
+      <div class="premium-lock-box" style="text-align:center;padding:40px 20px;background:#f9f9f9;border-radius:24px;margin-top:16px;border:2px dashed #4caf50;">
+        <div style="font-size:3rem;margin-bottom:15px;">🔒</div>
+        <h3 style="color:#1b5e20;margin-bottom:10px;">¡Únete a la conversación!</h3>
+        <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">Los comentarios y consejos del Chef IA son exclusivos para usuarios <strong>Premium</strong> 👑</p>
+        <button onclick="window.location.href='perfil.html'" style="margin-top:20px;padding:10px 25px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;transition:all .3s;">Actualizar a Premium</button>
+      </div>
+    `;
+    if (inputArea) inputArea.style.display = 'none';
+    return;
+  }
+  
+  if (inputArea) inputArea.style.display = 'flex';
   document.getElementById('nuevo-comentario').value = '';
   await cargarComentarios(recipeId);
 }
@@ -327,7 +381,15 @@ async function cargarComentarios(recipeId) {
   lista.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa">Cargando…</div>';
   
   try {
-    const res = await fetch(`${API_BASE}/recipes/${recipeId}/comments`);
+    const res = await fetch(`${API_BASE}/recipes/${recipeId}/comments`, {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+    });
+    
+    if (res.status === 403) {
+      lista.innerHTML = '';
+      return;
+    }
+    
     if (!res.ok) throw new Error('Error al cargar comentarios');
     
     const allComments = await res.json();
@@ -522,7 +584,7 @@ async function enviarComentario() {
     await cargarComentarios(recetaModalId);
   } catch (error) {
     console.error('Error al publicar:', error);
-    showToast('Error al publicar comentario', true);
+    showToast('🔒 Opción bloqueada. ¡Cámbiate a Premium para participar!', true);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Enviar';
