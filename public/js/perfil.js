@@ -77,10 +77,7 @@ async function cargarPerfil() {
   }
 
   try {
-    const API_BASE = (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1'))
-      ? 'http://localhost:3000/api'
-      : window.location.origin + '/api';
-
+    const API_BASE = '/api';
     let res;
     if (esPerfilAjeno) {
       res = await fetch(`${API_BASE}/users/${targetUserId}/profile`);
@@ -141,42 +138,66 @@ async function cargarPerfil() {
   // Puntos
   const puntosActuales = currentUser.puntos || 0;
   puntosBadge.textContent = `⭐ ${puntosActuales} pts`;
-  localStorage.setItem('userPoints', puntosActuales); // Sincronizar con local por si acaso
-  
-  // Avatar
+  localStorage.setItem('userPoints', puntosActuales); // S  // Avatar
   if (currentUser.foto_perfil) {
     avatarImg.src = currentUser.foto_perfil;
   } else {
     avatarImg.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%234caf50'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='white' font-size='45'%3E${(currentUser.nombre?.charAt(0) || currentUser.username?.charAt(0) || 'U').toUpperCase()}%3C/text%3E%3C/svg%3E`;
   }
-  
+
+  // ── Gestión Premium y Recompensas ──────────────────────────
   if (!esPerfilAjeno) {
-    // Formulario
-    perfilNombre.value = currentUser.nombre || '';
-    perfilApellido.value = currentUser.apellido || '';
-    perfilUsername.value = currentUser.username || currentUser.email?.split('@')[0] || '';
-    perfilEmail.value = currentUser.email || '';
-    perfilBio.value = currentUser.bio || '';
-    
-    // Preferencias
-    preferenciasSeleccionadas = currentUser.preferencias || [];
-    renderPreferencias();
-    
-    // Mostrar/ocultar sección de recompensas (solo Free)
-    if (!esPremium && rewardsSection) {
-      rewardsSection.style.display = 'block';
-      renderRewards();
-    } else if (rewardsSection) {
-      rewardsSection.style.display = 'none';
+    if (rewardsSection) rewardsSection.style.display = esPremium ? 'none' : 'block';
+    if (esPremium === false || esPremium === 'false') renderRewards();
+
+    const premiumManageSection = document.getElementById('premium-manage-section');
+    const premiumActiveInfo = document.getElementById('premium-active-info');
+    const premiumInactiveInfo = document.getElementById('premium-inactive-info');
+    const premiumExpiryText = document.getElementById('premium-expiry-date');
+    const cancelNote = document.getElementById('cancel-note');
+
+    if (premiumManageSection) {
+      premiumManageSection.style.display = 'block';
+      if (esPremium) {
+        premiumActiveInfo.style.display = 'block';
+        premiumInactiveInfo.style.display = 'none';
+        
+        let d = null;
+        if (currentUser.premium_hasta) {
+          d = new Date(currentUser.premium_hasta);
+          if (!isNaN(d.getTime())) {
+            premiumExpiryText.textContent = d.toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' });
+          } else {
+            premiumExpiryText.textContent = 'Indefinido';
+          }
+        } else {
+          premiumExpiryText.textContent = 'Fecha no disponible';
+        }
+
+        const estadoElemento = premiumActiveInfo.querySelector('strong');
+        const btnRenew = document.getElementById('btn-renew-premium');
+        const btnCancel = document.getElementById('btn-cancel-premium');
+
+        if (currentUser.premium_cancelado) {
+          estadoElemento.textContent = 'Activa (cancelada al final del periodo)';
+          estadoElemento.style.color = '#ff9800'; // Naranja
+          cancelNote.style.display = 'block';
+          if (btnCancel) btnCancel.style.display = 'none';
+          if (btnRenew) btnRenew.innerHTML = '🔄 Reactivar membresía';
+        } else {
+          estadoElemento.textContent = 'Activo';
+          estadoElemento.style.color = '#2e7d32'; // Verde
+          cancelNote.style.display = 'none';
+          if (btnCancel) btnCancel.style.display = 'inline-block';
+          if (btnRenew) btnRenew.innerHTML = '🔄 Renovar ahora';
+        }
+      } else {
+        premiumActiveInfo.style.display = 'none';
+        premiumInactiveInfo.style.display = 'block';
+      }
     }
-    
-    // Mostrar botón de historial para todos
-    const historialBtn = document.getElementById('btn-historial');
-    if (historialBtn) {
-      historialBtn.style.display = 'flex';
-    }
-    
-    // Cargar estadísticas y recetas en paralelo
+
+    // Cargar secciones privadas
     await Promise.all([
       cargarMisRecetas(),
       cargarFavoritos(),
@@ -185,8 +206,14 @@ async function cargarPerfil() {
     ]);
   } else {
     // Perfil ajeno
-    await cargarMisRecetas(currentUser.id);
-    await actualizarStatsAjeno(currentUser.id);
+    const premiumManageSection = document.getElementById('premium-manage-section');
+    if (premiumManageSection) premiumManageSection.style.display = 'none';
+    if (rewardsSection) rewardsSection.style.display = 'none';
+    
+    await Promise.all([
+      cargarMisRecetas(currentUser.id),
+      actualizarStatsAjeno(currentUser.id)
+    ]);
   }
 }
 
@@ -438,9 +465,14 @@ function renderGrid(containerId, recetas, misRecetas) {
   
   container.innerHTML = recetas.map(r => {
     const img = r.imagen || imgPlaceholder();
-    const btnEliminar = misRecetas 
-      ? `<button class="btn-eliminar-receta-overlay" data-id="${r.id}" title="Eliminar receta">✖</button>`
-      : '';
+    
+    // Botón eliminar (Mis Recetas o Historial)
+    let btnEliminar = '';
+    if (misRecetas) {
+      btnEliminar = `<button class="btn-eliminar-receta-overlay" data-id="${r.id}" title="Eliminar receta">✖</button>`;
+    } else if (containerId === 'historial-grid') {
+      btnEliminar = `<button class="btn-eliminar-historial-overlay" data-id="${r.id}" title="Quitar de historial">✖</button>`;
+    }
     
     return `
       <div class="receta-grid-item" data-id="${r.id}">
@@ -459,36 +491,48 @@ function renderGrid(containerId, recetas, misRecetas) {
   container.querySelectorAll('.receta-grid-item').forEach(el => {
     el.addEventListener('click', async (e) => {
       if (e.target.classList.contains('btn-eliminar-receta-overlay')) return;
+      if (e.target.classList.contains('btn-eliminar-historial-overlay')) return;
       // Registrar vista en historial
       await registrarVista(el.dataset.id);
       window.location.href = `receta.html?id=${el.dataset.id}`;
     });
   });
-  
-  // Eliminar receta usando la API del backend (solo mis recetas)
+
+  // Eventos de eliminación
   if (misRecetas) {
     container.querySelectorAll('.btn-eliminar-receta-overlay').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (!confirm('¿Eliminar esta receta? Esta acción no se puede deshacer.')) return;
-        
         const id = btn.dataset.id;
-        const token = localStorage.getItem('token');
-        try {
+        if (confirm('¿Seguro que quieres eliminar esta receta?')) {
           const res = await fetch(`/api/recipes/${id}`, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
           });
-          if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Error al eliminar');
+          if (res.ok) {
+            showToast('Receta eliminada');
+            cargarMisRecetas();
           }
-          showToast('Receta eliminada');
-          await cargarMisRecetas();
-          await actualizarStats();
+        }
+      });
+    });
+  } else if (containerId === 'historial-grid') {
+    container.querySelectorAll('.btn-eliminar-historial-overlay').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        try {
+          const res = await fetch(`/api/users/me/history/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (res.ok) {
+            showToast('Eliminado del historial');
+            cargarHistorial();
+            actualizarStats();
+          }
         } catch (error) {
           console.error(error);
-          showToast(error.message || 'Error al eliminar', true);
+          showToast('Error al eliminar', true);
         }
       });
     });
@@ -635,8 +679,193 @@ async function cerrarSesion() {
   window.location.href = 'login.html';
 }
 
+// ── Funciones Premium ─────────────────────────────────────────
+// ── Funciones Premium y Pago ──────────────────────────────────
+let tarjetaSeleccionadaId = null;
+
+async function abrirModalPago(esRenovacion = false) {
+  const modal = document.getElementById('modal-pago');
+  if (!modal) return;
+  
+  modal.style.display = 'flex';
+  modal.dataset.renovar = esRenovacion;
+  
+  // Limpiar form
+  document.getElementById('pago-numero').value = '';
+  document.getElementById('pago-exp').value = '';
+  document.getElementById('pago-cvv').value = '';
+  document.getElementById('pago-titular').value = '';
+  tarjetaSeleccionadaId = null;
+
+  // Cargar tarjetas guardadas
+  await cargarMetodosPago();
+}
+
+function cerrarModalPago() {
+  const modal = document.getElementById('modal-pago');
+  if (modal) modal.style.display = 'none';
+}
+
+async function cargarMetodosPago() {
+  const seccion = document.getElementById('metodos-guardados-seccion');
+  const lista = document.getElementById('lista-tarjetas');
+  const formPago = document.getElementById('form-pago');
+  if (!lista) return;
+
+  try {
+    const res = await fetch('/api/users/me/payment-methods', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    const tarjetas = await res.json();
+
+    if (tarjetas.length > 0) {
+      seccion.style.display = 'block';
+      formPago.style.display = 'none';
+      
+      lista.innerHTML = tarjetas.map(t => `
+        <div class="tarjeta-item" data-id="${t.id}" onclick="window.seleccionarTarjeta(${t.id})">
+          <div class="tarjeta-info">
+            <span class="tarjeta-icon">💳</span>
+            <span>${t.tarjeta_mask}</span>
+          </div>
+          <span class="check">✔️</span>
+        </div>
+      `).join('');
+      
+      // Seleccionar la primera por defecto
+      window.seleccionarTarjeta(tarjetas[0].id);
+    } else {
+      seccion.style.display = 'none';
+      formPago.style.display = 'block';
+    }
+  } catch (e) { console.error(e); }
+}
+
+window.seleccionarTarjeta = (id) => {
+  tarjetaSeleccionadaId = id;
+  document.querySelectorAll('.tarjeta-item').forEach(el => {
+    el.classList.toggle('selected', parseInt(el.dataset.id) === id);
+  });
+};
+
+async function finalizarPago() {
+  const btn = document.getElementById('btn-finalizar-pago');
+  const modal = document.getElementById('modal-pago');
+  const esRenovacion = modal.dataset.renovar === 'true';
+  
+  btn.disabled = true;
+  btn.textContent = 'Procesando...';
+
+  try {
+    // Si no seleccionó tarjeta guardada, validar y opcionalmente guardar la nueva
+    if (!tarjetaSeleccionadaId) {
+      const numero = document.getElementById('pago-numero').value.replace(/\s/g, '');
+      const exp = document.getElementById('pago-exp').value;
+      const cvv = document.getElementById('pago-cvv').value;
+      const titular = document.getElementById('pago-titular').value;
+      const guardar = document.getElementById('guardar-tarjeta').checked;
+
+      if (numero.length < 16 || exp.length < 5 || cvv.length < 3 || !titular) {
+        showToast('Por favor, completa los datos de la tarjeta', true);
+        btn.disabled = false;
+        btn.textContent = 'Pagar $30.00 MXN';
+        return;
+      }
+
+      if (guardar) {
+        await fetch('/api/users/me/payment-methods', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}` 
+          },
+          body: JSON.stringify({ numero, exp, cvv, titular })
+        });
+      }
+    }
+
+    // Procesar suscripción
+    const res = await fetch('/api/auth/subscribe', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}` 
+      },
+      body: JSON.stringify({ renovar: esRenovacion })
+    });
+
+    if (!res.ok) throw new Error('Error en el pago');
+    const data = await res.json();
+    
+    let fechaTxt = '';
+    if (data.premiumHasta) {
+      const fd = new Date(data.premiumHasta);
+      fechaTxt = fd.toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' });
+    }
+
+    showToast(`👑 ¡Membresía renovada con éxito! Tu nuevo vencimiento es el ${fechaTxt}`, false);
+    cerrarModalPago();
+    setTimeout(() => window.location.reload(), 2000);
+
+  } catch (err) {
+    showToast('Error al procesar el pago', true);
+    btn.disabled = false;
+    btn.textContent = 'Pagar $30.00 MXN';
+    const btnGuardada = document.getElementById('btn-usar-guardada');
+    if (btnGuardada) {
+      btnGuardada.disabled = false;
+      btnGuardada.textContent = 'Usar esta tarjeta';
+    }
+  }
+}
+
+async function subscribePremium() {
+  abrirModalPago(false);
+}
+
+async function renewPremium() {
+  abrirModalPago(true);
+}
+
+async function cancelPremium() {
+  const expiry = document.getElementById('premium-expiry-date')?.textContent || 'tu fecha de corte';
+  const msg = `¿Estás seguro de que quieres cancelar tu membresía Premium? Recuerda que seguirás teniendo acceso a todas las funciones Premium hasta el ${expiry}, después de esa fecha volverás al plan Free automáticamente.`;
+  
+  if (!confirm(msg)) return;
+  
+  try {
+    const res = await fetch(`/api/auth/cancel-premium`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error('Error al cancelar');
+    
+    showToast('✅ Renovación cancelada. Periodo actual respetado.', false);
+    setTimeout(() => window.location.reload(), 2000);
+  } catch (err) {
+    showToast('Error al cancelar membresía', true);
+  }
+}
+
 // Event listeners
 function initEventListeners() {
+  document.getElementById('btn-upgrade-premium-profile')?.addEventListener('click', () => abrirModalPago(false));
+  document.getElementById('btn-renew-premium')?.addEventListener('click', () => abrirModalPago(true));
+  document.getElementById('btn-cancel-premium')?.addEventListener('click', cancelPremium);
+  document.getElementById('btn-cerrar-pago')?.addEventListener('click', cerrarModalPago);
+  document.getElementById('btn-finalizar-pago')?.addEventListener('click', finalizarPago);
+  
+  document.getElementById('btn-usar-guardada')?.addEventListener('click', function() {
+    this.disabled = true;
+    this.textContent = 'Procesando...';
+    finalizarPago();
+  });
+  
+  document.getElementById('btn-usar-otra')?.addEventListener('click', () => {
+    document.getElementById('metodos-guardados-seccion').style.display = 'none';
+    document.getElementById('form-pago').style.display = 'block';
+    tarjetaSeleccionadaId = null;
+  });
   toggleFormBtn?.addEventListener('click', () => {
     formVisible ? ocultarForm() : mostrarForm();
   });
@@ -653,18 +882,7 @@ function initEventListeners() {
   document.getElementById('btn-favoritos')?.addEventListener('click', () => cambiarSeccion('favoritos'));
   document.getElementById('btn-historial')?.addEventListener('click', () => cambiarSeccion('historial'));
   
-  document.querySelectorAll('.pref-tag').forEach(tag => {
-    tag.addEventListener('click', () => {
-      const pref = tag.dataset.pref;
-      if (preferenciasSeleccionadas.includes(pref)) {
-        preferenciasSeleccionadas = preferenciasSeleccionadas.filter(p => p !== pref);
-        tag.classList.remove('selected');
-      } else {
-        preferenciasSeleccionadas.push(pref);
-        tag.classList.add('selected');
-      }
-    });
-  });
+  // Las etiquetas se manejan dinámicamente en cargarEtiquetas()
 }
 
 // Inicializar
@@ -679,8 +897,8 @@ async function cargarEtiquetas() {
     const tags = await res.json();
 
     container.innerHTML = tags.map(tag => {
-      const active = preferenciasSeleccionadas.includes(tag) ? 'active' : '';
-      return `<span class="pref-tag ${active}" data-pref="${tag}">${tag}</span>`;
+      const selected = preferenciasSeleccionadas.includes(tag) ? 'selected' : '';
+      return `<span class="pref-tag ${selected}" data-pref="${tag}">${tag}</span>`;
     }).join('');
 
     // Re-vincular eventos click
@@ -689,10 +907,10 @@ async function cargarEtiquetas() {
         const pref = tag.dataset.pref;
         if (preferenciasSeleccionadas.includes(pref)) {
           preferenciasSeleccionadas = preferenciasSeleccionadas.filter(p => p !== pref);
-          tag.classList.remove('active');
+          tag.classList.remove('selected');
         } else {
           preferenciasSeleccionadas.push(pref);
-          tag.classList.add('active');
+          tag.classList.add('selected');
         }
       });
     });

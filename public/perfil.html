@@ -23,7 +23,7 @@
     <div class="perfil-info-card">
       <div class="avatar-section">
         <div class="avatar-wrapper">
-          <img id="avatar-img" class="avatar-img" src="" alt="Avatar">
+          <img id="avatar-img" class="avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='65' text-anchor='middle' font-size='50'%3E👤%3C/text%3E%3C/svg%3E" alt="Avatar">
           <div class="avatar-overlay" id="avatar-overlay-btn" title="Cambiar foto">
             <span>📷</span>
           </div>
@@ -88,19 +88,37 @@
         <div class="form-group">
           <label>🥗 Preferencias alimenticias</label>
           <div class="preferencias-tags" id="preferencias-tags">
-            <span class="pref-tag" data-pref="fitness">⚡ Fitness</span>
-            <span class="pref-tag" data-pref="vegetariano">🌱 Vegetariano</span>
-            <span class="pref-tag" data-pref="vegano">🌿 Vegano</span>
-            <span class="pref-tag" data-pref="sin gluten">🚫 Sin gluten</span>
-            <span class="pref-tag" data-pref="sin lactosa">🥛 Sin lactosa</span>
-            <span class="pref-tag" data-pref="bajo en carbos">🍚 Bajo en carbos</span>
-            <span class="pref-tag" data-pref="alto proteina">💪 Alto en proteína</span>
-            <span class="pref-tag" data-pref="keto">🥑 Keto</span>
-            <span class="pref-tag" data-pref="pescetariano">🐟 Pescetariano</span>
+            <!-- Cargado dinámicamente -->
           </div>
         </div>
         <div class="btn-form-row">
           <button class="guardar-btn" id="guardar-perfil-btn">💾 Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN PREMIUM -->
+    <div id="premium-manage-section" class="premium-manage-card" style="display:none;">
+      <div class="premium-manage-header">
+        <span class="crown">👑</span>
+        <h2>Membresía Premium</h2>
+      </div>
+      <div class="premium-manage-body">
+        <div id="premium-active-info">
+          <p>Estado: <strong style="color:#2e7d32;">Activo</strong></p>
+          <p>Vence el: <span id="premium-expiry-date">--/--/--</span></p>
+          <p>Costo: <strong>$30 MXN / mes</strong></p>
+          <div class="premium-manage-actions">
+            <button id="btn-renew-premium" class="btn-renew">🔄 Renovar ahora</button>
+            <button id="btn-cancel-premium" class="btn-cancel-sub">❌ Cancelar membresía</button>
+          </div>
+          <p id="cancel-note" style="font-size:0.8rem; color:#666; margin-top:10px; display:none;">
+            ⚠️ Tu membresía se cancelará al final del periodo actual. Seguirás siendo Premium hasta la fecha indicada arriba.
+          </p>
+        </div>
+        <div id="premium-inactive-info" style="display:none; text-align:center;">
+          <p>Actualmente eres usuario <strong>Free</strong>.</p>
+          <button id="btn-upgrade-premium-profile" class="btn-upgrade-main">⭐ ¡Actualizar a Premium! ($30 MXN)</button>
         </div>
       </div>
     </div>
@@ -128,6 +146,58 @@
     <div id="favoritos-grid" class="recetas-grid" style="display:none;"></div>
     <div id="historial-grid" class="recetas-grid" style="display:none;"></div>
 
+  </div>
+
+  <!-- MODAL DE PAGO -->
+  <div id="modal-pago" class="modal-pago-overlay" style="display:none;">
+    <div class="modal-pago-content">
+      <div class="modal-pago-header">
+        <h3>💳 Método de Pago</h3>
+        <button id="btn-cerrar-pago" class="btn-close-modal">✕</button>
+      </div>
+      
+      <div class="modal-pago-body">
+        <!-- Tarjetas Guardadas -->
+        <div id="metodos-guardados-seccion" style="display:none; margin-bottom:20px;">
+          <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">Tu tarjeta guardada:</p>
+          <div id="lista-tarjetas" class="lista-tarjetas" style="margin-bottom: 15px;"></div>
+          
+          <div style="display:flex; gap:10px;">
+            <button id="btn-usar-guardada" class="btn-pay-confirm" style="margin-top:0; flex:1;">Usar esta tarjeta</button>
+            <button id="btn-usar-otra" class="btn-cancel-sub" style="flex:1; padding:10px; border-radius:15px;">Usar otra tarjeta</button>
+          </div>
+        </div>
+
+        <div id="form-pago" class="form-pago">
+          <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">Detalles de la tarjeta:</p>
+          <div class="input-group">
+            <label>Número de Tarjeta</label>
+            <input type="text" id="pago-numero" placeholder="0000 0000 0000 0000" maxlength="19">
+          </div>
+          <div style="display:flex; gap:15px;">
+            <div class="input-group" style="flex:1;">
+              <label>Expira (MM/AA)</label>
+              <input type="text" id="pago-exp" placeholder="MM/AA" maxlength="5">
+            </div>
+            <div class="input-group" style="flex:0.5;">
+              <label>CVV</label>
+              <input type="password" id="pago-cvv" placeholder="123" maxlength="3">
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Nombre en la Tarjeta</label>
+            <input type="text" id="pago-titular" placeholder="EJ. JUAN PEREZ">
+          </div>
+          
+          <div class="checkbox-group" style="margin-top:10px;">
+            <input type="checkbox" id="guardar-tarjeta" checked>
+            <label for="guardar-tarjeta">Guardar para futuras renovaciones</label>
+          </div>
+
+          <button id="btn-finalizar-pago" class="btn-pay-confirm">Pagar $30.00 MXN</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <nav class="bottom-nav">

@@ -30,20 +30,53 @@
         </p>
       </div>
 
-      <!-- REGISTRO BOX -->
+      <!-- REGISTRO BOX - PASO 1 -->
       <div class="login-card" id="registro-box" style="display:none;">
         <h2>Registrarse</h2>
-        <p class="welcome">Crea tu cuenta</p>
-        <input id="reg-nombre"    placeholder="Nombre *"              autocomplete="given-name">
-        <input id="reg-apellido"  placeholder="Apellido *"            autocomplete="family-name">
-        <input id="reg-username"  placeholder="Usuario * (letras, números, _)" autocomplete="username">
-        <input id="reg-email"     type="email" placeholder="Correo electrónico *" autocomplete="email">
-        <input id="reg-password"  type="password" placeholder="Contraseña * (mínimo 8 caracteres)">
-        <input id="reg-confirm"   type="password" placeholder="Confirmar contraseña *">
-        <label style="display:block; margin:15px 0; text-align:left; color:#424242; font-size:.95rem;">
-          <input type="checkbox" id="reg-premium"> Quiero ser Premium (chatbot, videos exclusivos)
-        </label>
-        <button id="register-btn">Crear Cuenta →</button>
+        <div id="reg-step-1">
+          <p class="welcome">Crea tu cuenta básica</p>
+          <input id="reg-nombre"    placeholder="Nombre *" autocomplete="given-name">
+          <input id="reg-apellido"  placeholder="Apellido *" autocomplete="family-name">
+          <input id="reg-username"  placeholder="Usuario *" autocomplete="username">
+          <input id="reg-email"     type="email" placeholder="Correo electrónico *" autocomplete="email">
+          <input id="reg-password"  type="password" placeholder="Contraseña *">
+          <input id="reg-confirm"   type="password" placeholder="Confirmar contraseña *">
+          <button id="next-step-btn" style="margin-top:20px;">Siguiente →</button>
+        </div>
+
+        <!-- PASO 2: ELECCIÓN PREMIUM -->
+        <div id="reg-step-2" style="display:none;">
+          <p class="welcome">💎 ¡Eleva tu experiencia!</p>
+          <div class="premium-choice-box">
+            <p>Por solo <strong>$30 MXN/mes</strong> obtén:</p>
+            <ul style="text-align:left; font-size:0.9rem; margin:10px 0;">
+              <li>🎥 Videos exclusivos paso a paso</li>
+              <li>💬 Comenta en todas las recetas</li>
+              <li>📖 Historial completo de cocina</li>
+              <li>🤖 Chef IA avanzado</li>
+            </ul>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+              <button id="btn-choose-free" style="background:#eee; color:#333;">Seguir Gratis 🆓</button>
+              <button id="btn-choose-premium">Ser Premium 👑</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 3: PAGO (SIMULADO) -->
+        <div id="reg-step-3" style="display:none;">
+          <p class="welcome">💳 Pago Seguro</p>
+          <p style="font-size:0.85rem; margin-bottom:15px; color:#666;">Introduce los datos de tu tarjeta para el cobro mensual de $30 MXN.</p>
+          <div class="payment-form">
+            <input id="card-name" placeholder="Nombre del titular">
+            <input id="card-number" placeholder="Número de tarjeta (16 dígitos)" maxlength="16">
+            <div style="display:flex; gap:10px;">
+              <input id="card-expiry" placeholder="MM/AA" maxlength="5">
+              <input id="card-cvv" placeholder="CVV" maxlength="3" type="password">
+            </div>
+            <button id="finalize-reg-btn" style="margin-top:20px;">Pagar y Registrarse 🔒</button>
+          </div>
+        </div>
+
         <p class="register-link">
           <a href="#" id="show-login">← Volver al login</a>
         </p>

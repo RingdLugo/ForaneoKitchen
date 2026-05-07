@@ -29,6 +29,9 @@ async function cargarUsuario() {
     try {
       currentUser = JSON.parse(cached);
       document.getElementById('user-name').textContent = currentUser.nombre || currentUser.username;
+      const avatar = document.getElementById('user-avatar');
+      if (avatar && currentUser.foto_perfil) avatar.src = currentUser.foto_perfil;
+      
       const pts = document.getElementById('puntos-display');
       if (pts) pts.textContent = `⭐ ${currentUser.puntos || 0} pts`;
     } catch(e) {}
@@ -44,6 +47,9 @@ async function cargarUsuario() {
       currentUser = await res.json();
       localStorage.setItem('userData', JSON.stringify(currentUser));
       document.getElementById('user-name').textContent = currentUser.nombre || currentUser.username;
+      const avatar = document.getElementById('user-avatar');
+      if (avatar && currentUser.foto_perfil) avatar.src = currentUser.foto_perfil;
+      
       const pts = document.getElementById('puntos-display');
       if (pts) pts.textContent = `⭐ ${currentUser.puntos || 0} pts`;
       
@@ -61,6 +67,7 @@ async function cargarUsuario() {
 
 // ── Cargar Recetas ────────────────────────────────────────────────────────────
 async function cargarRecetas(params = {}) {
+  mostrarSkeleton();
   const container = document.getElementById('recetas');
   if (!container) return;
 
@@ -112,26 +119,41 @@ async function cargarRecetas(params = {}) {
   }
 }
 
+function mostrarSkeleton() {
+  const container = document.getElementById('recetas');
+  if (!container) return;
+  
+  container.innerHTML = Array(6).fill(0).map(() => `
+    <div class="recipe-card skeleton">
+      <div class="skeleton-img"></div>
+      <div class="recipe-content">
+        <div class="skeleton-text title"></div>
+        <div class="skeleton-text"></div>
+        <div class="skeleton-text short"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
 function renderizarRecetas(recetas) {
   const container = document.getElementById('recetas');
   if (!container) return;
   
   if (!recetas || recetas.length === 0) {
-    container.innerHTML = '<div class="no-results"><span>🍳</span><p>No hay recetas disponibles por ahora</p></div>';
+    container.innerHTML = '<div class="no-results" style="opacity:0; animation: fadeIn 0.5s forwards;"><span>🍳</span><p>No hay recetas disponibles por ahora</p></div>';
     return;
   }
 
   const placeholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f5f5f5'/%3E%3Ctext x='50' y='60' text-anchor='middle' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
   
-  container.innerHTML = recetas.map(r => {
-    // Generar etiquetas si existen
+  container.innerHTML = recetas.map((r, i) => {
     const tagsHtml = (r.etiquetas || []).slice(0, 3).map(t => `<span class="recipe-tag">${t}</span>`).join('');
     
     return `
-      <div class="recipe-card" onclick="window.location.href='receta.html?id=${r.id}'">
+      <div class="recipe-card" style="opacity:0; animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${i * 0.05}s;" onclick="window.location.href='receta.html?id=${r.id}'">
         <div class="recipe-image">
           ${r.es_premium ? '<span class="badge-premium">👑 Premium</span>' : ''}
-          <img src="${r.imagen || placeholder}" alt="${r.titulo}" onerror="this.src='${placeholder}'">
+          <img src="${r.imagen || placeholder}" alt="${r.titulo}" onerror="this.src='${placeholder}'" loading="lazy">
         </div>
         <div class="recipe-content">
           <h3>${r.titulo}</h3>
@@ -154,15 +176,47 @@ function renderizarRecetas(recetas) {
 }
 
 // ── Filtros ──────────────────────────────────────────────────────────────────
-function setupFilters() {
-  const tags = document.querySelectorAll('.tag');
-  tags.forEach(tag => {
-    tag.addEventListener('click', () => {
-      tags.forEach(t => t.classList.remove('active-filter'));
-      tag.classList.add('active-filter');
-      cargarRecetas({ filter: tag.dataset.filter });
+async function setupFilters() {
+  const container = document.querySelector('.filter-tags');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/tags');
+    if (!res.ok) throw new Error('Error tags');
+    const tags = await res.json();
+
+    // Mantener los filtros fijos básicos
+    const fijos = [
+      { id: 'todas', icon: '🍽️', label: 'Todas' },
+      { id: 'populares', icon: '🔥', label: 'Populares' },
+      { id: 'economicas', icon: '💰', label: 'Económicas' },
+      { id: 'rapidas', icon: '⚡', label: 'Rápidas' }
+    ];
+
+    container.innerHTML = fijos.map(f => `
+      <button class="tag ${f.id === 'todas' ? 'active-filter' : ''}" data-filter="${f.id}">${f.icon} ${f.label}</button>
+    `).join('') + tags.map(t => `
+      <button class="tag" data-filter="tag:${t}">${t}</button>
+    `).join('');
+
+    // Re-vincular eventos
+    container.querySelectorAll('.tag').forEach(tag => {
+      tag.addEventListener('click', () => {
+        container.querySelectorAll('.tag').forEach(t => t.classList.remove('active-filter'));
+        tag.classList.add('active-filter');
+        const filter = tag.dataset.filter;
+        
+        if (filter.startsWith('tag:')) {
+          cargarRecetas({ q: filter.split(':')[1] }); // Buscar por la etiqueta
+        } else {
+          cargarRecetas({ filter: filter });
+        }
+      });
     });
-  });
+
+  } catch (error) {
+    console.error('Error al cargar filtros dinámicos:', error);
+  }
 
   const searchInput = document.getElementById('search-input');
   let timeout = null;
@@ -177,8 +231,8 @@ function setupFilters() {
 // ── Iniciar ──────────────────────────────────────────────────────────────────
 async function init() {
   await cargarUsuario();
-  cargarRecetas(); // No await para no bloquear
-  setupFilters();
+  await setupFilters(); // Cargar filtros antes de las recetas para tener el contexto
+  cargarRecetas(); 
 }
 
 document.addEventListener('DOMContentLoaded', init);

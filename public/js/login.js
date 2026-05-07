@@ -1,4 +1,4 @@
-// login.js — ForaneoKitchen (CORREGIDO)
+// login.js — ForaneoKitchen (Multi-step Premium Flow)
 const API_BASE = (() => {
   const origin = window.location.origin;
   if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
@@ -11,11 +11,22 @@ const API_BASE = (() => {
 const loginBox    = document.getElementById('login-box');
 const registroBox = document.getElementById('registro-box');
 const loginBtn    = document.getElementById('login-btn');
-const registerBtn = document.getElementById('register-btn');
 const showRegisterLink = document.getElementById('show-register');
 const showLoginLink    = document.getElementById('show-login');
 
+// Steps
+const regStep1 = document.getElementById('reg-step-1');
+const regStep2 = document.getElementById('reg-step-2');
+const regStep3 = document.getElementById('reg-step-3');
+
+// Buttons
+const nextStepBtn = document.getElementById('next-step-btn');
+const btnChooseFree = document.getElementById('btn-choose-free');
+const btnChoosePremium = document.getElementById('btn-choose-premium');
+const finalizeRegBtn = document.getElementById('finalize-reg-btn');
+
 let currentAction = 'login';
+let selectedPremium = false;
 
 // ── Toast ─────────────────────────────────────────────────────
 function showToast(message, type = 'error') {
@@ -37,170 +48,129 @@ function showLoginBox() {
 function showRegistroBox() {
   loginBox.style.display    = 'none';
   registroBox.style.display = 'block';
+  regStep1.style.display = 'block';
+  regStep2.style.display = 'none';
+  regStep3.style.display = 'none';
   currentAction = 'register';
 }
 
 showRegisterLink?.addEventListener('click', e => { e.preventDefault(); showRegistroBox(); });
 showLoginLink?.addEventListener('click',    e => { e.preventDefault(); showLoginBox(); });
 
-function guardarSesion(id, username, rol, esPremium, puntos, token, preferencias) {
-  localStorage.setItem('token', token);
-  localStorage.setItem('userId', id);
-  localStorage.setItem('userName', username);
-  localStorage.setItem('userRol', rol);
-  localStorage.setItem('userPremium', esPremium);
-  localStorage.setItem('userPuntos', puntos || 0);
-  localStorage.setItem('userPrefs', JSON.stringify(preferencias || []));
+// ── Multi-Step Logic ─────────────────────────────────────────
+
+nextStepBtn?.addEventListener('click', () => {
+  const nombre = document.getElementById('reg-nombre').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const confirm = document.getElementById('reg-confirm').value;
+
+  if (!nombre || !email || !username || !password || !confirm) {
+    return showToast('Todos los campos son obligatorios', 'error');
+  }
+  if (password !== confirm) return showToast('Las contraseñas no coinciden', 'error');
   
-  console.log('✅ Sesión guardada:', { id, username, rol, token: token?.substring(0, 20) + '...' });
-}
+  regStep1.style.display = 'none';
+  regStep2.style.display = 'block';
+});
 
-// ── REGISTRO ──────────────────────────────────────────────────
+btnChooseFree?.addEventListener('click', () => {
+  selectedPremium = false;
+  registerUser(); // Registrar directo como Free
+});
+
+btnChoosePremium?.addEventListener('click', () => {
+  selectedPremium = true;
+  regStep2.style.display = 'none';
+  regStep3.style.display = 'block';
+});
+
+finalizeRegBtn?.addEventListener('click', () => {
+  const cardName = document.getElementById('card-name').value.trim();
+  const cardNumber = document.getElementById('card-number').value.trim();
+  
+  if (!cardName || cardNumber.length < 16) {
+    return showToast('Datos de tarjeta inválidos', 'error');
+  }
+
+  // Simulación de validación Stripe/Banco
+  finalizeRegBtn.disabled = true;
+  finalizeRegBtn.textContent = 'Procesando pago... ⌛';
+  
+  setTimeout(() => {
+    showToast('💳 Tarjeta válida, cobro exitoso ($30 MXN)', 'success');
+    registerUser();
+  }, 2000);
+});
+
+// ── REGISTRO FINAL ────────────────────────────────────────────
 async function registerUser() {
-  const nombre    = document.getElementById('reg-nombre')?.value.trim();
-  const apellido  = document.getElementById('reg-apellido')?.value.trim();
-  const email     = document.getElementById('reg-email')?.value.trim();
-  const username  = document.getElementById('reg-username')?.value.trim();
-  const password  = document.getElementById('reg-password')?.value;
-  const confirm   = document.getElementById('reg-confirm')?.value;
-  const esPremium = document.getElementById('reg-premium')?.checked || false;
-
-  if (!nombre || !apellido || !email || !username || !password || !confirm) {
-    showToast('Todos los campos son obligatorios', 'error'); return;
-  }
-  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-    showToast('Username: solo letras, números y _ (3-20 caracteres)', 'error'); return;
-  }
-  if (password !== confirm) {
-    showToast('Las contraseñas no coinciden', 'error'); return;
-  }
-  if (password.length < 8) {
-    showToast('La contraseña debe tener al menos 8 caracteres', 'error'); return;
-  }
-
-  if (registerBtn) { registerBtn.disabled = true; registerBtn.textContent = 'Enviando código...'; }
+  const nombre    = document.getElementById('reg-nombre').value.trim();
+  const apellido  = document.getElementById('reg-apellido').value.trim();
+  const email     = document.getElementById('reg-email').value.trim();
+  const username  = document.getElementById('reg-username').value.trim();
+  const password  = document.getElementById('reg-password').value;
+  const confirm   = document.getElementById('reg-confirm').value;
 
   try {
-    const res  = await fetch(`${API_BASE}/auth/registro`, {
+    const res = await fetch(`${API_BASE}/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, apellido, email, username, password, confirmPassword: confirm, esPremium })
+      body: JSON.stringify({ 
+        nombre, apellido, email, username, password, 
+        confirmPassword: confirm, 
+        esPremium: selectedPremium 
+      })
     });
+    
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al registrar');
 
-    showToast(`✅ Código enviado a ${email}`, 'success');
+    showToast(`✅ Cuenta creada! Verifica tu email: ${email}`, 'success');
     localStorage.setItem('verifyEmail', email);
     setTimeout(() => { window.location.href = 'verificar.html'; }, 1500);
 
   } catch (err) {
     showToast(err.message, 'error');
-  } finally {
-    if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = 'Crear Cuenta →'; }
+    finalizeRegBtn.disabled = false;
+    finalizeRegBtn.textContent = 'Pagar y Registrarse 🔒';
   }
 }
 
-// ── LOGIN (CORREGIDO) ─────────────────────────────────────────
-async function loginUser() {
-  const username = document.getElementById('login-username')?.value.trim();
-  const password = document.getElementById('login-password')?.value;
+// ── LOGIN ─────────────────────────────────────────────────────
+async function login() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
 
   if (!username || !password) {
-    showToast('Ingresa usuario y contraseña', 'error'); 
-    return;
+    return showToast('Faltan credenciales', 'error');
   }
 
-  if (loginBtn) { 
-    loginBtn.disabled = true; 
-    loginBtn.textContent = 'Iniciando...'; 
-  }
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Validando...';
 
   try {
-    console.log('📡 Intentando login con:', { username });
-    
-    const res  = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    
     const data = await res.json();
-    console.log('📡 Respuesta del servidor:', data);
+    if (!res.ok) throw new Error(data.error || 'Error de login');
+
+    // Guardar sesión
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('userId', data.user.id);
+    localStorage.setItem('userName', data.user.username);
     
-    if (!res.ok) throw new Error(data.error || 'Usuario o contraseña incorrectos');
-
-    // Verificar que el token existe
-    if (!data.token) {
-      console.error('❌ El servidor no devolvió token');
-      throw new Error('Error en el servidor: token no recibido');
-    }
-
-    // Guardar sesión correctamente
-    guardarSesion(
-      data.user.id, 
-      data.user.username, 
-      data.user.rol, 
-      data.user.esPremium, 
-      data.user.puntos,
-      data.token,
-      data.user.preferencias
-    );
-
-    showToast(`¡Bienvenido, ${data.user.username}!`, 'success');
-    console.log('✅ Login exitoso, redirigiendo a home...');
-    
-    setTimeout(() => { 
-      window.location.href = 'home.html'; 
-    }, 500);
-
+    showToast('🚀 ¡Bienvenido!', 'success');
+    setTimeout(() => { window.location.href = 'home.html'; }, 1000);
   } catch (err) {
-    console.error('❌ Error en login:', err);
     showToast(err.message, 'error');
-  } finally {
-    if (loginBtn) { 
-      loginBtn.disabled = false; 
-      loginBtn.textContent = 'Iniciar Sesión →'; 
-    }
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Iniciar Sesión →';
   }
 }
 
-// ── Event listeners ───────────────────────────────────────────
-loginBtn?.addEventListener('click', loginUser);
-registerBtn?.addEventListener('click', registerUser);
-
-document.querySelectorAll('input').forEach(inp => {
-  inp.addEventListener('keypress', e => {
-    if (e.key === 'Enter') {
-      currentAction === 'login' ? loginUser() : registerUser();
-    }
-  });
-});
-
-// ── Verificar si ya hay sesión activa ─────────────────────────
-async function checkSession() {
-  const token = localStorage.getItem('token');
-  const userId = localStorage.getItem('userId');
-  
-  console.log('🔍 Verificando sesión existente - token:', token ? '✅' : '❌', 'userId:', userId);
-  
-  if (token && userId) {
-    try {
-      const res = await fetch(`${API_BASE}/auth/me`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        console.log('✅ Sesión válida, redirigiendo a home');
-        window.location.href = 'home.html';
-      } else {
-        console.log('⚠️ Sesión inválida, limpiando localStorage');
-        localStorage.clear();
-      }
-    } catch (err) {
-      console.log('⚠️ Error verificando sesión:', err.message);
-      localStorage.clear();
-    }
-  }
-}
-
-// ── Iniciar ───────────────────────────────────────────────────
-checkSession();
+loginBtn?.addEventListener('click', login);

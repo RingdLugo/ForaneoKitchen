@@ -503,7 +503,7 @@ function renderizarReceta(r) {
   const esPropio = userId && String(r.usuario_id) === String(userId);
 
   container.innerHTML = `
-    <div class="receta-container">
+    <div class="receta-container" style="opacity:0; animation: fadeInUp 0.6s ease-out forwards;">
       <div class="receta-imagen">
         <img src="${imagenSrc}"
              alt="${escapeHTML(r.titulo)}"

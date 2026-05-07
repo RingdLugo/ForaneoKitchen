@@ -1,5 +1,5 @@
 /**
- * ForaneoKitchen MVP â€” server.js CORREGIDO COMPLETO
+ * ForaneoKitchen MVP — server.js CORREGIDO COMPLETO
  */
 'use strict';
 
@@ -33,7 +33,7 @@ app.use(express.json({ limit: '20mb' }));
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// —— Helpers ——————————————————————————————————————————————————
 function makeToken(u) {
   return Buffer.from(JSON.stringify({
     id: u.id, username: u.username,
@@ -50,9 +50,9 @@ async function authMW(req, res, next) {
   const t = req.headers.authorization?.split(' ')[1];
   if (!t) return res.status(401).json({ error: 'No autorizado' });
   const d = decodeToken(t);
-  if (!d) return res.status(401).json({ error: 'Token invÃ¡lido' });
+  if (!d) return res.status(401).json({ error: 'Token inválido' });
   const { data } = await supabase.from('usuarios').select('*').eq('id', d.id).maybeSingle();
-  if (!data) return res.status(401).json({ error: 'SesiÃ³n invÃ¡lida' });
+  if (!data) return res.status(401).json({ error: 'Sesión inválida' });
   if (data.es_premium && data.premium_hasta && new Date(data.premium_hasta) < new Date()) {
     await supabase.from('usuarios').update({ es_premium: false, rol: 'free' }).eq('id', data.id);
     data.es_premium = false; data.rol = 'free';
@@ -62,29 +62,19 @@ async function authMW(req, res, next) {
 }
 
 function tienePermiso(u, p) {
-  if (!u) {
-    console.warn(`[tienePermiso] No hay usuario para verificar permiso: ${p}`);
-    return false;
-  }
-  // Admins y Premium siempre tienen permiso
+  if (!u) return false;
   const esPrem = u.es_premium === true || u.rol === 'admin' || u.rol === 'premium';
   if (esPrem) return true;
-  
   const prefs = Array.isArray(u.preferencias) ? u.preferencias : [];
   if (prefs.length === 0) return false;
-  
   const tagPrefix = `PERMISO_${p.toUpperCase()}:`;
   const tag = prefs.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
-  
   if (tag) {
     const parts = tag.split(':');
     if (parts.length < 2) return false;
-    
     const expiraStr = parts[1];
     if (expiraStr === 'PERMANENT') return true;
-    
-    const expira = new Date(expiraStr);
-    return expira > new Date();
+    return new Date(expiraStr) > new Date();
   }
   return false;
 }
@@ -96,1113 +86,436 @@ async function optAuth(req, res, next) {
       const d = decodeToken(t);
       if (d && d.id) {
         req.userId = d.id;
-        // Solo cargar datos básicos del usuario para preferencias
         const { data } = await supabase.from('usuarios').select('id, rol, es_premium, preferencias').eq('id', d.id).maybeSingle();
         if (data) req.user = data;
       }
     }
-  } catch (e) {
-    console.error('optAuth Error:', e);
-  }
+  } catch (e) { console.error('optAuth Error:', e); }
   next();
 }
 
 function genOTP() { return Math.floor(100000 + Math.random() * 900000).toString(); }
 
 async function sendOTP(email, otp, tipo) {
-  console.log(`\nðŸ“§ [${tipo.toUpperCase()}] OTP para ${email}`);
-  console.log(`ðŸ‘‰ CÃ“DIGO: ${otp}\n`);
+  console.log(`\n📧 [${tipo.toUpperCase()}] OTP para ${email}\n👉 CÓDIGO: ${otp}\n`);
   return true;
 }
 
-// FIX: otorgarPuntos con try/catch correcto
 async function otorgarPuntos(userId, accion, extra = '') {
   const pts = PUNTOS[accion] || 0;
   if (pts === 0) return;
   try {
     await supabase.from('puntos_log').insert({
-      usuario_id: userId, accion, puntos: pts,
-      descripcion: extra, fecha: new Date().toISOString()
+      usuario_id: userId, accion, puntos: pts, descripcion: extra, fecha: new Date().toISOString()
     });
-  } catch (e) { console.warn('puntos_log insert warn:', e.message); }
-
-  try {
-    // Intentar obtener puntos actuales
     const { data: u } = await supabase.from('usuarios').select('puntos').eq('id', userId).single();
-    const nuevosPuntos = (u?.puntos || 0) + pts;
-    await supabase.from('usuarios').update({ puntos: nuevosPuntos }).eq('id', userId);
-  } catch (e2) { console.warn('puntos update warn:', e2.message); }
+    await supabase.from('usuarios').update({ puntos: (u?.puntos || 0) + pts }).eq('id', userId);
+  } catch (e) { console.warn('Puntos warn:', e.message); }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-//  AUTH - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
+// ── AUTH ──────────────────────────────────────────────────────
 app.post('/api/auth/registro', async (req, res) => {
   const { nombre, apellido, email, username, password, confirmPassword, esPremium } = req.body;
-  if (!nombre || !apellido || !email || !username || !password || !confirmPassword)
-    return res.status(400).json({ error: 'Todos los campos son obligatorios' });
-  if (password !== confirmPassword)
-    return res.status(400).json({ error: 'Las contraseÃ±as no coinciden' });
-  if (password.length < 8)
-    return res.status(400).json({ error: 'MÃ­nimo 8 caracteres en la contraseÃ±a' });
-
+  if (!nombre || !apellido || !email || !username || !password || !confirmPassword) return res.status(400).json({ error: 'Faltan campos' });
+  if (password !== confirmPassword) return res.status(400).json({ error: 'Contraseñas no coinciden' });
   const { data: eu } = await supabase.from('usuarios').select('id').eq('username', username).maybeSingle();
-  if (eu) return res.status(400).json({ error: 'El usuario ya existe' });
-  const { data: ee } = await supabase.from('usuarios').select('id').eq('email', email).maybeSingle();
-  if (ee) return res.status(400).json({ error: 'El email ya estÃ¡ registrado' });
-
-  await supabase.from('otp_tokens').delete().eq('email', email).eq('tipo', 'registro');
-
+  if (eu) return res.status(400).json({ error: 'Usuario existe' });
   const otp = genOTP();
-  const { error: otpError } = await supabase.from('otp_tokens').insert({
-    email, otp, tipo: 'registro',
-    datos: { nombre, apellido, email, username, password, esPremium: esPremium || false },
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-    usado: false
-  });
-
-  if (otpError) {
-    console.error('âŒ Error OTP:', otpError);
-    return res.status(500).json({ error: 'Error interno. Intenta de nuevo.' });
-  }
-
+  await supabase.from('otp_tokens').insert({ email, otp, tipo: 'registro', datos: { nombre, apellido, email, username, password, esPremium }, expires_at: new Date(Date.now() + 600000).toISOString(), usado: false });
   await sendOTP(email, otp, 'registro');
-  res.json({ mensaje: 'CÃ³digo enviado a tu correo', email });
+  res.json({ mensaje: 'Código enviado', email });
 });
 
 app.post('/api/auth/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ error: 'Email y cÃ³digo requeridos' });
-
-  const { data: stored } = await supabase
-    .from('otp_tokens').select('*')
-    .eq('email', email).eq('usado', false)
-    .gt('expires_at', new Date().toISOString())
-    .order('id', { ascending: false }).limit(1).maybeSingle();
-
-  if (!stored) return res.status(400).json({ error: 'CÃ³digo expirado. Solicita uno nuevo.' });
-  if (stored.otp !== otp.toString().trim()) return res.status(400).json({ error: 'CÃ³digo incorrecto' });
-
+  const { data: stored } = await supabase.from('otp_tokens').select('*').eq('email', email).eq('usado', false).gt('expires_at', new Date().toISOString()).order('id', { ascending: false }).limit(1).maybeSingle();
+  if (!stored || stored.otp !== otp.toString().trim()) return res.status(400).json({ error: 'Código inválido' });
   await supabase.from('otp_tokens').update({ usado: true }).eq('id', stored.id);
-
   if (stored.tipo === 'registro') {
     const { nombre, apellido, username, password, esPremium } = stored.datos;
     const hash = await bcrypt.hash(password, 10);
-    const { data: nu, error: insertError } = await supabase.from('usuarios').insert({
-      nombre, apellido, email, username,
-      password_hash: hash,
-      rol: esPremium ? 'premium' : 'free',
-      es_premium: esPremium || false,
-      puntos: 0, bio: '', foto_perfil: null, preferencias: [],
-      fecha_registro: new Date().toISOString()
-    }).select().maybeSingle();
-
-    if (insertError) {
-      console.error('âŒ Error creando usuario:', insertError);
-      return res.status(500).json({ error: 'Error al crear usuario: ' + insertError.message });
+    let premiumHasta = null;
+    if (esPremium) {
+      let d = new Date(); d.setMonth(d.getMonth() + 1); premiumHasta = d.toISOString();
     }
+    const { data: nu } = await supabase.from('usuarios').insert({ nombre, apellido, email, username, password_hash: hash, rol: esPremium ? 'premium' : 'free', es_premium: esPremium || false, premium_hasta: premiumHasta, puntos: 0, fecha_registro: new Date().toISOString() }).select().maybeSingle();
     return res.json({ token: makeToken(nu), user: nu });
   }
-
-  if (stored.tipo === 'reset') {
-    await supabase.from('otp_tokens').insert({
-      email, otp: 'VERIFIED', tipo: 'reset',
-      datos: { verified: true }, usado: false,
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
-    });
-    return res.json({ mensaje: 'CÃ³digo verificado.' });
-  }
-
   res.json({ mensaje: 'Verificado' });
-});
-
-app.post('/api/auth/resend-otp', async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email requerido' });
-  const { data: pending } = await supabase.from('otp_tokens')
-    .select('datos, tipo').eq('email', email).eq('tipo', 'registro').eq('usado', false)
-    .order('id', { ascending: false }).limit(1).maybeSingle();
-  if (!pending) return res.status(400).json({ error: 'No hay registro pendiente para ese email' });
-  await supabase.from('otp_tokens').delete().eq('email', email).eq('tipo', 'registro');
-  const otp = genOTP();
-  await supabase.from('otp_tokens').insert({
-    email, otp, tipo: 'registro', datos: pending.datos, usado: false,
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
-  });
-  await sendOTP(email, otp, 'registro');
-  res.json({ mensaje: 'Nuevo cÃ³digo enviado' });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseÃ±a requeridos' });
-
   let { data: u } = await supabase.from('usuarios').select('*').eq('username', username).maybeSingle();
-  if (!u) {
-    const { data: uByEmail } = await supabase.from('usuarios').select('*').eq('email', username).maybeSingle();
-    u = uByEmail;
+  if (!u) { const { data } = await supabase.from('usuarios').select('*').eq('email', username).maybeSingle(); u = data; }
+  if (!u || !(await bcrypt.compare(password, u.password_hash))) return res.status(400).json({ error: 'Credenciales inválidas' });
+  res.json({ token: makeToken(u), user: u });
+});
+
+app.post('/api/auth/subscribe', authMW, async (req, res) => {
+  const { renovar } = req.body;
+  let d = new Date();
+  
+  // Si ya es premium y está renovando, sumar al tiempo actual
+  if (renovar && req.user.es_premium && req.user.premium_hasta) {
+    d = new Date(req.user.premium_hasta);
   }
-  if (!u) return res.status(400).json({ error: 'Usuario o contraseÃ±a incorrectos' });
-
-  const ok = await bcrypt.compare(password, u.password_hash);
-  if (!ok) return res.status(400).json({ error: 'Usuario o contraseÃ±a incorrectos' });
-
-  if (u.es_premium && u.premium_hasta && new Date(u.premium_hasta) < new Date()) {
-    await supabase.from('usuarios').update({ es_premium: false, rol: 'free' }).eq('id', u.id);
-    u.es_premium = false; u.rol = 'free';
-  }
-
-  await supabase.from('usuarios').update({ ultimo_acceso: new Date().toISOString() }).eq('id', u.id);
-
-  console.log(`âœ… Login: ${u.username} (${u.rol})`);
-  res.json({
-    token: makeToken(u),
-    user: { id: u.id, username: u.username, email: u.email, rol: u.rol, esPremium: u.es_premium, puntos: u.puntos || 0 }
-  });
+  
+  d.setMonth(d.getMonth() + 1);
+  const hasta = d.toISOString();
+  
+  await supabase.from('usuarios').update({ 
+    es_premium: true, 
+    rol: 'premium', 
+    premium_hasta: hasta, 
+    premium_cancelado: false 
+  }).eq('id', req.user.id);
+  
+  res.json({ mensaje: '¡Suscripción exitosa!', premiumHasta: hasta });
 });
 
-app.post('/api/auth/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email requerido' });
-  const { data } = await supabase.from('usuarios').select('id').eq('email', email).maybeSingle();
-  if (!data) return res.status(404).json({ error: 'No hay cuenta con ese email' });
-  await supabase.from('otp_tokens').delete().eq('email', email).eq('tipo', 'reset');
-  const otp = genOTP();
-  await supabase.from('otp_tokens').insert({
-    email, otp, tipo: 'reset', datos: {}, usado: false,
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
-  });
-  await sendOTP(email, otp, 'reset');
-  res.json({ mensaje: 'CÃ³digo enviado' });
+app.post('/api/auth/cancel-premium', authMW, async (req, res) => {
+  await supabase.from('usuarios').update({ premium_cancelado: true }).eq('id', req.user.id);
+  res.json({ mensaje: 'Cancelación programada' });
 });
 
-app.post('/api/auth/reset-password', async (req, res) => {
-  const { email, newPassword, confirmNewPassword } = req.body;
-  if (!email || !newPassword) return res.status(400).json({ error: 'Datos incompletos' });
-  if (newPassword !== confirmNewPassword) return res.status(400).json({ error: 'Las contraseÃ±as no coinciden' });
-  if (newPassword.length < 8) return res.status(400).json({ error: 'MÃ­nimo 8 caracteres' });
-  const { data: v } = await supabase.from('otp_tokens')
-    .select('*').eq('email', email).eq('tipo', 'reset').eq('otp', 'VERIFIED').eq('usado', false)
-    .gt('expires_at', new Date().toISOString()).maybeSingle();
-  if (!v) return res.status(400).json({ error: 'Debes verificar el cÃ³digo primero' });
-  const hash = await bcrypt.hash(newPassword, 10);
-  await supabase.from('usuarios').update({ password_hash: hash }).eq('email', email);
-  await supabase.from('otp_tokens').update({ usado: true }).eq('id', v.id);
-  res.json({ mensaje: 'ContraseÃ±a actualizada' });
+// ── MÉTODOS DE PAGO ──────────────────────────────────────────
+app.get('/api/users/me/payment-methods', authMW, async (req, res) => {
+  const { data } = await supabase.from('metodos_pago').select('*').eq('usuario_id', req.user.id).order('fecha_registro', { ascending: false });
+  res.json(data || []);
 });
 
-// ────────────────────────────────────────────────────────────────────────────
-//  USUARIO / PERFIL - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
+app.post('/api/users/me/payment-methods', authMW, async (req, res) => {
+  const { numero, exp, cvv, titular } = req.body;
+  const mask = `**** **** **** ${numero.slice(-4)}`;
+  const { data } = await supabase.from('metodos_pago').insert({
+    usuario_id: req.user.id,
+    tarjeta_mask: mask,
+    token_pago: 'tok_' + Math.random().toString(36).substr(2, 9),
+    fecha_registro: new Date().toISOString()
+  }).select().maybeSingle();
+  res.json(data);
+});
 
+// ── PERFIL ────────────────────────────────────────────────────
 app.get('/api/auth/me', authMW, async (req, res) => {
   const u = req.user;
-  const [{ count: cr }, { count: cf }, { count: ch }] = await Promise.all([
-    supabase.from('recetas').select('id', { count: 'exact', head: true }).eq('autor', u.username),
-    supabase.from('favoritos').select('id', { count: 'exact', head: true }).eq('usuario_id', u.id),
-    supabase.from('historial').select('id', { count: 'exact', head: true }).eq('usuario_id', u.id)
-  ]);
-  res.json({
-    id: u.id, nombre: u.nombre, apellido: u.apellido,
-    email: u.email, username: u.username,
-    rol: u.rol, es_premium: u.es_premium,
-    premium_hasta: u.premium_hasta,
-    puntos: u.puntos || 0,
-    bio: u.bio || '', foto_perfil: u.foto_perfil,
-    preferencias: u.preferencias || [],
-    fecha_registro: u.fecha_registro,
-    stats: { recetas: cr || 0, favoritos: cf || 0, historial: ch || 0 }
-  });
+  res.json(u);
 });
 
-// Actualizar perfil (nombre, apellido, bio, preferencias, avatar)
 app.put('/api/auth/me', authMW, async (req, res) => {
   const { nombre, apellido, bio, preferencias, foto_perfil } = req.body;
-  const upd = {};
-  if (nombre !== undefined) upd.nombre = nombre;
-  if (apellido !== undefined) upd.apellido = apellido;
-  if (bio !== undefined) upd.bio = bio;
-  if (preferencias !== undefined) upd.preferencias = preferencias;
-  if (foto_perfil !== undefined) upd.foto_perfil = foto_perfil;
-
-  const { error } = await supabase.from('usuarios').update(upd).eq('id', req.user.id);
-  if (error) {
-    console.error('Error updating profile:', error);
-    return res.status(500).json({ error: 'Error al actualizar perfil' });
-  }
+  await supabase.from('usuarios').update({ nombre, apellido, bio, preferencias, foto_perfil }).eq('id', req.user.id);
   res.json({ mensaje: 'Perfil actualizado' });
 });
 
-// Subir avatar (base64)
-app.post('/api/auth/avatar', authMW, async (req, res) => {
-  const { avatarBase64 } = req.body;
-  if (!avatarBase64) return res.status(400).json({ error: 'Imagen requerida' });
-  const { error } = await supabase.from('usuarios').update({ foto_perfil: avatarBase64 }).eq('id', req.user.id);
-  if (error) return res.status(500).json({ error: 'Error al actualizar avatar' });
-  res.json({ avatarUrl: avatarBase64 });
+app.get('/api/users/:id/profile', async (req, res) => {
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id, username, nombre, apellido, bio, foto_perfil, es_premium, rol, puntos, fecha_registro')
+    .eq('id', req.params.id)
+    .maybeSingle();
+    
+  if (error || !data) return res.status(404).json({ error: 'No encontrado' });
+  res.json(data);
 });
 
-app.get('/api/users/:username', optAuth, async (req, res) => {
-  const { data: u } = await supabase.from('usuarios')
-    .select('id,username,nombre,apellido,rol,es_premium,bio,foto_perfil,puntos,fecha_registro')
-    .eq('username', req.params.username).maybeSingle();
-  if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
-  const { data: recetas } = await supabase.from('recetas')
-    .select('id,titulo,imagen,likes,es_premium,fecha')
-    .eq('autor', u.username).order('fecha', { ascending: false });
-  const totalLikes = (recetas || []).reduce((s, r) => s + (r.likes || 0), 0);
-  res.json({ ...u, recetas: recetas || [], totalLikes });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  PUNTOS Y CANJE PREMIUM - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-app.get('/api/users/me/activity', authMW, async (req, res) => {
-  try {
-    const [likes, favorites, comments, recipes, points] = await Promise.all([
-      supabase.from('likes').select('*, receta:receta_id(titulo)').eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(10),
-      supabase.from('favoritos').select('*, receta:receta_id(titulo)').eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(10),
-      supabase.from('comentarios').select('*, receta:receta_id(titulo)').eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(10),
-      supabase.from('recetas').select('*').eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(10),
-      supabase.from('puntos_log').select('*').eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(10)
-    ]);
-
-    const activity = [
-      ...(likes.data || []).map(l => ({ tipo: 'like', fecha: l.fecha, texto: `Diste like a "${l.receta?.titulo || 'Receta'}"`, id: l.receta_id })),
-      ...(favorites.data || []).map(f => ({ tipo: 'favorito', fecha: f.fecha, texto: `Añadiste "${f.receta?.titulo || 'Receta'}" a favoritos`, id: f.receta_id })),
-      ...(comments.data || []).map(c => ({ tipo: 'comentario', fecha: c.fecha, texto: `Comentaste en "${c.receta?.titulo || 'Receta'}": "${c.texto.substring(0, 30)}..."`, id: c.receta_id })),
-      ...(recipes.data || []).map(r => ({ tipo: 'receta', fecha: r.fecha, texto: `Publicaste la receta "${r.titulo}"`, id: r.id })),
-      ...(points.data || []).filter(p => p.puntos !== 0).map(p => ({ tipo: 'punto', fecha: p.fecha, texto: `${p.puntos > 0 ? 'Ganaste' : 'Canjeaste'} ${Math.abs(p.puntos)} puntos: ${p.descripcion}` }))
-    ];
-
-    activity.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-    res.json(activity.slice(0, 30));
-  } catch (error) {
-    console.error('Activity error:', error);
-    res.status(500).json({ error: 'Error al cargar actividad' });
-  }
-});
-
-app.get('/api/users/me/puntos', authMW, async (req, res) => {
-  const { data: logs } = await supabase.from('puntos_log')
-    .select('*').eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(20);
-  res.json({ puntos: req.user.puntos || 0, historial: logs || [] });
-});
-
-app.post('/api/users/me/canjear-premium', authMW, async (req, res) => {
-  const { dias } = req.body;
-  const costos = { 7: COSTO_PREMIUM_7D, 30: COSTO_PREMIUM_30D, 90: COSTO_PREMIUM_90D };
-  const costo = costos[dias];
-  if (!costo) return res.status(400).json({ error: 'Opción inválida. Elige 7, 30 o 90 días.' });
-  const puntosActuales = req.user.puntos || 0;
-  if (puntosActuales < costo)
-    return res.status(400).json({ error: `Necesitas ${costo} puntos. Tienes ${puntosActuales}.` });
-  const hasta = new Date();
-  if (req.user.es_premium && req.user.premium_hasta && new Date(req.user.premium_hasta) > hasta)
-    hasta.setTime(new Date(req.user.premium_hasta).getTime());
-  hasta.setDate(hasta.getDate() + dias);
-  await supabase.from('usuarios').update({
-    puntos: puntosActuales - costo, es_premium: true, rol: 'premium',
-    premium_hasta: hasta.toISOString()
-  }).eq('id', req.user.id);
-  await supabase.from('puntos_log').insert({
-    usuario_id: req.user.id, accion: 'canjear',
-    puntos: -costo, descripcion: `${dias} días Premium`,
-    fecha: new Date().toISOString()
-  });
-  res.json({ mensaje: `✅ ¡${dias} días Premium activados!`, premiumHasta: hasta, puntosRestantes: puntosActuales - costo });
-});
-
+// ── ETIQUETAS ────────────────────────────────────────────────
 app.get('/api/tags', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('recetas').select('etiquetas');
-    if (error) throw error;
-    
-    const allTags = new Set();
-    // Agregar etiquetas fijas por defecto
-    ['fitness', 'vegetariano', 'vegano', 'sin gluten', 'keto', 'alto proteina', 'mexicana', 'postre'].forEach(t => allTags.add(t));
-    
-    data.forEach(r => {
-      if (Array.isArray(r.etiquetas)) {
-        r.etiquetas.forEach(t => allTags.add(t.toLowerCase().trim()));
-      }
+    const { data } = await supabase.from('recetas').select('etiquetas');
+    const allTags = new Set(['fitness', 'vegetariano', 'vegano', 'sin gluten', 'keto', 'mexicana', 'postre']);
+    data?.forEach(r => {
+      if (Array.isArray(r.etiquetas)) r.etiquetas.forEach(t => allTags.add(t.toLowerCase().trim()));
     });
-    
     res.json(Array.from(allTags).sort());
-  } catch (error) {
-    console.error('API Error tags:', error);
-    res.status(500).json({ error: 'Error al obtener etiquetas' });
-  }
+  } catch (e) { res.status(500).json({ error: 'Error etiquetas' }); }
 });
 
-app.get('/api/recipes', async (req, res) => {
-  try {
-    const { q, orden, limit } = req.query;
-    let query = supabase.from('recetas').select('*');
-
-    if (q) {
-      query = query.or(`titulo.ilike.%${q}%,ingredientes.ilike.%${q}%`);
-    }
-
-    if (orden === 'likes') {
-      query = query.order('likes', { ascending: false });
-    } else {
-      query = query.order('id', { ascending: false });
-    }
-
-    if (limit) {
-      query = query.limit(parseInt(limit));
-    } else {
-      query = query.limit(50);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    res.json(data || []);
-  } catch (error) {
-    console.error('API Error recipes:', error);
-    res.status(500).json({ error: 'Error al obtener recetas' });
-  }
+// ── RECETAS ──────────────────────────────────────────────────
+app.get('/api/users/me/recipes', authMW, async (req, res) => {
+  const { data, error } = await supabase.from('recetas').select('*').eq('usuario_id', req.user.id).order('fecha', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
 });
 
+app.get('/api/users/:id/recipes', async (req, res) => {
+  const { data, error } = await supabase.from('recetas').select('*').eq('usuario_id', req.params.id).order('fecha', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+app.get('/api/recipes', optAuth, async (req, res) => {
+  const { q, orden, filter, maxPrecio, maxTiempo } = req.query;
+  let query = supabase.from('recetas').select('*');
+  
+  if (q) query = query.or(`titulo.ilike.%${q}%,ingredientes.ilike.%${q}%`);
+  
+  // Sincronizar con home.js: orden=likes o filter=populares
+  if (orden === 'likes' || filter === 'populares') {
+    query = query.order('likes', { ascending: false });
+  } else {
+    query = query.order('id', { ascending: false });
+  }
+
+  if (maxPrecio) query = query.lte('precio_numerico', parseInt(maxPrecio));
+  if (maxTiempo) query = query.lte('tiempo_numerico', parseInt(maxTiempo));
+
+  const { data, error } = await query.limit(50);
+  if (error) {
+    console.error('Recipes Query Error:', error);
+    return res.status(500).json({ error: 'Error al obtener recetas' });
+  }
+  res.json(data || []);
+});
 
 app.get('/api/recipes/:id', optAuth, async (req, res) => {
-  const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: 'ID invÃ¡lido' });
-
-  const { data: r, error } = await supabase.from('recetas').select('*').eq('id', id).maybeSingle();
-  if (error || !r) return res.status(404).json({ error: 'Receta no encontrada' });
-
-  // Control de acceso para recetas Premium
-  const esPremiumUser = req.user?.es_premium || req.user?.rol === 'premium';
-  if (r.es_premium && !esPremiumUser) {
-    return res.status(403).json({
-      error: 'Esta receta es exclusiva para usuarios Premium 👑',
-      isPremiumFeature: true,
-      receta: {
-        id: r.id,
-        titulo: r.titulo,
-        imagen: r.imagen,
-        es_premium: true,
-        autor: r.autor || 'Anónimo'
-      }
-    });
+  const { data: recipe, error } = await supabase.from('recetas').select('*').eq('id', req.params.id).maybeSingle();
+  if (error || !recipe) return res.status(404).json({ error: 'Receta no encontrada' });
+  
+  // Protección Premium
+  if (recipe.es_premium) {
+    if (!req.user || (!req.user.es_premium && req.user.rol !== 'premium' && req.user.rol !== 'admin')) {
+      return res.status(403).json({ error: 'Exclusivo para Premium' });
+    }
   }
-
-  let liked = false, favorito = false;
-  if (req.userId) {
-    const [{ data: lk }, { data: fv }] = await Promise.all([
-      supabase.from('likes').select('id').eq('receta_id', id).eq('usuario_id', req.userId).maybeSingle(),
-      supabase.from('favoritos').select('id').eq('receta_id', id).eq('usuario_id', req.userId).maybeSingle()
-    ]);
-    liked = !!lk; favorito = !!fv;
-
-    // Registrar vista
-    await otorgarPuntos(req.userId, 'ver_receta', `Vista receta ${id}`);
-  }
-
-  // Obtener rol del autor
-  let autorRol = 'free';
-  if (r.usuario_id) {
-    const { data: userData } = await supabase.from('usuarios').select('rol').eq('id', r.usuario_id).maybeSingle();
-    autorRol = userData?.rol || 'free';
-  }
-
-  res.json({
-    ...r,
-    autor: r.autor || 'AnÃ³nimo',
-    autorRol: autorRol,
-    usuarioLike: liked,
-    esFavorito: favorito
-  });
+  res.json(recipe);
 });
 
-// FIX: POST receta sin usuario_id (evita error UUID)
 app.post('/api/recipes', authMW, async (req, res) => {
-  const {
-    titulo, ingredientes, pasos, precio, precioNumerico,
-    tiempo, tiempoNumerico, imagen, videoUrl, videoYoutube,
-    esPremium, etiquetas
-  } = req.body;
-
-  if (!titulo || !ingredientes || !pasos)
-    return res.status(400).json({ error: 'TÃ­tulo, ingredientes y pasos son obligatorios' });
-
-  // Control de video para usuarios Premium
-  const esPremiumUser = req.user.es_premium || req.user.rol === 'premium';
-  const hasVideo = videoUrl || videoYoutube;
-
-  if (hasVideo && !esPremiumUser) {
-    return res.status(403).json({ error: 'Solo usuarios Premium pueden incluir videos en sus recetas 👑' });
-  }
-
-  // Construir objeto sin usuario_id (columna UUID incompatible)
-  const recetaData = {
-    titulo: titulo.trim(),
-    ingredientes: ingredientes.trim(),
-    pasos: pasos.trim(),
-    precio: precio || '',
-    precio_numerico: parseFloat(String(precio).replace(/[^0-9.]/g, '')) || precioNumerico || 0,
-    tiempo: tiempo || '',
-    tiempo_numerico: parseInt(String(tiempo).replace(/[^0-9]/g, '')) || tiempoNumerico || 0,
-    imagen: imagen || null,
-    video_url: esPremiumUser ? (videoUrl || null) : null,
-    video_youtube: esPremiumUser ? (videoYoutube || null) : null,
-    es_premium: esPremiumUser ? (esPremium || false) : false,
-    etiquetas: etiquetas || [],
-    autor: req.user.username,
-    usuario_id: req.user.id,
-    likes: 0,
-    fecha: new Date().toISOString()
-  };
-
-  const { data, error } = await supabase.from('recetas').insert(recetaData).select().maybeSingle();
-  if (error) {
-    console.error('Error inserting recipe:', error);
-    return res.status(500).json({ error: 'Error al crear receta: ' + error.message });
-  }
-
-  const puntosAOtorgar = esPremium ? 30 : 20;
-  await otorgarPuntos(req.user.id, 'subir_receta', `Publicaste una receta ${esPremium ? 'Premium' : 'Normal'}: ${titulo}`);
-
-  // Bono primera receta
-  const { count } = await supabase.from('recetas').select('id', { count: 'exact', head: true }).eq('autor', req.user.username);
-  if (count === 1) {
-    try {
-      const { data: pu } = await supabase.from('usuarios').select('puntos').eq('id', req.user.id).single();
-      await supabase.from('usuarios').update({ puntos: (pu?.puntos || 0) + 50 }).eq('id', req.user.id);
-      await supabase.from('puntos_log').insert({
-        usuario_id: req.user.id, accion: 'bono_primera_receta', puntos: 50,
-        descripcion: 'ðŸŽ‰ Â¡Primera receta publicada!', fecha: new Date().toISOString()
-      });
-    } catch (e) { console.warn('bono primera receta warn:', e.message); }
-  }
-
+  const receta = { ...req.body, autor: req.user.username, usuario_id: req.user.id, fecha: new Date().toISOString(), likes: 0 };
+  const { data } = await supabase.from('recetas').insert(receta).select().maybeSingle();
+  await otorgarPuntos(req.user.id, 'subir_receta', `Receta: ${req.body.titulo}`);
   res.json(data);
 });
 
 app.delete('/api/recipes/:id', authMW, async (req, res) => {
-  const id = parseInt(req.params.id);
-  const { data: r } = await supabase.from('recetas').select('autor').eq('id', id).maybeSingle();
-  if (!r) return res.status(404).json({ error: 'No encontrada' });
-  if (r.autor !== req.user.username) return res.status(403).json({ error: 'Sin permiso' });
-  await supabase.from('recetas').delete().eq('id', id);
-  res.json({ mensaje: 'Receta eliminada' });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  LIKES - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-app.post('/api/recipes/:id/like', authMW, async (req, res) => {
-  const recipeId = parseInt(req.params.id);
-  const { data: ex } = await supabase.from('likes')
-    .select('id').eq('receta_id', recipeId).eq('usuario_id', req.user.id).maybeSingle();
-  if (ex) return res.status(400).json({ error: 'Ya diste like' });
-
-  await supabase.from('likes').insert({ receta_id: recipeId, usuario_id: req.user.id, fecha: new Date().toISOString() });
-
-  const { data: r } = await supabase.from('recetas').select('likes,autor').eq('id', recipeId).single();
-  const newLikes = (r?.likes || 0) + 1;
-  await supabase.from('recetas').update({ likes: newLikes }).eq('id', recipeId);
-
-  await otorgarPuntos(req.user.id, 'like', `Like a receta ${recipeId}`);
-
-  // Dar puntos al autor de la receta
-  if (r?.autor && r.autor !== req.user.username) {
-    const { data: autorUser } = await supabase.from('usuarios').select('id').eq('username', r.autor).maybeSingle();
-    if (autorUser) {
-      await otorgarPuntos(autorUser.id, 'ser_likeado', `Like recibido receta ${recipeId}`);
-      // NotificaciÃ³n
-      await supabase.from('notificaciones').insert({
-        usuario_id: autorUser.id,
-        tipo: 'like_recibido',
-        leida: false,
-        mensaje: `@${req.user.username} le dio â ¤ï¸  a tu receta: ${r.titulo}`,
-        metadata: { receta_id: recipeId }
-      });
-    }
+  const { data } = await supabase.from('recetas').select('autor').eq('id', req.params.id).maybeSingle();
+  if (data?.autor === req.user.username) {
+    await supabase.from('recetas').delete().eq('id', req.params.id);
+    return res.json({ mensaje: 'Eliminado' });
   }
-
-  res.json({ likes: newLikes });
+  res.status(403).json({ error: 'Sin permiso' });
 });
 
-app.delete('/api/recipes/:id/like', authMW, async (req, res) => {
-  const recipeId = parseInt(req.params.id);
-  await supabase.from('likes').delete().eq('receta_id', recipeId).eq('usuario_id', req.user.id);
-  const { data: r } = await supabase.from('recetas').select('likes').eq('id', recipeId).single();
-  const newLikes = Math.max((r?.likes || 1) - 1, 0);
-  await supabase.from('recetas').update({ likes: newLikes }).eq('id', recipeId);
-  res.json({ likes: newLikes });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  COMENTARIOS - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-app.get('/api/recipes/:id/comments', optAuth, async (req, res) => {
-  // Solo usuarios Premium o con permiso pueden ver comentarios
-  if (!tienePermiso(req.user, 'comentarios')) {
-    return res.status(403).json({ error: 'Solo usuarios Premium pueden ver comentarios 👑', isPremiumFeature: true });
-  }
-
-  const { data } = await supabase.from('comentarios')
-    .select('*')
-    .eq('receta_id', parseInt(req.params.id))
-    .order('fecha', { ascending: true });
-
-  // Enriquecer con info del usuario
-  const enriched = await Promise.all((data || []).map(async c => {
-    const { data: u } = await supabase.from('usuarios')
-      .select('id,username,foto_perfil,rol').eq('id', c.usuario_id).maybeSingle();
-    return { ...c, usuario: u || { id: c.usuario_id, username: 'Usuario', foto_perfil: null, rol: 'free' } };
+// ── COMENTARIOS ──────────────────────────────────────────────
+app.get('/api/recipes/:id/comments', async (req, res) => {
+  // Unir con la tabla usuarios para obtener username y foto
+  const { data, error } = await supabase
+    .from('comentarios')
+    .select('*, usuarios(username, nombre, foto_perfil, es_premium, rol)')
+    .eq('receta_id', req.params.id)
+    .order('fecha', { ascending: false });
+    
+  if (error) return res.status(500).json({ error: error.message });
+  
+  // Transformar para que el frontend reciba usuario como objeto
+  const transformado = (data || []).map(c => ({
+    ...c,
+    usuario: { ...c.usuarios, id: c.usuario_id } // Incluir ID explícitamente
   }));
-
-  res.json(enriched);
+  
+  res.json(transformado);
 });
 
 app.post('/api/recipes/:id/comments', authMW, async (req, res) => {
-  const { texto, padre_id } = req.body;
+  const { texto, contenido } = req.body; // Soporta ambos nombres de campo
+  const finalContenido = texto || contenido;
+  if (!finalContenido) return res.status(400).json({ error: 'Sin contenido' });
+  
+  // Verificar si es premium si se requiere
+  // const esPrem = req.user.es_premium || req.user.rol === 'premium' || req.user.rol === 'admin';
+  // if (!esPrem) return res.status(403).json({ error: 'Exclusivo para Premium' });
 
-  // Lógica de permisos: Solo Premium o con permiso puede comentar o responder
-  if (!tienePermiso(req.user, 'comentarios')) {
-    return res.status(403).json({ error: '🔒 Opción bloqueada. ¡Cámbiate a Premium para participar!' });
-  }
-
-  if (!texto?.trim()) return res.status(400).json({ error: 'Comentario vacío' });
-  if (texto.length > 500) return res.status(400).json({ error: 'Máximo 500 caracteres' });
-
-  const { data, error } = await supabase.from('comentarios').insert({
-    receta_id: parseInt(req.params.id),
+  const comentario = {
+    receta_id: req.params.id,
     usuario_id: req.user.id,
-    texto: texto.trim(),
-    padre_id: padre_id || null,
+    autor: req.user.username,
+    contenido: finalContenido,
+    texto: finalContenido, // Para compatibilidad
     fecha: new Date().toISOString()
-  }).select().maybeSingle();
-
-  if (error) { console.error('comentario error:', error); return res.status(500).json({ error: 'Error al publicar comentario' }); }
-
-  await otorgarPuntos(req.user.id, 'comentar', `Comentario en receta ${req.params.id}`);
-
-  // NotificaciÃ³n para el autor del comentario original si es respuesta
-  if (padre_id) {
-    try {
-      const { data: padre } = await supabase.from('comentarios').select('usuario_id').eq('id', padre_id).single();
-      if (padre && padre.usuario_id !== req.user.id) {
-        await supabase.from('notificaciones').insert({
-          usuario_id: padre.usuario_id,
-          tipo: 'respuesta_comentario',
-          leida: false,
-          mensaje: `@${req.user.username} respondiÃ³ a tu comentario`,
-          metadata: { receta_id: req.params.id, comentario_id: data.id }
-        });
-      }
-    } catch (e) { console.warn('Notif error:', e); }
-  }
-
-  // NotificaciÃ³n para el autor de la receta
-  try {
-    const { data: receta } = await supabase.from('recetas').select('usuario_id,titulo').eq('id', req.params.id).single();
-    if (receta && receta.usuario_id && receta.usuario_id !== req.user.id) {
-      await supabase.from('notificaciones').insert({
-        usuario_id: receta.usuario_id,
-        tipo: 'nuevo_comentario',
-        leida: false,
-        mensaje: `@${req.user.username} comentÃ³ en tu receta: ${receta.titulo}`,
-        metadata: { receta_id: req.params.id, comentario_id: data.id }
-      });
-    }
-  } catch (e) { console.warn('Notif error receta:', e); }
-
-  res.json({ ...data, usuario: { id: req.user.id, username: req.user.username, foto_perfil: req.user.foto_perfil, rol: req.user.rol } });
-});
-
-app.delete('/api/comments/:id', authMW, async (req, res) => {
-  const { data } = await supabase.from('comentarios').select('usuario_id, texto').eq('id', req.params.id).maybeSingle();
-  if (!data) return res.status(404).json({ error: 'No encontrado' });
-  if (data.usuario_id !== req.user.id) return res.status(403).json({ error: 'Sin permiso' });
-
-  // En lugar de borrar la fila (que rompería el hilo de respuestas), 
-  // actualizamos el texto a "eliminado"
-  await supabase.from('comentarios').update({ texto: '🚫 [Comentario eliminado]' }).eq('id', req.params.id);
-  res.json({ mensaje: 'Eliminado', eliminado: true });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  FAVORITOS - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-// FIX: Favoritos con dos queries separadas (mÃ¡s confiable que join)
-app.get('/api/users/me/favorites', authMW, async (req, res) => {
-  const { data: favs } = await supabase.from('favoritos')
-    .select('receta_id')
-    .eq('usuario_id', req.user.id)
-    .order('fecha', { ascending: false });
-
-  if (!favs || !favs.length) return res.json([]);
-
-  const ids = favs.map(f => f.receta_id).filter(Boolean);
-  if (!ids.length) return res.json([]);
-
-  const { data: recetas } = await supabase.from('recetas')
-    .select('id,titulo,imagen,likes,precio,tiempo,es_premium,autor,fecha')
-    .in('id', ids);
-
-  // Preservar orden de favoritos
-  const map = {};
-  (recetas || []).forEach(r => { map[r.id] = r; });
-  res.json(ids.map(id => map[id]).filter(Boolean));
-});
-
-app.get('/api/users/me/favorites/:recipeId', authMW, async (req, res) => {
-  const { data } = await supabase.from('favoritos')
-    .select('id').eq('receta_id', parseInt(req.params.recipeId)).eq('usuario_id', req.user.id).maybeSingle();
-  res.json({ favorito: !!data });
-});
-
-app.post('/api/users/me/favorites/:recipeId', authMW, async (req, res) => {
-  const rId = parseInt(req.params.recipeId);
-  const { data: ex } = await supabase.from('favoritos')
-    .select('id').eq('receta_id', rId).eq('usuario_id', req.user.id).maybeSingle();
-  if (ex) return res.status(400).json({ error: 'Ya en favoritos' });
-  await supabase.from('favoritos').insert({ receta_id: rId, usuario_id: req.user.id, fecha: new Date().toISOString() });
-  await otorgarPuntos(req.user.id, 'favorito', `Favorito receta ${rId}`);
-  res.json({ mensaje: 'Agregado a favoritos' });
-});
-
-app.delete('/api/users/me/favorites/:recipeId', authMW, async (req, res) => {
-  await supabase.from('favoritos')
-    .delete().eq('receta_id', parseInt(req.params.recipeId)).eq('usuario_id', req.user.id);
-  res.json({ mensaje: 'Eliminado de favoritos' });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  HISTORIAL (solo Premium) - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-app.get('/api/users/me/history', authMW, async (req, res) => {
-  // Historial disponible para todos los usuarios
-
-  const { data: hist } = await supabase.from('historial')
-    .select('receta_id, fecha').eq('usuario_id', req.user.id)
-    .order('fecha', { ascending: false }).limit(30);
-
-  if (!hist || !hist.length) return res.json([]);
-
-  const ids = hist.map(h => h.receta_id).filter(Boolean);
-  const { data: recetas } = await supabase.from('recetas')
-    .select('id,titulo,imagen,likes,precio,tiempo,fecha').in('id', ids);
-
-  const map = {};
-  (recetas || []).forEach(r => { map[r.id] = r; });
-  res.json(ids.map(id => map[id]).filter(Boolean));
-});
-
-app.post('/api/users/me/history', authMW, async (req, res) => {
-  const { recipeId } = req.body;
-  if (!recipeId) return res.status(400).json({ error: 'recipeId requerido' });
-
-  await otorgarPuntos(req.user.id, 'ver_receta', `Vista receta ${recipeId}`);
-
-  // Guardar en historial para todos los usuarios
-
-  const { data: ex } = await supabase.from('historial')
-    .select('id').eq('receta_id', recipeId).eq('usuario_id', req.user.id).maybeSingle();
-  if (ex) {
-    await supabase.from('historial').update({ fecha: new Date().toISOString() }).eq('id', ex.id);
-  } else {
-    await supabase.from('historial').insert({ receta_id: recipeId, usuario_id: req.user.id, fecha: new Date().toISOString() });
-  }
-  res.json({ mensaje: 'OK' });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  RECETAS DEL USUARIO - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-// FIX: Usar autor (text) en vez de usuario_id (UUID incompatible)
-app.get('/api/users/me/recipes', authMW, async (req, res) => {
-  const { data } = await supabase.from('recetas')
-    .select('*').eq('autor', req.user.username).order('fecha', { ascending: false });
-  res.json(data || []);
-});
-
-app.get('/api/users/me/notifications', authMW, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('notificaciones')
-      .select('*')
-      .eq('usuario_id', req.user.id)
-      .eq('leida', false)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    res.json(data || []);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar notificaciones' });
-  }
-});
-
-// Endpoint duplicado de historial eliminado (el correcto está en la sección de HISTORIAL arriba)
-
-// Planificador semanal
-app.get('/api/users/me/planner', authMW, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('planes_semanales')
-      .select('*')
-      .eq('usuario_id', req.user.id)
-      .maybeSingle();
-
-    if (error) throw error;
-    res.json(data || { plan: null });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar planificador' });
-  }
-});
-
-app.post('/api/users/me/planner', authMW, async (req, res) => {
-  try {
-    const { plan } = req.body;
-    const { error } = await supabase
-      .from('planes_semanales')
-      .upsert({
-        usuario_id: req.user.id,
-        plan: plan,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'usuario_id' });
-
-    if (error) throw error;
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al guardar planificador' });
-  }
-});
-
-// Puntos del usuario
-app.get('/api/users/me/points', authMW, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('puntos')
-      .eq('id', req.user.id)
-      .maybeSingle();
-
-    if (error) throw error;
-    res.json({ puntos: data?.puntos || 0 });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cargar puntos' });
-  }
-});
-
-app.post('/api/users/me/redeem', authMW, async (req, res) => {
-  const { rewardId, points, days, type } = req.body;
-  if (!rewardId || points === undefined) return res.status(400).json({ error: 'Faltan datos' });
-
-  const currentPoints = req.user.puntos || 0;
-  if (currentPoints < points) return res.status(400).json({ error: 'Puntos insuficientes' });
-
-  try {
-    const newPoints = currentPoints - points;
-    const updates = { puntos: newPoints };
-
-    if (days > 0 && !type) {
-      let premiumHasta = new Date();
-      if (req.user.premium_hasta && new Date(req.user.premium_hasta) > new Date()) {
-        premiumHasta = new Date(req.user.premium_hasta);
-      }
-      premiumHasta.setDate(premiumHasta.getDate() + days);
-      updates.es_premium = true;
-      updates.rol = 'premium';
-      updates.premium_hasta = premiumHasta.toISOString();
-    } else if (type) {
-      // Cualquier otro tipo (permiso_comentarios, videos, etc.) se guarda como tag
-      const expira = days > 0 
-        ? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
-        : 'PERMANENT';
-      const tag = `${type.toUpperCase()}:${expira}`;
-      
-      const currentPrefs = Array.isArray(req.user.preferencias) ? req.user.preferencias : [];
-      // Evitar duplicados del mismo tipo (reemplazar el anterior si existe)
-      const filteredPrefs = currentPrefs.filter(p => typeof p === 'string' && !p.startsWith(`${type.toUpperCase()}:`));
-      updates.preferencias = [...filteredPrefs, tag];
-    }
-
-    const { error: upErr } = await supabase.from('usuarios').update(updates).eq('id', req.user.id);
-    if (upErr) throw upErr;
-
-    // Log
-    await supabase.from('puntos_log').insert({
-      usuario_id: req.user.id,
-      accion: 'canje',
-      puntos: -points,
-      descripcion: `Canje: ${rewardId}`,
-      fecha: new Date().toISOString()
-    });
-
-    res.json({ 
-      success: true, 
-      points: newPoints, 
-      message: 'Canje exitoso',
-      es_premium: updates.es_premium,
-      rol: updates.rol,
-      preferencias: updates.preferencias
-    });
-  } catch (error) {
-    console.error('Redeem error:', error);
-    res.status(500).json({ error: 'Error al procesar el canje' });
-  }
-});
-
-app.post('/api/users/me/notifications/read', authMW, async (req, res) => {
-  await supabase.from('notificaciones').update({ leida: true }).eq('usuario_id', req.user.id);
-  res.json({ mensaje: 'Notificaciones leÃ­das' });
-});
-
-app.get('/api/users/:id/profile', async (req, res) => {
-  const { id } = req.params;
-  const { data, error } = await supabase.from('usuarios')
-    .select('id, username, nombre, apellido, bio, foto_perfil, rol, es_premium, puntos, fecha_registro')
-    .eq('id', id).maybeSingle();
-  if (error || !data) return res.status(404).json({ error: 'Usuario no encontrado' });
+  };
+  const { data } = await supabase.from('comentarios').insert(comentario).select().maybeSingle();
   res.json(data);
 });
 
-app.get('/api/users/:id/recipes', async (req, res) => {
-  const { id } = req.params;
-  const { data: user } = await supabase.from('usuarios').select('username').eq('id', id).maybeSingle();
-  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-  const { data } = await supabase.from('recetas')
-    .select('*').eq('autor', user.username).order('fecha', { ascending: false });
-  res.json(data || []);
-});
-
-app.get('/api/users/me/activity', authMW, async (req, res) => {
-  const { data } = await supabase.from('puntos_log')
-    .select('*')
-    .eq('usuario_id', req.user.id)
-    .order('fecha', { ascending: false })
-    .limit(50);
-  res.json(data || []);
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  ACTIVIDAD RECIENTE (para comunidad) - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-app.get('/api/activity', optAuth, async (req, res) => {
-  // Solo usuarios Premium o con permiso pueden ver la actividad global (comentarios)
-  if (!tienePermiso(req.user, 'comentarios')) {
-    return res.status(403).json({ error: '🔒 Opción bloqueada. ¡Cámbiate a Premium para ver la actividad!', isPremiumFeature: true });
-  }
-
-  // Comentarios recientes de todos los usuarios
-  const { data: comentarios } = await supabase.from('comentarios')
-    .select('id, texto, fecha, receta_id, usuario_id')
-    .order('fecha', { ascending: false }).limit(30);
-
-  if (!comentarios || !comentarios.length) return res.json([]);
-
-  // Enriquecer con datos de usuario y receta
-  const userIds = [...new Set(comentarios.map(c => c.usuario_id))];
-  const recetaIds = [...new Set(comentarios.map(c => c.receta_id))];
-
-  const [{ data: users }, { data: recetas }] = await Promise.all([
-    supabase.from('usuarios').select('id,username,foto_perfil,es_premium').in('id', userIds),
-    supabase.from('recetas').select('id,titulo').in('id', recetaIds)
-  ]);
-
-  const userMap = {};
-  (users || []).forEach(u => { userMap[u.id] = u; });
-  const recetaMap = {};
-  (recetas || []).forEach(r => { recetaMap[r.id] = r; });
-
-  const enriched = comentarios.map(c => ({
-    ...c,
-    usuario: userMap[c.usuario_id] || { username: 'Usuario', foto_perfil: null, es_premium: false },
-    receta: recetaMap[c.receta_id] || { titulo: 'Receta eliminada' }
-  }));
-
-  res.json(enriched);
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  PLAN SEMANAL Y LISTA DE COMPRAS - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-// Eliminados endpoints duplicados de /api/users/me/plan
-
-// LISTA DE COMPRAS
-app.get('/api/users/me/shopping-list', authMW, async (req, res) => {
-  try {
-    const { data, error } = await supabase.from('lista_compras')
-      .select('items')
-      .eq('usuario_id', req.user.id)
-      .maybeSingle();
-    if (error) throw error;
-    res.json(data?.items || []);
-  } catch (err) {
-    console.error('Error shopping list:', err);
-    res.status(500).json({ error: 'Error al obtener lista de compras' });
-  }
-});
-
-app.post('/api/users/me/shopping-list', authMW, async (req, res) => {
-  const { items } = req.body;
-  try {
-    const { error } = await supabase.from('lista_compras')
-      .upsert({
-        usuario_id: req.user.id,
-        items: items || [],
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'usuario_id' });
-    if (error) throw error;
-    res.json({ mensaje: 'Lista de compras guardada' });
-  } catch (err) {
-    console.error('Error saving shopping list:', err);
-    res.status(500).json({ error: 'Error al guardar lista de compras' });
-  }
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-//  SERVIDOR - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-//  CHATBOT IA (solo Premium) - Formatear para que el frontend lo lea fácil
-// ────────────────────────────────────────────────────────────────────────────
-
-// Algoritmo de similitud coseno para matching de texto
-function tokenize(text) {
-  return String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\W+/).filter(w => w.length > 2);
-}
-
-function cosineSimilarity(tokensA, tokensB) {
-  const setA = new Set(tokensA);
-  const setB = new Set(tokensB);
-  const allTokens = new Set([...setA, ...setB]);
-  let dot = 0, magA = 0, magB = 0;
-  allTokens.forEach(t => {
-    const a = setA.has(t) ? 1 : 0;
-    const b = setB.has(t) ? 1 : 0;
-    dot += a * b;
-    magA += a * a;
-    magB += b * b;
+  app.delete('/api/comments/:id', authMW, async (req, res) => {
+    const { data: c } = await supabase.from('comentarios').select('usuario_id').eq('id', req.params.id).maybeSingle();
+    if (!c) return res.status(404).json({ error: 'No existe' });
+    if (c.usuario_id === req.user.id || req.user.rol === 'admin') {
+      await supabase.from('comentarios').delete().eq('id', req.params.id);
+      return res.json({ mensaje: 'Eliminado' });
+    }
+    res.status(403).json({ error: 'Sin permiso' });
   });
-  return magA && magB ? dot / (Math.sqrt(magA) * Math.sqrt(magB)) : 0;
+
+  app.post('/api/comments/:id/replies', authMW, async (req, res) => {
+    const { texto, contenido } = req.body;
+    const finalContenido = texto || contenido;
+    if (!finalContenido) return res.status(400).json({ error: 'Sin contenido' });
+    
+    const respuesta = {
+      receta_id: null, // Opcional si se saca de la base
+      usuario_id: req.user.id,
+      padre_id: req.params.id,
+      texto: finalContenido,
+      fecha: new Date().toISOString()
+    };
+    
+    // Obtener el receta_id del padre
+    const { data: padre } = await supabase.from('comentarios').select('receta_id').eq('id', req.params.id).single();
+    if (padre) respuesta.receta_id = padre.receta_id;
+
+    const { data, error } = await supabase.from('comentarios').insert(respuesta).select().maybeSingle();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
+
+  app.get('/api/activity', optAuth, async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from('comentarios')
+        .select('*, usuarios(username, foto_perfil, es_premium), recetas(titulo)')
+        .order('fecha', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      
+      const resData = (data || []).map(c => ({
+        ...c,
+        usuario: { ...c.usuarios, id: c.usuario_id },
+        receta_titulo: c.recetas?.titulo || 'Receta'
+      }));
+      
+      res.json(resData);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+// ── LIKES / FAVS / HISTORY ──────────────────────────────────
+app.post('/api/recipes/:id/like', authMW, async (req, res) => {
+  await supabase.from('likes').insert({ receta_id: req.params.id, usuario_id: req.user.id, fecha: new Date().toISOString() });
+  const { data: r } = await supabase.from('recetas').select('likes').eq('id', req.params.id).single();
+  await supabase.from('recetas').update({ likes: (r?.likes || 0) + 1 }).eq('id', req.params.id);
+  res.json({ likes: (r?.likes || 0) + 1 });
+});
+
+app.get('/api/users/me/favorites', authMW, async (req, res) => {
+  const { data: favs } = await supabase.from('favoritos').select('receta_id').eq('usuario_id', req.user.id);
+  if (!favs?.length) return res.json([]);
+  const { data } = await supabase.from('recetas').select('*').in('id', favs.map(f => f.receta_id));
+  res.json(data || []);
+});
+
+app.get('/api/users/me/history', authMW, async (req, res) => {
+  const { data: hist } = await supabase.from('historial').select('receta_id').eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(30);
+  if (!hist?.length) return res.json([]);
+  const { data } = await supabase.from('recetas').select('*').in('id', hist.map(h => h.receta_id));
+  res.json(data || []);
+});
+
+app.post('/api/users/me/history', authMW, async (req, res) => {
+  await supabase.from('historial').upsert({ receta_id: req.body.recipeId, usuario_id: req.user.id, fecha: new Date().toISOString() }, { onConflict: 'receta_id,usuario_id' });
+  res.json({ ok: true });
+});
+
+app.delete('/api/users/me/history/:recipeId', authMW, async (req, res) => {
+  await supabase.from('historial').delete().eq('usuario_id', req.user.id).eq('receta_id', req.params.recipeId);
+  res.json({ mensaje: 'Eliminado' });
+});
+
+// ── PLAN / SHOPPING ──────────────────────────────────────────
+app.get('/api/users/me/planner', authMW, async (req, res) => {
+  const { data } = await supabase.from('planes_semanales').select('plan').eq('usuario_id', req.user.id).maybeSingle();
+  res.json(data || { plan: {} });
+});
+
+app.post('/api/users/me/planner', authMW, async (req, res) => {
+  await supabase.from('usuarios').upsert({ usuario_id: req.user.id, plan: req.body.plan, updated_at: new Date().toISOString() }, { onConflict: 'usuario_id' });
+  res.json({ ok: true });
+});
+
+// ── STATS ──────────────────────────────────────────────────
+app.get('/api/users/me/stats', authMW, async (req, res) => {
+  try {
+    const { count: recipes } = await supabase.from('recetas').select('*', { count: 'exact', head: true }).eq('usuario_id', req.user.id);
+    const { count: favorites } = await supabase.from('favoritos').select('*', { count: 'exact', head: true }).eq('usuario_id', req.user.id);
+    const { data: likesData } = await supabase.from('recetas').select('likes').eq('usuario_id', req.user.id);
+    const likes = likesData?.reduce((acc, r) => acc + (r.likes || 0), 0) || 0;
+    
+    res.json({ recetas: recipes || 0, favoritos: favorites || 0, visitas: likes });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/users/:id/stats', async (req, res) => {
+  try {
+    const { count: recipes } = await supabase.from('recetas').select('*', { count: 'exact', head: true }).eq('usuario_id', req.params.id);
+    const { data: likesData } = await supabase.from('recetas').select('likes').eq('usuario_id', req.params.id);
+    const likes = likesData?.reduce((acc, r) => acc + (r.likes || 0), 0) || 0;
+    
+    res.json({ recetas: recipes || 0, visitas: likes });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── CHATBOT IA ──────────────────────────────────────────────
+function tokenize(t) { return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\W+/).filter(w => w.length > 2); }
+function cosineSimilarity(a, b) {
+  const sA = new Set(a), sB = new Set(b), all = new Set([...sA, ...sB]);
+  let dot = 0, mA = 0, mB = 0;
+  all.forEach(t => { const vA = sA.has(t)?1:0, vB = sB.has(t)?1:0; dot += vA*vB; mA += vA*vA; mB += vB*vB; });
+  return mA && mB ? dot / (Math.sqrt(mA)*Math.sqrt(mB)) : 0;
 }
 
-// Clasificador de intencion (NLU basado en reglas + keywords)
-function clasificarIntencion(mensaje) {
-  const m = mensaje.toLowerCase();
-  if (/recomienda|sugiere|que (cocin|prepar|hag)|quiero (cocinar|hacer|comer)|dame una receta/i.test(m)) return 'recomendar';
-  if (/semana|especial|mejor de la semana/i.test(m)) return 'receta_semana';
-  if (/ingrediente|tengo|con .*(pollo|arroz|huevo|carne|papa|frijol|pasta|queso|leche|tomate)/i.test(m)) return 'por_ingrediente';
-  if (/barato|economi|poco dinero|presupuesto/i.test(m)) return 'economica';
-  if (/rapid|facil|sencill|poco tiempo|minutos/i.test(m)) return 'rapida';
-  if (/saludable|dieta|vegano|vegetariano|light|fitness|keto|bajar de peso/i.test(m)) return 'saludable';
-  if (/popular|mejor|top|mas likeada/i.test(m)) return 'popular';
-  if (/planificador|compras|como (uso|funciona|hago)/i.test(m)) return 'ayuda_funcional';
-  if (/hola|buenos|buenas|hey|saludos/i.test(m)) return 'saludo';
-  if (/gracias|chido|genial|perfecto/i.test(m)) return 'agradecimiento';
-  if (/ayuda|que puedes|que haces|funciones/i.test(m)) return 'ayuda';
+function clasificarIntencion(m) {
+  const t = m.toLowerCase();
+  if (/crea.*plan|armar.*plan|hacer.*plan/i.test(t)) return 'crear_plan';
+  if (/familiar|familia|para todos/i.test(t)) return 'plan_familiar';
+  if (/dulce|postre|azucar/i.test(t)) return 'dulces';
+  if (/[0-9].*minuto|tiempo/i.test(t)) return 'tiempo_especifico';
+  if (/presupuesto.*[0-9]|precio.*[0-9]|dinero/i.test(t)) return 'presupuesto_especifico';
+  if (/recomienda|sugiere|que (cocin|prepar|hag)|quiero (cocinar|hacer|comer)/i.test(t)) return 'recomendar';
+  if (/ingrediente|tengo|con .*(pollo|arroz|huevo|carne|papa|frijol|pasta)/i.test(t)) return 'por_ingrediente';
+  if (/barato|economi|poco dinero/i.test(t)) return 'economica';
+  if (/rapid|facil|minutos/i.test(t)) return 'rapida';
+  if (/saludo|hola|hey/i.test(t)) return 'saludo';
   return 'buscar';
 }
 
 app.post('/api/chatbot', authMW, async (req, res) => {
-  console.log(`[Chatbot] Mensaje de @${req.user.username}: ${req.body.mensaje}`);
-  // Solo Premium
-  if (!req.user.es_premium && req.user.rol !== 'premium') {
-    return res.status(403).json({ error: 'El Chef IA es exclusivo para usuarios Premium' });
-  }
-
+  if (!req.user.es_premium && req.user.rol !== 'premium') return res.status(403).json({ error: 'Chef IA es Premium' });
   const { mensaje } = req.body;
-  if (!mensaje || !mensaje.trim()) return res.status(400).json({ error: 'Mensaje vacio' });
-
-  const intencion = clasificarIntencion(mensaje);
-  console.log(`[Chatbot] Intencion detectada: ${intencion}`);
-
-  if (intencion === 'saludo') {
-    return res.json({ respuesta: 'Hola ' + (req.user.nombre || req.user.username) + '! Soy tu Chef IA. Puedo recomendarte recetas, buscarte algo por ingredientes o sugerirte lo mas popular. Que se te antoja?', recetas: [] });
-  }
-  if (intencion === 'agradecimiento') {
-    return res.json({ respuesta: 'Con gusto! Si necesitas mas ideas, aqui estare!', recetas: [] });
-  }
-  if (intencion === 'ayuda') {
-    return res.json({ respuesta: 'Chef IA - Funciones:\n- "Recomiendame algo" = Receta aleatoria\n- "Tengo pollo y arroz" = Busco por ingredientes\n- "Algo barato" = Recetas economicas\n- "Algo rapido" = Recetas de menos de 20 min\n- "Lo mas popular" = Top recetas\n- "La receta de la semana" = Nuestra favorita', recetas: [] });
-  }
-  if (intencion === 'ayuda_funcional') {
-    return res.json({ respuesta: 'Puedes usar el **Planificador** para organizar tus comidas de la semana. Solo busca una receta y haz clic en "Al plan". Tu **Lista de Compras** se actualizará solita con los ingredientes necesarios. ¡Es genial!', recetas: [] });
-  }
+  const int = clasificarIntencion(mensaje);
+  
+  if (int === 'saludo') return res.json({ respuesta: '¡Hola! Soy tu Chef IA 👨‍🍳. ¿Quieres un plan familiar para el lunes, algo dulce o una comida de $50?', recetas: [] });
 
   try {
-    let query = supabase.from('recetas').select('id, titulo, ingredientes, precio, precio_numerico, tiempo, tiempo_numerico, imagen, likes, etiquetas');
+    let query = supabase.from('recetas').select('*');
+    if (int === 'economica') query = query.lte('precio_numerico', 40);
+    else if (int === 'rapida') query = query.lte('tiempo_numerico', 25);
+    else if (int === 'dulces') query = query.ilike('titulo', '%dulce%');
+    else if (int === 'plan_familiar') query = query.ilike('titulo', '%familiar%');
     
-    if (intencion === 'receta_semana' || intencion === 'popular') query = query.order('likes', { ascending: false });
-    else if (intencion === 'economica') query = query.lte('precio_numerico', 35).order('precio_numerico', { ascending: true });
-    else if (intencion === 'rapida') query = query.lte('tiempo_numerico', 20).order('tiempo_numerico', { ascending: true });
-    else query = query.order('likes', { ascending: false });
-
-    query = query.limit(50);
-    const { data: recetas, error: queryError } = await query;
-
-    if (queryError) throw queryError;
-
-    if (!recetas || recetas.length === 0) {
-      return res.json({ respuesta: 'No encontre recetas en este momento.', recetas: [] });
+    const match = mensaje.match(/([0-9]+)/);
+    if (match) {
+      if (int === 'tiempo_especifico' || int === 'crear_plan') query = query.lte('tiempo_numerico', parseInt(match[1]));
+      if (int === 'presupuesto_especifico') query = query.lte('precio_numerico', parseInt(match[1]));
     }
 
-    let resultados = recetas;
-    let respuestaTexto = '';
+    const { data: results } = await query.limit(30);
+    let final = (results || []).sort(() => 0.5 - Math.random()).slice(0, 5);
 
-    if (intencion === 'por_ingrediente' || intencion === 'buscar') {
-      const queryTokens = tokenize(mensaje);
-      const scored = recetas.map(r => {
-        const recipeTokens = tokenize((r.titulo || '') + ' ' + (r.ingredientes || '') + ' ' + JSON.stringify(r.etiquetas || []));
-        return { ...r, score: cosineSimilarity(queryTokens, recipeTokens) };
-      }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
-      resultados = scored.slice(0, 5);
-      if (resultados.length === 0) {
-        resultados = recetas.filter(r => {
-          const text = ((r.titulo || '') + ' ' + (r.ingredientes || '')).toLowerCase();
-          return queryTokens.some(p => text.includes(p));
-        }).slice(0, 5);
-      }
+    let resp = 'Aquí tienes unas opciones:';
+    if (int === 'crear_plan' && final.length) {
+      const dia = (mensaje.match(/lunes|martes|miercoles|jueves|viernes|sabado|domingo/i) || ['lunes'])[0].toLowerCase();
+      const rec = final[0];
+      const { data: p } = await supabase.from('planes_semanales').select('plan').eq('usuario_id', req.user.id).maybeSingle();
+      const nP = p?.plan || {};
+      nP[dia] = { id: rec.id, titulo: rec.titulo, imagen: rec.imagen };
+      await supabase.from('planes_semanales').upsert({ usuario_id: req.user.id, plan: nP, updated_at: new Date().toISOString() }, { onConflict: 'usuario_id' });
+      resp = `✅ He añadido **${rec.titulo}** a tu plan para el **${dia}**.`;
     }
 
-    if (intencion === 'recomendar') { resultados = recetas.sort(() => Math.random() - 0.5).slice(0, 3); respuestaTexto = 'Te recomiendo estas recetas!'; }
-    else if (intencion === 'receta_semana') { resultados = [recetas[0]]; respuestaTexto = 'Nuestra receta estrella de esta semana es:'; }
-    else if (intencion === 'economica') { resultados = resultados.slice(0, 5); respuestaTexto = 'Las mas economicas:'; }
-    else if (intencion === 'rapida') { resultados = resultados.slice(0, 5); respuestaTexto = 'Rapidisimas de preparar:'; }
-    else if (intencion === 'popular') { resultados = resultados.slice(0, 5); respuestaTexto = 'Las mas populares!'; }
-    else if (intencion === 'saludable') {
-      const qt = tokenize('saludable vegano vegetariano light ensalada fitness keto baja calorias');
-      resultados = recetas.map(r => {
-        const rt = tokenize((r.titulo || '') + ' ' + (r.descripcion || '') + ' ' + (r.ingredientes || ''));
-        return { ...r, score: cosineSimilarity(qt, rt) };
-      }).filter(r => r.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
-      respuestaTexto = 'Opciones ideales para tu dieta y estilo de vida:';
-    } else if (intencion === 'por_ingrediente') {
-      respuestaTexto = resultados.length > 0 ? 'Encontre ' + resultados.length + ' receta(s) con esos ingredientes:' : 'No encontre recetas con esos ingredientes.';
-    } else {
-      respuestaTexto = resultados.length > 0 ? 'Esto encontre para tu busqueda:' : 'No encontre resultados. Prueba con otra busqueda.';
-    }
-
-    const recetasFormateadas = resultados.slice(0, 5).map(r => ({
-      id: r.id, titulo: r.titulo, imagen: r.imagen, precio: r.precio, tiempo: r.tiempo, likes: r.likes || 0
-    }));
-
-    res.json({ respuesta: respuestaTexto, recetas: recetasFormateadas });
-  } catch (error) {
-    console.error('Error chatbot:', error);
-    res.status(500).json({ error: 'Error interno del Chef IA' });
-  }
+    res.json({ respuesta: resp, recetas: final.map(r => ({ id: r.id, titulo: r.titulo, imagen: r.imagen, precio: r.precio, tiempo: r.tiempo })) });
+  } catch (e) { res.status(500).json({ error: 'Error IA' }); }
 });
 
-// ────────────────────────────────────────────────────────────────────────────
-
-app.listen(PORT, () => {
-  console.log(`\nðŸ³ ForaneoKitchen corriendo â†’ http://localhost:${PORT}`);
-  console.log(`   Roles: Free y Premium activos`);
-  console.log(`   Sistema de puntos: ${Object.entries(PUNTOS).map(([k, v]) => `${k}=+${v}pts`).join(' | ')}\n`);
-});
+app.listen(PORT, () => console.log(`ForaneoKitchen en http://localhost:${PORT}`));

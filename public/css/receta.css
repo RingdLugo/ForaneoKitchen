@@ -525,4 +525,13 @@ body.dark-mode .btn-dia:hover, body.dark-mode .btn-comida:hover {
 
 .notification-toast.error {
   background: #e53935;
+}@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
