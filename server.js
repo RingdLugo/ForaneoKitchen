@@ -2,6 +2,7 @@
  * ForaneoKitchen MVP — server.js CORREGIDO COMPLETO
  */
 'use strict';
+require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
@@ -13,8 +14,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const supabase = createClient(
-  'https://neqnkbqhzdtqfoxqpgld.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lcW5rYnFoemR0cWZveHFwZ2xkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Njg0NzQ1NSwiZXhwIjoyMDkyNDIzNDU1fQ.gRpDty0aSC01-2UgYZtQ7-5xp2fDBcvEAlTRhAnevGI'
+  process.env.SUPABASE_URL || 'https://gikqmtsrhgdxzxvjxcbd.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
 const PUNTOS = {
@@ -138,7 +139,11 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     if (esPremium) {
       let d = new Date(); d.setMonth(d.getMonth() + 1); premiumHasta = d.toISOString();
     }
-    const { data: nu } = await supabase.from('usuarios').insert({ nombre, apellido, email, username, password_hash: hash, rol: esPremium ? 'premium' : 'free', es_premium: esPremium || false, premium_hasta: premiumHasta, puntos: 0, fecha_registro: new Date().toISOString() }).select().maybeSingle();
+    const { data: nu, error: insertError } = await supabase.from('usuarios').insert({ nombre, apellido, email, username, password_hash: hash, rol: esPremium ? 'premium' : 'free', es_premium: esPremium || false, premium_hasta: premiumHasta, puntos: 0, fecha_registro: new Date().toISOString() }).select().maybeSingle();
+    if (insertError) {
+      console.error('❌ Error al registrar usuario en Supabase:', insertError);
+      return res.status(500).json({ error: 'Error interno al registrar el usuario' });
+    }
     return res.json({ token: makeToken(nu), user: nu });
   }
   res.json({ mensaje: 'Verificado' });
@@ -155,22 +160,22 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/auth/subscribe', authMW, async (req, res) => {
   const { renovar } = req.body;
   let d = new Date();
-  
+
   // Si ya es premium y está renovando, sumar al tiempo actual
   if (renovar && req.user.es_premium && req.user.premium_hasta) {
     d = new Date(req.user.premium_hasta);
   }
-  
+
   d.setMonth(d.getMonth() + 1);
   const hasta = d.toISOString();
-  
-  await supabase.from('usuarios').update({ 
-    es_premium: true, 
-    rol: 'premium', 
-    premium_hasta: hasta, 
-    premium_cancelado: false 
+
+  await supabase.from('usuarios').update({
+    es_premium: true,
+    rol: 'premium',
+    premium_hasta: hasta,
+    premium_cancelado: false
   }).eq('id', req.user.id);
-  
+
   res.json({ mensaje: '¡Suscripción exitosa!', premiumHasta: hasta });
 });
 
@@ -215,7 +220,7 @@ app.get('/api/users/:id/profile', async (req, res) => {
     .select('id, username, nombre, apellido, bio, foto_perfil, es_premium, rol, puntos, fecha_registro')
     .eq('id', req.params.id)
     .maybeSingle();
-    
+
   if (error || !data) return res.status(404).json({ error: 'No encontrado' });
   res.json(data);
 });
@@ -248,9 +253,9 @@ app.get('/api/users/:id/recipes', async (req, res) => {
 app.get('/api/recipes', optAuth, async (req, res) => {
   const { q, orden, filter, maxPrecio, maxTiempo } = req.query;
   let query = supabase.from('recetas').select('*');
-  
+
   if (q) query = query.or(`titulo.ilike.%${q}%,ingredientes.ilike.%${q}%`);
-  
+
   // Sincronizar con home.js: orden=likes o filter=populares
   if (orden === 'likes' || filter === 'populares') {
     query = query.order('likes', { ascending: false });
@@ -272,7 +277,7 @@ app.get('/api/recipes', optAuth, async (req, res) => {
 app.get('/api/recipes/:id', optAuth, async (req, res) => {
   const { data: recipe, error } = await supabase.from('recetas').select('*').eq('id', req.params.id).maybeSingle();
   if (error || !recipe) return res.status(404).json({ error: 'Receta no encontrada' });
-  
+
   // Protección Premium
   if (recipe.es_premium) {
     if (!req.user || (!req.user.es_premium && req.user.rol !== 'premium' && req.user.rol !== 'admin')) {
@@ -283,9 +288,46 @@ app.get('/api/recipes/:id', optAuth, async (req, res) => {
 });
 
 app.post('/api/recipes', authMW, async (req, res) => {
-  const receta = { ...req.body, autor: req.user.username, usuario_id: req.user.id, fecha: new Date().toISOString(), likes: 0 };
-  const { data } = await supabase.from('recetas').insert(receta).select().maybeSingle();
-  await otorgarPuntos(req.user.id, 'subir_receta', `Receta: ${req.body.titulo}`);
+  const {
+    titulo, ingredientes, pasos, descripcion,
+    precio, precioNumerico,
+    tiempo, tiempoNumerico,
+    imagen,
+    videoUrl, videoYoutube,
+    esPremium, etiquetas
+  } = req.body;
+
+  if (!titulo || !ingredientes || !pasos) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios: titulo, ingredientes, pasos' });
+  }
+
+  const receta = {
+    titulo,
+    descripcion: descripcion || '',
+    ingredientes,
+    pasos,
+    precio: precio || '$$',
+    precio_numerico: precioNumerico || 0,
+    tiempo: tiempo || '30 min',
+    tiempo_numerico: tiempoNumerico || 30,
+    imagen: imagen || null,
+    video_url: videoUrl || null,
+    video_youtube: videoYoutube || null,
+    es_premium: esPremium || false,
+    etiquetas: etiquetas || [],
+    autor: req.user.username,
+    usuario_id: req.user.id,
+    fecha: new Date().toISOString(),
+    likes: 0,
+    comentarios_count: 0
+  };
+
+  const { data, error } = await supabase.from('recetas').insert(receta).select().maybeSingle();
+  if (error) {
+    console.error('❌ Error al insertar receta:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  await otorgarPuntos(req.user.id, 'subir_receta', `Receta: ${titulo}`);
   res.json(data);
 });
 
@@ -306,15 +348,15 @@ app.get('/api/recipes/:id/comments', async (req, res) => {
     .select('*, usuarios(username, nombre, foto_perfil, es_premium, rol)')
     .eq('receta_id', req.params.id)
     .order('fecha', { ascending: false });
-    
+
   if (error) return res.status(500).json({ error: error.message });
-  
+
   // Transformar para que el frontend reciba usuario como objeto
   const transformado = (data || []).map(c => ({
     ...c,
     usuario: { ...c.usuarios, id: c.usuario_id } // Incluir ID explícitamente
   }));
-  
+
   res.json(transformado);
 });
 
@@ -322,7 +364,7 @@ app.post('/api/recipes/:id/comments', authMW, async (req, res) => {
   const { texto, contenido } = req.body; // Soporta ambos nombres de campo
   const finalContenido = texto || contenido;
   if (!finalContenido) return res.status(400).json({ error: 'Sin contenido' });
-  
+
   // Verificar si es premium si se requiere
   // const esPrem = req.user.es_premium || req.user.rol === 'premium' || req.user.rol === 'admin';
   // if (!esPrem) return res.status(403).json({ error: 'Exclusivo para Premium' });
@@ -339,57 +381,57 @@ app.post('/api/recipes/:id/comments', authMW, async (req, res) => {
   res.json(data);
 });
 
-  app.delete('/api/comments/:id', authMW, async (req, res) => {
-    const { data: c } = await supabase.from('comentarios').select('usuario_id').eq('id', req.params.id).maybeSingle();
-    if (!c) return res.status(404).json({ error: 'No existe' });
-    if (c.usuario_id === req.user.id || req.user.rol === 'admin') {
-      await supabase.from('comentarios').delete().eq('id', req.params.id);
-      return res.json({ mensaje: 'Eliminado' });
-    }
-    res.status(403).json({ error: 'Sin permiso' });
-  });
+app.delete('/api/comments/:id', authMW, async (req, res) => {
+  const { data: c } = await supabase.from('comentarios').select('usuario_id').eq('id', req.params.id).maybeSingle();
+  if (!c) return res.status(404).json({ error: 'No existe' });
+  if (c.usuario_id === req.user.id || req.user.rol === 'admin') {
+    await supabase.from('comentarios').delete().eq('id', req.params.id);
+    return res.json({ mensaje: 'Eliminado' });
+  }
+  res.status(403).json({ error: 'Sin permiso' });
+});
 
-  app.post('/api/comments/:id/replies', authMW, async (req, res) => {
-    const { texto, contenido } = req.body;
-    const finalContenido = texto || contenido;
-    if (!finalContenido) return res.status(400).json({ error: 'Sin contenido' });
-    
-    const respuesta = {
-      receta_id: null, // Opcional si se saca de la base
-      usuario_id: req.user.id,
-      padre_id: req.params.id,
-      texto: finalContenido,
-      fecha: new Date().toISOString()
-    };
-    
-    // Obtener el receta_id del padre
-    const { data: padre } = await supabase.from('comentarios').select('receta_id').eq('id', req.params.id).single();
-    if (padre) respuesta.receta_id = padre.receta_id;
+app.post('/api/comments/:id/replies', authMW, async (req, res) => {
+  const { texto, contenido } = req.body;
+  const finalContenido = texto || contenido;
+  if (!finalContenido) return res.status(400).json({ error: 'Sin contenido' });
 
-    const { data, error } = await supabase.from('comentarios').insert(respuesta).select().maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
-  });
+  const respuesta = {
+    receta_id: null, // Opcional si se saca de la base
+    usuario_id: req.user.id,
+    padre_id: req.params.id,
+    texto: finalContenido,
+    fecha: new Date().toISOString()
+  };
 
-  app.get('/api/activity', optAuth, async (req, res) => {
-    try {
-      const { data, error } = await supabase
-        .from('comentarios')
-        .select('*, usuarios(username, foto_perfil, es_premium), recetas(titulo)')
-        .order('fecha', { ascending: false })
-        .limit(20);
-      
-      if (error) throw error;
-      
-      const resData = (data || []).map(c => ({
-        ...c,
-        usuario: { ...c.usuarios, id: c.usuario_id },
-        receta_titulo: c.recetas?.titulo || 'Receta'
-      }));
-      
-      res.json(resData);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-  });
+  // Obtener el receta_id del padre
+  const { data: padre } = await supabase.from('comentarios').select('receta_id').eq('id', req.params.id).single();
+  if (padre) respuesta.receta_id = padre.receta_id;
+
+  const { data, error } = await supabase.from('comentarios').insert(respuesta).select().maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.get('/api/activity', optAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('comentarios')
+      .select('*, usuarios(username, foto_perfil, es_premium), recetas(titulo)')
+      .order('fecha', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    const resData = (data || []).map(c => ({
+      ...c,
+      usuario: { ...c.usuarios, id: c.usuario_id },
+      receta_titulo: c.recetas?.titulo || 'Receta'
+    }));
+
+    res.json(resData);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // ── LIKES / FAVS / HISTORY ──────────────────────────────────
 app.post('/api/recipes/:id/like', authMW, async (req, res) => {
@@ -429,8 +471,14 @@ app.get('/api/users/me/planner', authMW, async (req, res) => {
   res.json(data || { plan: {} });
 });
 
-app.post('/api/users/me/planner', authMW, async (req, res) => {
-  await supabase.from('usuarios').upsert({ usuario_id: req.user.id, plan: req.body.plan, updated_at: new Date().toISOString() }, { onConflict: 'usuario_id' });
+app.post("/api/users/me/planner", authMW, async (req, res) => {
+  const { error } = await supabase
+    .from("planes_semanales")
+    .upsert({ usuario_id: req.user.id, plan: req.body.plan, updated_at: new Date().toISOString() }, { onConflict: "usuario_id" });
+  if (error) {
+    console.error("❌ Error al guardar plan:", error);
+    return res.status(500).json({ error: error.message });
+  }
   res.json({ ok: true });
 });
 
@@ -441,7 +489,7 @@ app.get('/api/users/me/stats', authMW, async (req, res) => {
     const { count: favorites } = await supabase.from('favoritos').select('*', { count: 'exact', head: true }).eq('usuario_id', req.user.id);
     const { data: likesData } = await supabase.from('recetas').select('likes').eq('usuario_id', req.user.id);
     const likes = likesData?.reduce((acc, r) => acc + (r.likes || 0), 0) || 0;
-    
+
     res.json({ recetas: recipes || 0, favoritos: favorites || 0, visitas: likes });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -451,7 +499,7 @@ app.get('/api/users/:id/stats', async (req, res) => {
     const { count: recipes } = await supabase.from('recetas').select('*', { count: 'exact', head: true }).eq('usuario_id', req.params.id);
     const { data: likesData } = await supabase.from('recetas').select('likes').eq('usuario_id', req.params.id);
     const likes = likesData?.reduce((acc, r) => acc + (r.likes || 0), 0) || 0;
-    
+
     res.json({ recetas: recipes || 0, visitas: likes });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -461,8 +509,8 @@ function tokenize(t) { return String(t).toLowerCase().normalize('NFD').replace(/
 function cosineSimilarity(a, b) {
   const sA = new Set(a), sB = new Set(b), all = new Set([...sA, ...sB]);
   let dot = 0, mA = 0, mB = 0;
-  all.forEach(t => { const vA = sA.has(t)?1:0, vB = sB.has(t)?1:0; dot += vA*vB; mA += vA*vA; mB += vB*vB; });
-  return mA && mB ? dot / (Math.sqrt(mA)*Math.sqrt(mB)) : 0;
+  all.forEach(t => { const vA = sA.has(t) ? 1 : 0, vB = sB.has(t) ? 1 : 0; dot += vA * vB; mA += vA * vA; mB += vB * vB; });
+  return mA && mB ? dot / (Math.sqrt(mA) * Math.sqrt(mB)) : 0;
 }
 
 function clasificarIntencion(m) {
@@ -484,7 +532,7 @@ app.post('/api/chatbot', authMW, async (req, res) => {
   if (!req.user.es_premium && req.user.rol !== 'premium') return res.status(403).json({ error: 'Chef IA es Premium' });
   const { mensaje } = req.body;
   const int = clasificarIntencion(mensaje);
-  
+
   if (int === 'saludo') return res.json({ respuesta: '¡Hola! Soy tu Chef IA 👨‍🍳. ¿Quieres un plan familiar para el lunes, algo dulce o una comida de $50?', recetas: [] });
 
   try {
@@ -493,7 +541,7 @@ app.post('/api/chatbot', authMW, async (req, res) => {
     else if (int === 'rapida') query = query.lte('tiempo_numerico', 25);
     else if (int === 'dulces') query = query.ilike('titulo', '%dulce%');
     else if (int === 'plan_familiar') query = query.ilike('titulo', '%familiar%');
-    
+
     const match = mensaje.match(/([0-9]+)/);
     if (match) {
       if (int === 'tiempo_especifico' || int === 'crear_plan') query = query.lte('tiempo_numerico', parseInt(match[1]));
