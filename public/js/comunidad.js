@@ -1,12 +1,11 @@
-// comunidad.js - Comunidad con Supabase
+// comunidad.js
 import { supabase } from './supabaseClient.js';
 
-// URL base del API REST propio
 const API_BASE = (window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1"))
   ? "http://localhost:3000/api"
   : window.location.origin + "/api";
 
-// Estado
+
 let currentUser = null;
 let recetas = [];
 let recetasPopulares = [];
@@ -14,38 +13,51 @@ let comentariosRecientes = [];
 let recetaModalId = null;
 let comentarioPadreId = null;
 
-// Elementos DOM
+
 const recetasContainer = document.getElementById('recetas-comunidad');
 const popularesContainer = document.getElementById('recetas-populares');
 const actividadContainer = document.getElementById('actividad-reciente');
 const modalComentarios = document.getElementById('modal-comentarios');
 const modalRespuesta = document.getElementById('modal-respuesta');
 
-// Constantes
+
 const PLACEHOLDER_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
 
-// Cargar usuario actual (usa JWT propio, no Supabase auth)
+// Cargar usuario desde la API
 async function cargarUsuario() {
-  const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
-  if (userId && token) {
+  if (!token) return;
+
+  try {
+    const res = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      currentUser = await res.json();
+
+      return;
+    }
+  } catch (e) {
+  }
+
+  // Fallback: localStorage
+  const userId = localStorage.getItem('userId');
+  if (userId) {
     const isPremium = localStorage.getItem('userPremium');
     let prefs = [];
     try { prefs = JSON.parse(localStorage.getItem('userPrefs') || '[]'); } catch { prefs = []; }
-
     currentUser = {
-      id: userId, // Mantener como UUID string
+      id: userId,
       es_premium: isPremium === 'true' || isPremium === true,
       rol: localStorage.getItem('userRol') || 'free',
       puntos: parseInt(localStorage.getItem('userPuntos') || 0),
       username: localStorage.getItem('userName'),
       preferencias: prefs
     };
-    console.log('👤 Usuario cargado en comunidad:', currentUser);
   }
 }
 
-// Mostrar notificación
+
 function showToast(msg, isError = false) {
   let t = document.getElementById('comunidad-toast');
   if (!t) {
@@ -61,7 +73,7 @@ function showToast(msg, isError = false) {
   t._timeout = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// Escapar HTML
+
 function escapeHTML(s) {
   if (!s) return '';
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -69,7 +81,6 @@ function escapeHTML(s) {
 
 function tienePermiso(u, p) {
   if (!u) return false;
-  // Admins y Premium siempre tienen permiso (manejo flexible de tipos)
   const esPrem = u.es_premium === true || u.es_premium === 'true' || u.esPremium === true || u.esPremium === 'true';
   if (esPrem || u.rol === 'admin' || u.rol === 'premium') return true;
   
@@ -92,7 +103,7 @@ function tienePermiso(u, p) {
   return false;
 }
 
-// Formatear fecha
+
 function formatFecha(f) {
   const d = new Date(f);
   const now = new Date();
@@ -104,7 +115,7 @@ function formatFecha(f) {
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 }
 
-// Cargar recetas recientes
+// Recetas recientes
 async function cargarRecetasRecientes() {
   if (!recetasContainer) return;
   recetasContainer.innerHTML = '<div class="loading-spinner"></div>';
@@ -120,7 +131,7 @@ async function cargarRecetasRecientes() {
   }
 }
 
-// Cargar recetas populares (por likes)
+// Recetas populares
 async function cargarRecetasPopulares() {
   if (!popularesContainer) return;
   popularesContainer.innerHTML = '<div class="loading-spinner"></div>';
@@ -136,12 +147,20 @@ async function cargarRecetasPopulares() {
   }
 }
 
-// Cargar actividad reciente (comentarios)
+// Actividad reciente
 async function cargarActividadReciente() {
   if (!actividadContainer) return;
   actividadContainer.innerHTML = '<div class="loading-spinner"></div>';
-  
-  if (!tienePermiso(currentUser, 'comentarios')) {
+
+  // Solo Premium puede ver la actividad
+  const esPremium = currentUser && (
+    currentUser.es_premium === true ||
+    currentUser.es_premium === 'true' ||
+    currentUser.rol === 'premium' ||
+    currentUser.rol === 'admin'
+  );
+
+  if (!esPremium) {
     actividadContainer.innerHTML = `
       <div style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;border:2px dashed #4caf50;">
         <span style="font-size:3rem">🔒</span>
@@ -152,18 +171,25 @@ async function cargarActividadReciente() {
     `;
     return;
   }
-  
+
   const token = localStorage.getItem('token');
   try {
-    // Cargar actividad global (comentarios recientes)
     const res = await fetch(`/api/activity`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    
+
     if (res.status === 403) {
-      throw new Error('Forbidden');
+      actividadContainer.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;border:2px dashed #4caf50;">
+          <span style="font-size:3rem">🔒</span>
+          <h3 style="color:#1b5e20;margin-top:15px">Actividad Exclusiva Premium</h3>
+          <p style="margin:10px 0;color:#666;font-size:0.95rem;line-height:1.5;">Actualiza tu cuenta para ver la actividad de la comunidad.</p>
+          <button onclick="window.location.href='perfil.html'" class="tab-btn active" style="margin-top:20px;padding:10px 25px;border-radius:20px;">Mejorar a Premium</button>
+        </div>
+      `;
+      return;
     }
-    
+
     if (res.ok) {
       const data = await res.json();
       comentariosRecientes = data || [];
@@ -171,12 +197,11 @@ async function cargarActividadReciente() {
     } else {
       throw new Error('Error en API');
     }
-  } catch (e) { 
+  } catch (e) {
     console.error('Error community activity:', e);
     actividadContainer.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Error al cargar la actividad de la comunidad.</div>';
   }
 }
-
 // Renderizar recetas
 function renderizarRecetas(container, recetasList) {
   if (!container) return;
@@ -185,15 +210,27 @@ function renderizarRecetas(container, recetasList) {
     container.innerHTML = '<div style="text-align:center;padding:60px;color:#999">No hay recetas aún.</div>';
     return;
   }
+
+  const esPremiumActual = currentUser && (
+    currentUser.es_premium === true ||
+    currentUser.es_premium === 'true' ||
+    currentUser.rol === 'premium' ||
+    currentUser.rol === 'admin'
+  );
   
   container.innerHTML = recetasList.map(r => {
     const img = r.imagen || PLACEHOLDER_IMG;
-    const likedClass = r.usuarioLike ? 'liked' : '';
-    const favClass = r.esFavorito ? 'favorited' : '';
+    const likedClass = r.likedByUser ? 'liked' : '';
+    const favClass = r.favoriteByUser ? 'favorited' : '';
     const autorPremium = r.usuario?.es_premium || false;
     const autorBadge = autorPremium 
       ? '<span class="autor-badge premium">👑 Premium</span>' 
       : '<span class="autor-badge free">🆓 Free</span>';
+    
+
+    const comentarBtn = esPremiumActual
+      ? `<button class="comentar-btn" onclick="window.abrirComentarios(${r.id}, '${escapeHTML(r.titulo)}')">💬 Comentar</button>`
+      : `<button class="comentar-btn comentar-bloqueado" onclick="window.mostrarBloqueoComentarios()" title="Solo Premium">🔒 Comentar</button>`;
     
     return `
       <div class="receta-comunidad-card" data-id="${r.id}" onclick="window.irAReceta(${r.id}, event)">
@@ -207,7 +244,6 @@ function renderizarRecetas(container, recetasList) {
             👨‍🍳 ${escapeHTML(r.usuario?.username || 'Anónimo')}
             ${autorBadge}
           </p>
-          ${r.usuario?.rol === 'free' && !r.video_url && !r.video_youtube ? '<div style="font-size:0.65rem;color:#4caf50;margin-top:-5px;margin-bottom:5px">ℹ️ Sin video - Usuario Free</div>' : ''}
           <div class="receta-stats">
             <span class="receta-precio">💰 ${escapeHTML(r.precio || '$$')}</span>
             <span class="receta-tiempo">⏱️ ${escapeHTML(r.tiempo || '30 min')}</span>
@@ -215,18 +251,16 @@ function renderizarRecetas(container, recetasList) {
           </div>
           <div class="acciones-comunidad" onclick="event.stopPropagation()">
             <button class="like-btn ${likedClass}"
-              data-id="${r.id}" data-liked="${r.usuarioLike ? '1' : '0'}"
+              data-id="${r.id}" data-liked="${r.likedByUser ? '1' : '0'}"
               onclick="window.toggleLike(${r.id}, this)">
               ❤️ <span class="like-count">${r.likes || 0}</span>
             </button>
             <button class="favorito-btn ${favClass}"
-              data-id="${r.id}" data-fav="${r.esFavorito ? '1' : '0'}"
+              data-id="${r.id}" data-fav="${r.favoriteByUser ? '1' : '0'}"
               onclick="window.toggleFavorito(${r.id}, this)">
-              ⭐ ${r.esFavorito ? 'Guardado' : 'Guardar'}
+              ⭐ ${r.favoriteByUser ? 'Guardado' : 'Guardar'}
             </button>
-            <button class="comentar-btn" onclick="window.abrirComentarios(${r.id}, '${escapeHTML(r.titulo)}')">
-              💬 Comentar
-            </button>
+            ${comentarBtn}
           </div>
         </div>
       </div>
@@ -234,33 +268,42 @@ function renderizarRecetas(container, recetasList) {
   }).join('');
 }
 
-// Renderizar actividad reciente
-function renderizarActividad(comentarios) {
+
+function renderizarActividad(items) {
   if (!actividadContainer) return;
-  if (!comentarios.length) {
+  if (!items.length) {
     actividadContainer.innerHTML = '<div style="text-align:center;padding:60px;color:#999">No hay actividad reciente.</div>';
     return;
   }
   
-  actividadContainer.innerHTML = comentarios.map(c => {
-    const avatar = c.usuario?.foto_perfil 
-      ? `<img src="${c.usuario.foto_perfil}" alt="${escapeHTML(c.usuario.username)}">`
-      : `<div class="avatar-placeholder">${(c.usuario?.username?.charAt(0) || 'U').toUpperCase()}</div>`;
+  actividadContainer.innerHTML = items.map(item => {
+    const avatar = item.usuario?.foto_perfil 
+      ? `<img src="${item.usuario.foto_perfil}" alt="${escapeHTML(item.usuario.username)}">`
+      : `<div class="avatar-placeholder">${(item.usuario?.username?.charAt(0) || 'U').toUpperCase()}</div>`;
     
-    const autorBadge = c.usuario?.es_premium ? '👑' : '🆓';
+    const autorBadge = item.usuario?.es_premium ? '👑' : '🆓';
     
+    let activityText = '';
+    if (item.tipo === 'comentario') {
+      activityText = `comentó: "${escapeHTML(item.texto.substring(0, 80))}${item.texto.length > 80 ? '...' : ''}"`;
+    } else if (item.tipo === 'like') {
+      activityText = `le dio ❤️ a <strong>${escapeHTML(item.receta?.titulo || 'una receta')}</strong>`;
+    } else if (item.tipo === 'receta') {
+      activityText = `publicó una nueva receta: <strong>${escapeHTML(item.receta?.titulo || 'Sin título')}</strong>`;
+    }
+
     return `
-      <div class="actividad-item">
+      <div class="actividad-item" onclick="window.location.href='receta.html?id=${item.receta?.id || ''}'" style="cursor:pointer;">
         <div class="actividad-avatar">${avatar}</div>
         <div class="actividad-contenido">
           <div class="actividad-header">
-            <span class="actividad-autor" onclick="window.location.href='perfil.html?id=${c.usuario_id || c.usuario?.id || ''}'" style="cursor:pointer; color:#4caf50;">${escapeHTML(c.usuario?.username || 'Usuario')} <span style="font-size:0.7rem">${autorBadge}</span></span>
-            <span class="actividad-fecha">${formatFecha(c.fecha)}</span>
+            <span class="actividad-autor" style="color:#4caf50;">
+              ${escapeHTML(item.usuario?.username || 'Usuario')} 
+              <span style="font-size:0.7rem">${autorBadge}</span>
+            </span>
+            <span class="actividad-fecha">${formatFecha(item.fecha)}</span>
           </div>
-          <div class="actividad-texto">"${escapeHTML(c.texto.substring(0, 100))}"</div>
-          <div class="actividad-receta" onclick="window.location.href='receta.html?id=${c.receta?.id}'">
-            📖 En: ${escapeHTML(c.receta?.titulo || 'Receta')}
-          </div>
+          <div class="actividad-texto">${activityText}</div>
         </div>
       </div>
     `;
@@ -284,7 +327,7 @@ function renderizarActividadPersonal(activity) {
   }).join('');
 }
 
-// Toggle Like
+
 async function toggleLike(recipeId, btn) {
   if (!currentUser) {
     showToast('Inicia sesión para dar like', true);
@@ -317,7 +360,7 @@ async function toggleLike(recipeId, btn) {
   }
 }
 
-// Toggle Favorito
+
 async function toggleFavorito(recipeId, btn) {
   if (!currentUser) {
     showToast('Inicia sesión para guardar favoritos', true);
@@ -330,7 +373,7 @@ async function toggleFavorito(recipeId, btn) {
   btn.innerHTML = `⭐ ${!fav ? 'Guardado' : 'Guardar'}`;
   btn.dataset.fav = fav ? '0' : '1';
   try {
-    const res = await fetch(`${API_BASE}/users/me/favorites/${recipeId}`, {
+    const res = await fetch(`${API_BASE}/recipes/${recipeId}/favorite`, {
       method: fav ? 'DELETE' : 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -346,7 +389,7 @@ async function toggleFavorito(recipeId, btn) {
   }
 }
 
-// Abrir modal de comentarios
+
 async function abrirComentarios(recipeId, titulo) {
   recetaModalId = recipeId;
   comentarioPadreId = null;
@@ -375,7 +418,7 @@ async function abrirComentarios(recipeId, titulo) {
   await cargarComentarios(recipeId);
 }
 
-// Cargar comentarios (incluyendo respuestas)
+
 async function cargarComentarios(recipeId) {
   const lista = document.getElementById('comentarios-lista');
   lista.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa">Cargando…</div>';
@@ -399,7 +442,7 @@ async function cargarComentarios(recipeId) {
       return;
     }
     
-    // Construir árbol en memoria
+    // Organizar comentarios en árbol padre-hijo
     const padres = allComments.filter(c => !c.padre_id);
     const hijosPorPadre = {};
     
@@ -416,7 +459,7 @@ async function cargarComentarios(recipeId) {
   }
 }
 
-// Renderizar comentario individual
+
 function renderComentario(comentario, respuestas = []) {
   const uname = comentario.usuario?.username || 'Usuario';
   const inicial = uname[0].toUpperCase();
@@ -487,7 +530,7 @@ function renderComentarioRespuesta(respuesta) {
   `;
 }
 
-// Abrir modal para responder
+
 function abrirResponder(comentarioId, autorNombre) {
   if (!currentUser) {
     showToast('Inicia sesión para responder', true);
@@ -515,7 +558,7 @@ function abrirResponder(comentarioId, autorNombre) {
   modalRespuesta.classList.add('active');
 }
 
-// Enviar respuesta
+
 async function enviarRespuesta() {
   const texto = document.getElementById('respuesta-texto').value.trim();
   if (!texto) {
@@ -553,7 +596,7 @@ async function enviarRespuesta() {
   }
 }
 
-// Enviar comentario principal
+
 async function enviarComentario() {
   if (!currentUser) {
     showToast('Inicia sesión para comentar', true);
@@ -591,7 +634,7 @@ async function enviarComentario() {
   }
 }
 
-// Eliminar comentario
+
 async function eliminarComentario(commentId, btn) {
   if (!confirm('¿Eliminar este comentario?')) return;
   
@@ -613,7 +656,7 @@ async function eliminarComentario(commentId, btn) {
   }
 }
 
-// Cerrar modales
+
 function cerrarModal() {
   modalComentarios.classList.remove('active');
   recetaModalId = null;
@@ -624,13 +667,13 @@ function cerrarModalRespuesta() {
   comentarioPadreId = null;
 }
 
-// Ir a receta
+
 function irAReceta(id, event) {
   if (event?.target?.closest('.acciones-comunidad')) return;
   window.location.href = `receta.html?id=${id}`;
 }
 
-// Cambiar tabs
+
 function initTabs() {
   const tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(tab => {
@@ -658,7 +701,7 @@ function initTabs() {
   });
 }
 
-// Inicializar
+
 async function init() {
   await cargarUsuario();
   await cargarRecetasRecientes();
@@ -666,7 +709,7 @@ async function init() {
   await cargarActividadReciente();
   initTabs();
   
-  // Modales
+
   document.querySelector('#modal-comentarios .close-modal')?.addEventListener('click', cerrarModal);
   document.querySelector('#modal-respuesta .close-respuesta-modal')?.addEventListener('click', cerrarModalRespuesta);
   document.getElementById('enviar-comentario')?.addEventListener('click', enviarComentario);
@@ -690,12 +733,18 @@ async function init() {
   });
 }
 
-// Exponer funciones globalmente
+
+function mostrarBloqueoComentarios() {
+  showToast('🔒 Los comentarios son exclusivos para usuarios Premium 👑', true);
+}
+
+// Funciones globales
 window.toggleLike = toggleLike;
 window.toggleFavorito = toggleFavorito;
 window.abrirComentarios = abrirComentarios;
 window.eliminarComentario = eliminarComentario;
 window.irAReceta = irAReceta;
 window.abrirResponder = abrirResponder;
+window.mostrarBloqueoComentarios = mostrarBloqueoComentarios;
 
 init();

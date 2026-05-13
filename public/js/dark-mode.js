@@ -1,4 +1,4 @@
-/* ForaneoKitchen — dark-mode.js */
+/* dark-mode.js */
 (function () {
   function apply(isDark) {
     document.body.classList.toggle('dark-mode', isDark);
@@ -19,7 +19,7 @@
       b.addEventListener('click', toggle);
     });
   }
-  // Aplicar sin flash
+  // Aplicar sin flash al cargar
   if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

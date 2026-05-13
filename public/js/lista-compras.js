@@ -1,12 +1,10 @@
-// lista-compras.js - Lista de compras con Supabase
+// lista-compras.js
 import { supabase } from './supabaseClient.js';
 
-// Estado
 let itemsCompra = [];
 let currentUser = null;
 let planSemanal = {};
 
-// Categorías de ingredientes
 const categorias = {
   'Abarrotes': ['arroz', 'pasta', 'frijol', 'lenteja', 'harina', 'azucar', 'sal', 'aceite', 'pan', 'maiz', 'trigo', 'cereal', 'galleta', 'sopa', 'fideos', 'espagueti', 'garbanzo'],
   'Lacteos': ['leche', 'crema', 'queso', 'mantequilla', 'yogur', 'requeson', 'yoghurt', 'media crema'],
@@ -16,7 +14,6 @@ const categorias = {
   'Otros': []
 };
 
-// Cargar usuario
 async function cargarUsuario() {
   const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
@@ -34,7 +31,6 @@ async function cargarUsuario() {
   }
 }
 
-// Cargar plan semanal
 async function cargarPlanSemanal() {
   if (!currentUser) return null;
   const token = localStorage.getItem('token');
@@ -52,7 +48,6 @@ async function cargarPlanSemanal() {
   return null;
 }
 
-// Extraer cantidad
 function extraerCantidad(nombreIngrediente) {
   const regex = /^(\d+(?:\.\d+)?(?:\s*(?:g|kg|ml|l|taza|cucharada|cucharadita|unidad|pieza|pizca|cdita|cdta|cda|gr|kilo|litro))?)\s+(.+)$/i;
   const match = nombreIngrediente.match(regex);
@@ -62,7 +57,6 @@ function extraerCantidad(nombreIngrediente) {
   return { cantidad: '', nombre: nombreIngrediente.trim() };
 }
 
-// Obtener categoría
 function obtenerCategoria(ingrediente) {
   const lower = ingrediente.toLowerCase();
   for (const [categoria, palabras] of Object.entries(categorias)) {
@@ -73,79 +67,86 @@ function obtenerCategoria(ingrediente) {
   return 'Otros';
 }
 
-// Sincronización inteligente basada en recetas del plan
+/**
+ * Extrae todos los ingredientes del plan semanal y los combina correctamente.
+ * Recetas repetidas en varios días/comidas suman sus ingredientes.
+ * Items agregados manualmente se conservan.
+ * Items del planner que ya no están se eliminan automáticamente.
+ */
 async function sincronizarInteligente() {
   const plan = await cargarPlanSemanal();
   if (!plan) return;
 
-  const itemsPlan = [];
   const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
   const comidas = ['desayuno', 'comida', 'cena', 'merienda', 'snack'];
+
+  // --- 1. Recolectar todos los ingredientes del plan (con multiplicidades) ---
+  // Map: nombreNormalizado → { nombre, cantidades[], recetas[] }
+  const mapa = new Map();
 
   dias.forEach(dia => {
     comidas.forEach(comida => {
       let recetas = plan[dia]?.[comida];
       if (!recetas) return;
       if (!Array.isArray(recetas)) recetas = [recetas];
-      
+
       recetas.forEach(receta => {
-        if (receta && receta.ingredientes) {
-          // Separar ingredientes por coma o por líneas
-          const ingredientesRaw = receta.ingredientes.includes('\n') 
-            ? receta.ingredientes.split('\n') 
-            : receta.ingredientes.split(',');
-            
-          ingredientesRaw.map(i => i.trim()).filter(i => i).forEach(ing => {
-            const { cantidad, nombre } = extraerCantidad(ing);
-            itemsPlan.push({ nombre, cantidad, recetaTitulo: receta.titulo });
-          });
-        }
+        if (!receta?.ingredientes) return;
+
+        // Separar por salto de línea primero, luego por coma
+        const raw = receta.ingredientes.includes('\n')
+          ? receta.ingredientes.split('\n')
+          : receta.ingredientes.split(',');
+
+        raw.map(i => i.trim()).filter(Boolean).forEach(ing => {
+          const { cantidad, nombre } = extraerCantidad(ing);
+          const key = nombre.toLowerCase().trim();
+
+          if (!mapa.has(key)) {
+            mapa.set(key, { nombre, cantidades: [], recetas: [] });
+          }
+          const entry = mapa.get(key);
+          if (cantidad) entry.cantidades.push(cantidad);
+          if (receta.titulo && !entry.recetas.includes(receta.titulo)) {
+            entry.recetas.push(receta.titulo);
+          }
+        });
       });
     });
   });
 
-  let modificado = false;
-  
-  // Limpiar recetas previas de los items existentes para re-sincronizar
-  itemsCompra.forEach(item => {
-    if (item.recetas) item.recetas = [];
+  // --- 2. Separar items manuales (no vinculados a ninguna receta del planner) ---
+  const itemsManuales = itemsCompra.filter(item => !item.delPlanner);
+
+  // --- 3. Reconstruir la lista desde el planner, preservando estado de completado ---
+  const completadosAnteriores = new Map(
+    itemsCompra.filter(i => i.delPlanner).map(i => [i.nombre.toLowerCase().trim(), i.completado])
+  );
+
+  const itemsPlanner = [];
+  mapa.forEach((entry, key) => {
+    // Combinar cantidades: "100g", "2 tazas" → "100g + 2 tazas"
+    const cantidadCombinada = entry.cantidades.length > 0
+      ? [...new Set(entry.cantidades)].join(' + ')
+      : '';
+
+    itemsPlanner.push({
+      id: Date.now() + Math.random(),
+      nombre: entry.nombre,
+      cantidad: cantidadCombinada,
+      completado: completadosAnteriores.get(key) ?? false,
+      categoria: obtenerCategoria(entry.nombre),
+      recetas: entry.recetas,
+      delPlanner: true   // bandera para distinguirlos de los manuales
+    });
   });
 
-  itemsPlan.forEach(newItem => {
-    const nombreNormalizado = newItem.nombre.toLowerCase().trim();
-    // Buscar si ya existe el ingrediente
-    let existente = itemsCompra.find(i => i.nombre.toLowerCase().trim() === nombreNormalizado);
-    
-    if (!existente) {
-      itemsCompra.push({
-        id: Date.now() + Math.random(),
-        nombre: newItem.nombre,
-        cantidad: newItem.cantidad,
-        completado: false,
-        categoria: obtenerCategoria(newItem.nombre),
-        recetas: [newItem.recetaTitulo]
-      });
-      modificado = true;
-    } else {
-      // Si ya existe, actualizamos cantidad si estaba vacío y agregamos receta
-      if (!existente.cantidad && newItem.cantidad) {
-        existente.cantidad = newItem.cantidad;
-        modificado = true;
-      }
-      if (!existente.recetas) existente.recetas = [];
-      if (!existente.recetas.includes(newItem.recetaTitulo)) {
-        existente.recetas.push(newItem.recetaTitulo);
-        modificado = true;
-      }
-    }
-  });
-
-  // Nota: Siempre guardamos para asegurar persistencia del estado actual
+  // --- 4. Unir manuales + planner y guardar ---
+  itemsCompra = [...itemsManuales, ...itemsPlanner];
   await guardarItemsEnSupabase(itemsCompra);
   renderizarLista();
 }
 
-// Cargar items desde Supabase
 async function cargarItemsDesdeSupabase() {
   if (!currentUser) return [];
   const { data, error } = await supabase
@@ -156,19 +157,16 @@ async function cargarItemsDesdeSupabase() {
   return data?.items || [];
 }
 
-// Guardar items en Supabase
 async function guardarItemsEnSupabase(items) {
   if (!currentUser) return;
   await supabase
     .from('lista_compras')
     .upsert({
       usuario_id: currentUser.id,
-      items: items,
-      updated_at: new Date().toISOString()
+      items: items
     }, { onConflict: 'usuario_id' });
 }
 
-// Renderizar lista
 function renderizarLista() {
   const container = document.getElementById('lista-contenido');
   if (!container) return;
@@ -211,7 +209,6 @@ function renderizarLista() {
   
   container.innerHTML = html;
   
-  // Eventos
   container.querySelectorAll('.item-checkbox').forEach(cb => {
     cb.addEventListener('change', async (e) => {
       const id = parseFloat(e.target.dataset.id);
@@ -253,7 +250,6 @@ function escapeHTML(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Exportar PDF
 async function exportarPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -276,7 +272,6 @@ async function exportarPDF() {
   
   let y = 45;
   
-  // Agrupar por categoría para el PDF
   const agrupados = {};
   itemsPendientes.forEach(item => {
     const cat = item.categoria || 'Otros';
@@ -326,21 +321,16 @@ async function agregarItemManual() {
   renderizarLista();
 }
 
-// Inicializar
 async function init() {
   await cargarUsuario();
   if (!currentUser) { window.location.href = 'login.html'; return; }
   
-  // 1. Cargar items existentes
   itemsCompra = await cargarItemsDesdeSupabase();
   
-  // 2. Sincronizar con el plan actual
-  await sincronizarInteligente(); 
+  await sincronizarInteligente();
   
-  // 3. Renderizar
   renderizarLista();
   
-  // Eventos
   document.getElementById('add-item-btn')?.addEventListener('click', agregarItemManual);
   document.getElementById('input-item')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') agregarItemManual();

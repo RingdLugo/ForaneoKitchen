@@ -1,9 +1,8 @@
-// home.js - Inicio de ForaneoKitchen
+// home.js
 import { supabase } from './supabaseClient.js';
 
 let currentUser = null;
 
-// ── Notificaciones Toast ─────────────────────────────────────────────────────
 function showToast(m, err = false) {
   let t = document.getElementById('home-toast');
   if (!t) {
@@ -19,19 +18,17 @@ function showToast(m, err = false) {
   t._t = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── Cargar usuario ──────────────────────────────────────────────────────────
 async function cargarUsuario() {
   const token = localStorage.getItem('token');
-  
-  // Cache rápido
+
+  // Mostrar datos cacheados mientras carga
   const cached = localStorage.getItem('userData');
   if (cached) {
     try {
       currentUser = JSON.parse(cached);
-      document.getElementById('user-name').textContent = currentUser.nombre || currentUser.username;
+      document.getElementById('user-name').textContent = currentUser.username || currentUser.nombre || 'Usuario';
       const avatar = document.getElementById('user-avatar');
       if (avatar && currentUser.foto_perfil) avatar.src = currentUser.foto_perfil;
-      
       const pts = document.getElementById('puntos-display');
       if (pts) pts.textContent = `⭐ ${currentUser.puntos || 0} pts`;
     } catch(e) {}
@@ -46,14 +43,16 @@ async function cargarUsuario() {
     if (res.ok) {
       currentUser = await res.json();
       localStorage.setItem('userData', JSON.stringify(currentUser));
-      document.getElementById('user-name').textContent = currentUser.nombre || currentUser.username;
+      document.getElementById('user-name').textContent = currentUser.username || currentUser.nombre || 'Usuario';
       const avatar = document.getElementById('user-avatar');
       if (avatar && currentUser.foto_perfil) avatar.src = currentUser.foto_perfil;
-      
       const pts = document.getElementById('puntos-display');
       if (pts) pts.textContent = `⭐ ${currentUser.puntos || 0} pts`;
-      
-      if (currentUser.es_premium || currentUser.esPremium) {
+
+      // Mostrar chatbot y badge si tiene acceso
+      const hasChat = currentUser.es_premium || currentUser.esPremium ||
+                      (currentUser.preferencias || []).some(p => String(p).startsWith('PERMISO_CHAT:'));
+      if (hasChat) {
         const b = document.getElementById('premium-badge');
         if (b) b.style.display = 'flex';
         const c = document.getElementById('chat-boton');
@@ -65,7 +64,6 @@ async function cargarUsuario() {
   }
 }
 
-// ── Cargar Recetas ────────────────────────────────────────────────────────────
 async function cargarRecetas(params = {}) {
   mostrarSkeleton();
   const container = document.getElementById('recetas');
@@ -77,26 +75,23 @@ async function cargarRecetas(params = {}) {
     if (params.filter === 'populares') url += `orden=likes&`;
     if (params.filter === 'economicas') url += `maxPrecio=35&`;
     if (params.filter === 'rapidas') url += `maxTiempo=20&`;
-    
-    // Ignorar preferencias en filtros rápidos para no limitar de más
-    if (params.filter && params.filter !== 'todas') url += `ignorePrefs=true&`;
 
     const token = localStorage.getItem('token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
+
     const response = await fetch(url, { headers });
     if (!response.ok) throw new Error('Error servidor');
-    
+
     const recetas = await response.json();
     renderizarRecetas(recetas);
-    
-    // Guardar en cache con manejo de cuota
+
+    // Guardar en caché
     try {
       localStorage.setItem('recetas_cache', JSON.stringify(recetas));
     } catch (e) {
       if (e.name === 'QuotaExceededError') {
-        console.warn('Caché llena, limpiando solo recetas...');
-        // SOLO eliminar caches grandes, NO el token ni datos de usuario
+        console.warn('Caché llena, limpiando...');
+        // Solo eliminar cachés grandes, conservar token y datos de usuario
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -122,7 +117,6 @@ async function cargarRecetas(params = {}) {
 function mostrarSkeleton() {
   const container = document.getElementById('recetas');
   if (!container) return;
-  
   container.innerHTML = Array(6).fill(0).map(() => `
     <div class="recipe-card skeleton">
       <div class="skeleton-img"></div>
@@ -138,17 +132,16 @@ function mostrarSkeleton() {
 function renderizarRecetas(recetas) {
   const container = document.getElementById('recetas');
   if (!container) return;
-  
+
   if (!recetas || recetas.length === 0) {
     container.innerHTML = '<div class="no-results" style="opacity:0; animation: fadeIn 0.5s forwards;"><span>🍳</span><p>No hay recetas disponibles por ahora</p></div>';
     return;
   }
 
   const placeholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f5f5f5'/%3E%3Ctext x='50' y='60' text-anchor='middle' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
-  
+
   container.innerHTML = recetas.map((r, i) => {
     const tagsHtml = (r.etiquetas || []).slice(0, 3).map(t => `<span class="recipe-tag">${t}</span>`).join('');
-    
     return `
       <div class="recipe-card" style="opacity:0; animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${i * 0.05}s;" onclick="window.location.href='receta.html?id=${r.id}'">
         <div class="recipe-image">
@@ -162,11 +155,12 @@ function renderizarRecetas(recetas) {
             <span class="recipe-time">⏱️ ${r.tiempo || '30 min'}</span>
             <span class="recipe-price">💰 ${r.precio || '$$'}</span>
           </div>
-          <div class="recipe-tags">
-            ${tagsHtml}
-          </div>
-          <div class="recipe-likes">
-            ❤️ ${r.likes || 0} likes
+          <div class="recipe-tags">${tagsHtml}</div>
+          <div class="recipe-footer-stats" style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+            <span class="recipe-likes" style="font-size:0.85rem; color:#666;">
+              ${r.likedByUser ? '❤️' : '🤍'} ${r.likes || 0}
+            </span>
+            ${r.favoriteByUser ? '<span class="recipe-saved-indicator" title="Guardada" style="color:#4caf50; font-size:1.1rem;">⭐</span>' : ''}
           </div>
           <button class="btn-ver-mas">Ver detalles</button>
         </div>
@@ -175,48 +169,28 @@ function renderizarRecetas(recetas) {
   }).join('');
 }
 
-// ── Filtros ──────────────────────────────────────────────────────────────────
 async function setupFilters() {
   const container = document.querySelector('.filter-tags');
   if (!container) return;
 
-  try {
-    const res = await fetch('/api/tags');
-    if (!res.ok) throw new Error('Error tags');
-    const tags = await res.json();
+  const fijos = [
+    { id: 'todas',      icon: '🍽️', label: 'Todas' },
+    { id: 'populares',  icon: '🔥', label: 'Populares' },
+    { id: 'economicas', icon: '💰', label: 'Económicas' },
+    { id: 'rapidas',    icon: '⚡', label: 'Rápidas' }
+  ];
 
-    // Mantener los filtros fijos básicos
-    const fijos = [
-      { id: 'todas', icon: '🍽️', label: 'Todas' },
-      { id: 'populares', icon: '🔥', label: 'Populares' },
-      { id: 'economicas', icon: '💰', label: 'Económicas' },
-      { id: 'rapidas', icon: '⚡', label: 'Rápidas' }
-    ];
+  container.innerHTML = fijos.map(f => `
+    <button class="tag ${f.id === 'todas' ? 'active-filter' : ''}" data-filter="${f.id}">${f.icon} ${f.label}</button>
+  `).join('');
 
-    container.innerHTML = fijos.map(f => `
-      <button class="tag ${f.id === 'todas' ? 'active-filter' : ''}" data-filter="${f.id}">${f.icon} ${f.label}</button>
-    `).join('') + tags.map(t => `
-      <button class="tag" data-filter="tag:${t}">${t}</button>
-    `).join('');
-
-    // Re-vincular eventos
-    container.querySelectorAll('.tag').forEach(tag => {
-      tag.addEventListener('click', () => {
-        container.querySelectorAll('.tag').forEach(t => t.classList.remove('active-filter'));
-        tag.classList.add('active-filter');
-        const filter = tag.dataset.filter;
-        
-        if (filter.startsWith('tag:')) {
-          cargarRecetas({ q: filter.split(':')[1] }); // Buscar por la etiqueta
-        } else {
-          cargarRecetas({ filter: filter });
-        }
-      });
+  container.querySelectorAll('.tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+      container.querySelectorAll('.tag').forEach(t => t.classList.remove('active-filter'));
+      tag.classList.add('active-filter');
+      cargarRecetas({ filter: tag.dataset.filter });
     });
-
-  } catch (error) {
-    console.error('Error al cargar filtros dinámicos:', error);
-  }
+  });
 
   const searchInput = document.getElementById('search-input');
   let timeout = null;
@@ -228,11 +202,10 @@ async function setupFilters() {
   });
 }
 
-// ── Iniciar ──────────────────────────────────────────────────────────────────
 async function init() {
   await cargarUsuario();
-  await setupFilters(); // Cargar filtros antes de las recetas para tener el contexto
-  cargarRecetas(); 
+  await setupFilters();
+  cargarRecetas();
 }
 
 document.addEventListener('DOMContentLoaded', init);

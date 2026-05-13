@@ -23,7 +23,10 @@
         <h2>Iniciar Sesión</h2>
         <p class="welcome">¡Bienvenido de vuelta!</p>
         <input id="login-username" type="text" placeholder="Usuario" autocomplete="username">
-        <input id="login-password" type="password" placeholder="Contraseña">
+        <div class="password-container">
+          <input id="login-password" type="password" placeholder="Contraseña">
+          <span class="eye-toggle" data-target="login-password">👁️</span>
+        </div>
         <button id="login-btn">Iniciar Sesión →</button>
         <p class="register-link">
           ¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a>
@@ -39,8 +42,14 @@
           <input id="reg-apellido"  placeholder="Apellido *" autocomplete="family-name">
           <input id="reg-username"  placeholder="Usuario *" autocomplete="username">
           <input id="reg-email"     type="email" placeholder="Correo electrónico *" autocomplete="email">
-          <input id="reg-password"  type="password" placeholder="Contraseña *">
-          <input id="reg-confirm"   type="password" placeholder="Confirmar contraseña *">
+          <div class="password-container">
+            <input id="reg-password"  type="password" placeholder="Contraseña *">
+            <span class="eye-toggle" data-target="reg-password">👁️</span>
+          </div>
+          <div class="password-container">
+            <input id="reg-confirm"   type="password" placeholder="Confirmar contraseña *">
+            <span class="eye-toggle" data-target="reg-confirm">👁️</span>
+          </div>
           <button id="next-step-btn" style="margin-top:20px;">Siguiente →</button>
         </div>
 

@@ -1,7 +1,6 @@
-// planificador.js - Planificador semanal con Supabase
+// planificador.js
 import { supabase } from './supabaseClient.js';
 
-// Estado
 let todasLasRecetas = [];
 let planSemanal = {};
 let diasAbiertos = {};
@@ -14,11 +13,9 @@ const nombresDias = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles',
 const nombresComidas = { desayuno: 'Desayuno', comida: 'Comida', cena: 'Cena', merienda: 'Merienda', snack: 'Snack' };
 const iconosComidas = { desayuno: '🥐', comida: '🍲', cena: '🍜', merienda: '🍎', snack: '🍿' };
 
-// Estado para modal
 let diaActual = null;
 let comidaActual = null;
 
-// Inicializar plan semanal vacío
 function initPlanSemanal() {
   const plan = {};
   for (const dia of diasLista) {
@@ -30,7 +27,6 @@ function initPlanSemanal() {
   return plan;
 }
 
-// Cargar usuario actual (usa datos de localStorage, sin RLS)
 async function cargarUsuario() {
   const userId = localStorage.getItem('userId');
   const token = localStorage.getItem('token');
@@ -44,11 +40,9 @@ async function cargarUsuario() {
   }
 }
 
-// Cargar plan desde Supabase
 async function cargarPlanDesdeSupabase() {
   if (!currentUser) return;
   
-  // OPTIMIZACIÓN: Cargar desde cache inmediatamente
   const cached = localStorage.getItem('user_plan_cache');
   if (cached) {
     try {
@@ -68,7 +62,7 @@ async function cargarPlanDesdeSupabase() {
       const data = await response.json();
       const freshPlan = data.plan || initPlanSemanal();
       
-      // Solo actualizar si cambió
+      // Actualizar solo si cambió
       if (JSON.stringify(freshPlan) !== JSON.stringify(planSemanal)) {
         planSemanal = freshPlan;
         localStorage.setItem('user_plan_cache', JSON.stringify(planSemanal));
@@ -80,7 +74,7 @@ async function cargarPlanDesdeSupabase() {
     if (!planSemanal) planSemanal = initPlanSemanal();
   }
   
-  // Cargar días abiertos desde localStorage (preferencia UI)
+  // Cargar estado de días abiertos (preferencia UI)
   const abiertosGuardados = localStorage.getItem('diasAbiertos');
   if (abiertosGuardados) {
     diasAbiertos = JSON.parse(abiertosGuardados);
@@ -90,7 +84,7 @@ async function cargarPlanDesdeSupabase() {
     }
   }
   
-  // Cargar presupuesto
+  // Cargar presupuesto guardado
   const presupuestoGuardado = localStorage.getItem('presupuesto');
   if (presupuestoGuardado) {
     presupuesto = parseInt(presupuestoGuardado);
@@ -99,7 +93,6 @@ async function cargarPlanDesdeSupabase() {
   }
 }
 
-// Guardar plan en Supabase
 async function guardarPlanEnSupabase() {
   if (!currentUser) return;
   
@@ -116,27 +109,26 @@ async function guardarPlanEnSupabase() {
     
     if (!response.ok) throw new Error('Error al guardar plan');
     
-    mostrarNotificacion('Plan guardado. La lista de compras se sincronizará automáticamente.', false);
+    // Actualizar cache local con el plan más reciente
+    localStorage.setItem('user_plan_cache', JSON.stringify(planSemanal));
+    mostrarNotificacion('Plan actualizado. La lista de compras se sincronizó.', false);
   } catch (error) {
     console.error('Error al guardar plan:', error);
     mostrarNotificacion('Error al guardar el plan', true);
   }
 }
 
-// Alternar día abierto/cerrado
 function toggleDia(dia) {
   diasAbiertos[dia] = !diasAbiertos[dia];
   guardarPreferenciasUI();
   renderizarPlanificador();
 }
 
-// Guardar preferencias UI
 function guardarPreferenciasUI() {
   localStorage.setItem('diasAbiertos', JSON.stringify(diasAbiertos));
   localStorage.setItem('presupuesto', presupuesto);
 }
 
-// Calcular gastos
 function calcularGastoTotal() {
   let total = 0;
   for (const dia of diasLista) {
@@ -170,7 +162,6 @@ function calcularGastoComida(dia, comida) {
   return total;
 }
 
-// Actualizar presupuesto en UI
 function actualizarPresupuesto() {
   const total = calcularGastoTotal();
   const restante = presupuesto - total;
@@ -184,7 +175,6 @@ function actualizarPresupuesto() {
   }
 }
 
-// Mostrar notificación
 function mostrarNotificacion(mensaje, esError = false) {
   let notif = document.getElementById('plan-notif');
   if (!notif) {
@@ -199,15 +189,12 @@ function mostrarNotificacion(mensaje, esError = false) {
   setTimeout(() => notif.classList.remove('show'), 3000);
 }
 
-// Cargar recetas desde el API
 async function cargarRecetas() {
   try {
     const token = localStorage.getItem('token');
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
     
-    // El API ya filtra por permisos si se le pide, pero para el planificador 
-    // queremos ver todas las que el usuario puede planear (ignoramos filtros de dieta).
     const response = await fetch('/api/recipes?ignorePrefs=true', { headers });
     if (!response.ok) throw new Error('Error en API');
     
@@ -219,7 +206,6 @@ async function cargarRecetas() {
   }
 }
 
-// Renderizar modal de recetas
 function renderizarModalRecetas(recetas) {
   const container = document.getElementById('modal-recetas-list');
   if (!container) return;
@@ -239,7 +225,6 @@ function renderizarModalRecetas(recetas) {
     </div>
   `).join('');
   
-  // Event listeners
   container.querySelectorAll('.modal-receta-item').forEach(item => {
     item.addEventListener('click', () => {
       const id = parseInt(item.dataset.id);
@@ -252,7 +237,6 @@ function renderizarModalRecetas(recetas) {
   });
 }
 
-// Filtrar recetas en modal
 function setupModalSearch() {
   const searchInput = document.getElementById('modal-search-input');
   if (searchInput) {
@@ -267,7 +251,6 @@ function setupModalSearch() {
   }
 }
 
-// Abrir modal
 function abrirModalRecetas(dia, comida) {
   diaActual = dia;
   comidaActual = comida;
@@ -283,7 +266,6 @@ function abrirModalRecetas(dia, comida) {
   }
 }
 
-// Cerrar modal
 function cerrarModalRecetas() {
   const modal = document.getElementById('modal-recetas');
   if (modal) modal.classList.remove('active');
@@ -291,39 +273,48 @@ function cerrarModalRecetas() {
   comidaActual = null;
 }
 
-// Agregar receta al plan
 async function agregarReceta(dia, comida, receta) {
-  if (!planSemanal[dia][comida]) {
-    planSemanal[dia][comida] = [];
-  }
+  // Asegurar que la estructura del plan existe
+  if (!planSemanal[dia]) planSemanal[dia] = {};
+  if (!planSemanal[dia][comida]) planSemanal[dia][comida] = [];
   
-  // Verificar duplicados
   const yaExiste = planSemanal[dia][comida].some(r => r.id === receta.id);
   if (yaExiste) {
-    mostrarNotificacion('Esta receta ya está agregada', true);
+    mostrarNotificacion('Esta receta ya está en este apartado', true);
     return;
   }
   
   planSemanal[dia][comida].push(receta);
-  await guardarPlanEnSupabase();
   renderizarPlanificador();
   actualizarPresupuesto();
+
+  try {
+    localStorage.setItem('user_plan_cache', JSON.stringify(planSemanal));
+    await guardarPlanEnSupabase();
+  } catch (e) {
+    console.error('Error guardando plan:', e);
+    mostrarNotificacion('Receta agregada localmente (error al sincronizar)', false);
+  }
 }
 
-// Eliminar receta del plan
 async function eliminarReceta(dia, comida, index) {
   if (confirm('¿Eliminar esta receta del plan?')) {
     if (!planSemanal[dia]) planSemanal[dia] = {};
     if (!planSemanal[dia][comida]) planSemanal[dia][comida] = [];
     
     planSemanal[dia][comida].splice(index, 1);
-    await guardarPlanEnSupabase();
     renderizarPlanificador();
     actualizarPresupuesto();
+
+    try {
+      localStorage.setItem('user_plan_cache', JSON.stringify(planSemanal));
+      await guardarPlanEnSupabase();
+    } catch (e) {
+      console.error('Error guardando plan al eliminar:', e);
+    }
   }
 }
 
-// Función auxiliar para manejar el agregado desde URL
 async function manejarAgregadoDesdeURL() {
   const params = new URLSearchParams(window.location.search);
   const agregarId = params.get('agregar');
@@ -338,13 +329,10 @@ async function manejarAgregadoDesdeURL() {
       
       if (res.ok) {
         const receta = await res.json();
-        // Por defecto lo agregamos al Lunes - Comida si viene de URL
-        // o abrimos el modal para que el usuario elija
         diaActual = 'lunes';
         comidaActual = 'comida';
         await agregarReceta(diaActual, comidaActual, receta);
         
-        // Limpiar URL
         window.history.replaceState({}, document.title, window.location.pathname);
         mostrarNotificacion(`Receta "${receta.titulo}" agregada al Lunes`);
       }
@@ -354,7 +342,6 @@ async function manejarAgregadoDesdeURL() {
   }
 }
 
-// Exportar a PDF usando jsPDF
 async function exportarPDF() {
   const { jsPDF } = window.jspdf;
   
@@ -426,7 +413,6 @@ async function exportarPDF() {
   }
 }
 
-// Renderizar planificador completo
 function renderizarPlanificador() {
   const container = document.getElementById('dias-container');
   if (!container) return;
@@ -496,30 +482,25 @@ function renderizarPlanificador() {
   actualizarPresupuesto();
 }
 
-// Escapar HTML
 function escapeHTML(str) {
   if (!str) return '';
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Ir a lista de compras
 function irAListaCompras() {
   window.location.href = 'lista-compras.html';
 }
 
-// Inicializar
 async function init() {
   await cargarUsuario();
   await cargarPlanDesdeSupabase();
   await cargarRecetas();
   
-  // Manejar si viene de la página de receta
   await manejarAgregadoDesdeURL();
   
   renderizarPlanificador();
   setupModalSearch();
   
-  // Event listeners
   const presupuestoInput = document.getElementById('presupuesto-input');
   if (presupuestoInput) {
     presupuestoInput.addEventListener('change', (e) => {
@@ -544,7 +525,7 @@ async function init() {
   });
 }
 
-// Exponer funciones globalmente
+// Funciones globales
 window.toggleDia = toggleDia;
 window.eliminarReceta = eliminarReceta;
 window.abrirModalRecetas = abrirModalRecetas;

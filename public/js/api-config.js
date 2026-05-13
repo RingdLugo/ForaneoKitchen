@@ -1,5 +1,4 @@
-// api-config.js - Configuración central de la API
-
+// Detectar URL base del API
 const API_BASE = (() => {
   if (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')) {
     return 'http://localhost:3000';
@@ -22,6 +21,7 @@ async function fetchWithAuth(endpoint, options = {}) {
     headers
   });
 
+  // Redirigir al login si la sesión expiró
   if (response.status === 401) {
     localStorage.removeItem('token');
     if (!window.location.pathname.includes('login.html')) {

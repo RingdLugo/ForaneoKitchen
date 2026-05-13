@@ -265,6 +265,32 @@ body {
   outline: none;
 }
 
+.password-container {
+  position: relative;
+  width: 100%;
+}
+
+.password-container input {
+  padding-right: 45px !important;
+}
+
+.eye-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #888;
+  font-size: 1.1rem;
+  user-select: none;
+  transition: color 0.2s;
+  z-index: 5;
+}
+
+.eye-toggle:hover {
+  color: #4caf50;
+}
+
 .form-group input:disabled {
   background: #f5f5f5;
   color: #999;
@@ -496,16 +522,21 @@ body {
 
 .receta-grid-item {
   position: relative;
-  aspect-ratio: 1/1;
   overflow: hidden;
   cursor: pointer;
-  background: #f0f0f0;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
 }
+.receta-grid-item:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
 .receta-grid-item img {
-  width: 100%; height: 100%;
+  width: 100%;
+  aspect-ratio: 1/1;
   object-fit: cover;
-  transition: transform .3s;
   display: block;
 }
 
@@ -530,25 +561,33 @@ body {
   background: rgba(0,0,0,.45);
 }
 
-.btn-eliminar-receta-overlay, .btn-eliminar-historial-overlay {
+.btn-eliminar-receta-overlay, 
+.btn-eliminar-historial-overlay,
+.btn-eliminar-favorito-overlay {
   position: absolute;
-  top: 6px; right: 6px;
+  top: 8px; right: 8px;
   background: rgba(0,0,0,.6);
   color: white;
   border: none;
   border-radius: 50%;
-  width: 28px; height: 28px;
-  font-size: 0.8rem;
+  width: 32px; height: 32px;
+  font-size: 0.9rem;
   cursor: pointer;
   display: none;
   align-items: center;
   justify-content: center;
-  transition: background .2s;
+  transition: all .2s;
   z-index: 10;
+  backdrop-filter: blur(4px);
 }
+
 .receta-grid-item:hover .btn-eliminar-receta-overlay, 
-.receta-grid-item:hover .btn-eliminar-historial-overlay { display: flex; }
-.btn-eliminar-receta-overlay:hover, .btn-eliminar-historial-overlay:hover { background: rgba(198,40,40,.9); }
+.receta-grid-item:hover .btn-eliminar-historial-overlay,
+.receta-grid-item:hover .btn-eliminar-favorito-overlay { display: flex; }
+
+.btn-eliminar-receta-overlay:hover, 
+.btn-eliminar-historial-overlay:hover,
+.btn-eliminar-favorito-overlay:hover { background: #e53935; transform: scale(1.1); }
 
 .vacio-mensaje {
   text-align: center;
@@ -557,13 +596,194 @@ body {
   grid-column: 1/-1;
 }
 
-/* RESPONSIVE */
+/* MODAL DE PAGO — Estilo Planificador Premium */
+.modal-pago-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInModal 0.3s ease;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-pago-content {
+  background: white;
+  width: 90%;
+  max-width: 450px;
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  animation: slideUpModal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpModal {
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-pago-header {
+  padding: 24px 30px;
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.modal-pago-header h3 {
+  font-family: 'Poppins', sans-serif;
+  color: #2e7d32;
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.btn-close-modal {
+  background: white;
+  border: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  color: #666;
+  font-weight: bold;
+}
+
+.modal-pago-body {
+  padding: 30px;
+}
+
+.lista-tarjetas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tarjeta-item {
+  padding: 16px;
+  border: 2px solid #eee;
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tarjeta-item:hover {
+  border-color: #4caf50;
+  background: #f1f8f1;
+}
+
+.tarjeta-item.seleccionada {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+}
+
+.tarjeta-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.tarjeta-icon { font-size: 1.4rem; }
+.check { opacity: 0; color: #2e7d32; }
+.tarjeta-item.seleccionada .check { opacity: 1; }
+
+.btn-pay-confirm {
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 16px;
+  font-weight: 700;
+  width: 100%;
+  cursor: pointer;
+  margin-top: 20px;
+  box-shadow: 0 8px 20px rgba(46, 125, 50, 0.2);
+}
+
+.form-pago .input-group {
+  margin-bottom: 18px;
+}
+
+.form-pago label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #777;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.form-pago input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #eee;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.form-pago input:focus {
+  border-color: #4caf50;
+}
+
+/* Recompensas Estilo Grid Refinado */
+.rewards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.reward-card {
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid #ffe0b2;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.reward-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(255, 152, 0, 0.15);
+  border-color: #ff9800;
+}
+
+/* Ajustes Responsive */
 @media (max-width: 768px) {
   .avatar-section { flex-direction: column; text-align: center; gap: 20px; align-items: center; }
   .stats-container { justify-content: center; gap: 24px; }
   .form-row { grid-template-columns: 1fr; }
   .recetas-grid { grid-template-columns: repeat(3, 1fr); gap: 2px; }
   .seccion-btn { padding: 12px 14px; font-size: 0.7rem; }
+}
+
+@media (max-width: 600px) {
+  .modal-pago-content {
+    width: 95%;
+    border-radius: 24px 24px 0 0;
+    position: fixed;
+    bottom: 0;
+  }
 }
 
 @media (max-width: 480px) {
