@@ -11,9 +11,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://gikqmtsrhgdxzxvjxcbd.supabase.co',
+  process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
+
+// Endpoint para que el frontend obtenga las llaves públicas de forma dinámica
+app.get('/api/config', (req, res) => {
+  res.json({
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+  });
+});
 
 const PUNTOS = {
   ver_receta: 2,
