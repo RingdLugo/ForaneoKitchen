@@ -6,6 +6,7 @@ const puntosMonto          = document.getElementById('puntos-monto');
 const tituloInput          = document.getElementById('titulo');
 const precioInput          = document.getElementById('precio');
 const tiempoInput          = document.getElementById('tiempo');
+const porcionesInput       = document.getElementById('porciones');
 const ingredientesTextarea = document.getElementById('ingredientes');
 const pasosTextarea        = document.getElementById('pasos');
 const imagenInput          = document.getElementById('receta-imagen');
@@ -84,6 +85,12 @@ const validar = {
     if (!n || isNaN(num) || num < 1 || num > 1440) return { v: false, m: 'Tiempo inválido (1-1440 min)' };
     return { v: true, val: `${n} min`, num };
   },
+  porciones: (p) => {
+    const val = p?.trim();
+    if (!val || val.length < 1) return { v: false, m: 'Indica las porciones' };
+    if (VALIDAR.isInvalid(val)) return { v: false, m: 'Porciones inválidas' };
+    return { v: true, val };
+  },
   ingredientes: (i) => {
     const val = i?.trim();
     if (!val || val.length < 10) return { v: false, m: 'Lista de ingredientes muy corta' };
@@ -128,6 +135,10 @@ async function verificarSesion() {
         optFile.title = 'Solo usuarios Premium pueden subir videos';
         optFile.style.opacity = '0.5';
       }
+      
+      const premiumCheckboxContainer = document.querySelector('.checkbox-group');
+      if (premiumCheckboxContainer) premiumCheckboxContainer.style.display = 'none';
+
       const videoSection = document.getElementById('video-section');
       if (videoSection) {
         videoSection.innerHTML = `
@@ -166,6 +177,7 @@ async function cargarDatosEdicion(id) {
     tituloInput.value = r.titulo;
     precioInput.value = r.precio_numerico || r.precio?.replace(/[^0-9]/g, '') || '';
     tiempoInput.value = r.tiempo_numerico || r.tiempo?.replace(/[^0-9]/g, '') || '';
+    if (porcionesInput) porcionesInput.value = r.porciones || '';
     ingredientesTextarea.value = r.ingredientes;
     pasosTextarea.value = r.pasos;
     if (esPremiumCheckbox) esPremiumCheckbox.checked = r.es_premium;
@@ -287,6 +299,7 @@ async function publicarReceta() {
   const vTitulo = validar.titulo(tituloInput.value);
   const vPrecio = validar.precio(precioInput.value);
   const vTiempo = validar.tiempo(tiempoInput.value);
+  const vPorc   = validar.porciones(porcionesInput.value);
   const vIngred = validar.ingredientes(ingredientesTextarea.value);
   const vPasos  = validar.pasos(pasosTextarea.value);
 
@@ -294,6 +307,7 @@ async function publicarReceta() {
   if (!vIngred.v) return mostrarNotificacion(vIngred.m, 'error');
   if (!vPasos.v)  return mostrarNotificacion(vPasos.m, 'error');
   if (!vTiempo.v) return mostrarNotificacion(vTiempo.m, 'error');
+  if (!vPorc.v)   return mostrarNotificacion(vPorc.m, 'error');
   if (!vPrecio.v) return mostrarNotificacion(vPrecio.m, 'error');
 
   const ingredientes = vIngred.val;
@@ -339,13 +353,14 @@ async function publicarReceta() {
     }
 
     const payload = {
-      titulo: tV.val,
+      titulo: vTitulo.val,
       ingredientes,
       pasos,
-      precio: pV.val,
-      precioNumerico: pV.num,
-      tiempo: tiV.val,
-      tiempoNumerico: tiV.num,
+      precio: vPrecio.val,
+      precioNumerico: vPrecio.num,
+      tiempo: vTiempo.val,
+      tiempoNumerico: vTiempo.num,
+      porciones: vPorc.val,
       imagen: finalImage,
       videoUrl,
       videoYoutube: videoYoutubeId,

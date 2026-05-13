@@ -162,13 +162,17 @@ async function cargarActividadReciente() {
 
   if (!esPremium) {
     actividadContainer.innerHTML = `
-      <div style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;border:2px dashed #4caf50;">
-        <span style="font-size:3rem">🔒</span>
-        <h3 style="color:#1b5e20;margin-top:15px">Actividad Exclusiva</h3>
-        <p style="margin:10px 0;color:#666;font-size:0.95rem;line-height:1.5;">La actividad de la comunidad y los comentarios son exclusivos para usuarios <strong>Premium</strong> 👑</p>
-        <button onclick="window.location.href='perfil.html'" class="tab-btn active" style="margin-top:20px;padding:10px 25px;border-radius:20px;">Mejorar a Premium</button>
-      </div>
-    `;
+      <div class="premium-lock-box" style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;border:2px dashed #4caf50;margin:20px 0;">
+        <div style="font-size:3rem;margin-bottom:15px;">🔒</div>
+        <h3 style="color:#1b5e20;margin-bottom:10px;">Actividad Exclusiva</h3>
+        <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">
+          La actividad de la comunidad y los comentarios son exclusivos para usuarios <strong>Premium</strong> 👑
+        </p>
+        <button onclick="window.location.href='perfil.html'" 
+          style="margin-top:20px;padding:10px 25px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;">
+          Mejorar Cuenta
+        </button>
+      </div>`;
     return;
   }
 

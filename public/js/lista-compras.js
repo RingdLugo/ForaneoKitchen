@@ -125,9 +125,9 @@ async function sincronizarInteligente() {
 
   const itemsPlanner = [];
   mapa.forEach((entry, key) => {
-    // Combinar cantidades: "100g", "2 tazas" → "100g + 2 tazas"
+    // Combinar cantidades: "100g", "100g" → "100g + 100g"
     const cantidadCombinada = entry.cantidades.length > 0
-      ? [...new Set(entry.cantidades)].join(' + ')
+      ? entry.cantidades.join(' + ')
       : '';
 
     itemsPlanner.push({

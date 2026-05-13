@@ -37,7 +37,7 @@ function tienePermiso(u, p) {
     const parts = tag.split(':');
     if (parts.length < 2) return false;
     const expiraStr = parts[1];
-    if (expiraStr === 'PERMANENT') return true;
+    if (expiraStr === 'PERMANENT') return false;
     return new Date(expiraStr) > new Date();
   }
   return false;
@@ -494,7 +494,7 @@ function renderizarReceta(r) {
           </div>
           <div class="info-card" style="background:#f5f5f5;border-radius:16px;padding:16px;text-align:center;">
             <div class="info-label" style="color:#888;font-size:0.75rem;text-transform:uppercase;">Porciones</div>
-            <div class="info-value" style="font-weight:700;font-size:1.1rem;">2–4</div>
+            <div class="info-value" style="font-weight:700;font-size:1.1rem;">${escapeHTML(r.porciones || '2–4')}</div>
           </div>
           <div class="info-card" style="background:#f5f5f5;border-radius:16px;padding:16px;text-align:center;">
             <div class="info-label" style="color:#888;font-size:0.75rem;text-transform:uppercase;">Tiempo</div>

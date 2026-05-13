@@ -1,136 +1,210 @@
-# README
+# Foráneo Kitchen 🍳
+### *La guía definitiva para sobrevivir a la cocina siendo foráneo.*
 
-## ForaneoKitchen 🍳
+**Foráneo Kitchen** es una plataforma web integral diseñada para estudiantes y personas que viven solas ("foráneos"), enfocada en la optimización del presupuesto, la salud y la comunidad. Permite registrarse, iniciar sesión, publicar recetas con imágenes y videos, planificar comidas semanales, generar listas de compra automáticas y consultar recetas compartidas por otros usuarios.
 
-Aplicación web de recetas económicas pensada para estudiantes foráneos. Permite registrarse, iniciar sesión, publicar recetas con imágenes, planificar comidas semanales, generar listas de compra automáticas y consultar recetas compartidas por otros usuarios.
+El sistema incluye autenticación con token JWT, gestión de recetas con validaciones, filtros inteligentes, búsqueda en tiempo real, planificador semanal con presupuesto, lista de compras por categorías y un asistente inteligente (Chef IA) disponible para usuarios premium.
 
-El sistema incluye autenticación con token, gestión de recetas con validaciones, filtros inteligentes, búsqueda en tiempo real, planificador semanal con presupuesto, lista de compras por categorías y un chatbot disponible para usuarios premium.
+**Repositorio del proyecto:** [https://github.com/RingdLugo/ForaneoKitchen.git](https://github.com/RingdLugo/ForaneoKitchen.git)
 
-**Repositorio del proyecto:** https://github.com/RingdLugo/ForaneoKitchen.git
+---
 
-## Tecnologías utilizadas
+## 🛠️ Tecnologías Utilizadas
 
-- HTML5
-- CSS3
-- JavaScript (Vanilla)
-- Node.js
-- Express
-- API REST
-- Supabase (Base de Datos & Auth)
-- JWT (JSON Web Token) para sesiones
-- bcryptjs para encriptación de contraseñas
-- Nodemailer (Simulado para OTP en consola)
+*   **HTML5**
+*   **CSS3**
+*   **JavaScript**
+*   **Node.js**
+*   **Express**
+*   **API REST**
+*   **Supabase** (Base de datos PostgreSQL)
+*   **JWT** (JSON Web Token) para autenticación
+*   **bcryptjs** para encriptación de contraseñas
+*   **Nodemailer** para envío de correos (OTP)
 
-## Requisitos
+---
 
+## 🔧 Requisitos e Instalación
+
+### Requisitos
 Antes de ejecutar el proyecto debes tener instalado:
-
-- Node.js (v14 o superior)
-- npm
+*   **Node.js**
+*   **npm**
 
 Puedes verificarlo con:
-
 ```bash
 node -v
 npm -v
 ```
 
-## Instalación del proyecto
+### Instalación del proyecto
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone https://github.com/RingdLugo/ForaneoKitchen.git
+    ```
+2.  **Entrar a la carpeta del proyecto:**
+    ```bash
+    cd ForaneoKitchen/2.0
+    ```
+3.  **Instalar las dependencias:**
+    ```bash
+    npm install
+    ```
 
-1. **Clonar el repositorio**
+---
 
-```bash
-git clone https://github.com/RingdLugo/ForaneoKitchen.git
-```
+## 🚀 Ejecución del Proyecto
 
-2. **Entrar a la carpeta del proyecto**
-
-```bash
-cd ForaneoKitchen
-```
-
-3. **Instalar las dependencias del backend**
-
-```bash
-npm install
-```
-
-Esto descargará todas las librerías necesarias para ejecutar el servidor.
-
-## Ejecutar el proyecto
-
-Para iniciar el servidor ejecutar:
-
+Para iniciar el servidor, ejecuta:
 ```bash
 npm start
 ```
+El servidor se ejecutará en: `http://localhost:3000`
 
-El servidor se ejecutará en:
+### Ejecutar el frontend
+Una vez que el servidor esté corriendo, abre tu navegador y entra a:
 `http://localhost:3000`
 
-## Ejecutar el frontend
+---
 
-Una vez que el servidor esté corriendo, simplemente abre tu navegador y entra a:
-`http://localhost:3000`
+## 💎 Sistema de Membresías (Free vs Premium)
 
-## Uso de la aplicación
+El proyecto cuenta con una diferenciación clara de funcionalidades según el rol del usuario, diseñada para incentivar la participación y la suscripción:
+
+### 👤 Usuario Free (Gratis)
+Es el nivel básico para todo nuevo usuario registrado. Permite:
+*   **Explorar Recetas:** Ver ingredientes, pasos y costos de todas las recetas públicas.
+*   **Planificador Semanal:** Acceso total para organizar comidas y presupuestos.
+*   **Lista de Compras:** Generación automática de listas de súper.
+*   **Publicar Recetas:** Puede subir platillos con imágenes (sin soporte de video).
+*   **Gamificación:** Gana puntos por likes y visitas.
+
+### 🌟 Usuario Premium (Pago o Recompensa)
+Desbloquea el potencial total de la plataforma:
+*   **Contenido Multimedia:** Visualización de videos tutoriales (YouTube y archivos MP4).
+*   **Comunidad Activa:** Único rol con permiso para **leer y escribir comentarios** en las recetas.
+*   **Chatbot Chef IA:** Acceso al asistente inteligente para consultas de cocina personalizadas.
+*   **Historial de Navegación:** Acceso a la lista detallada de recetas visitadas recientemente.
+*   **Publicación Avanzada:** Capacidad de incluir videos al subir o editar sus propias recetas.
+*   **Beneficio Visual:** Eliminación de los anuncios o mensajes de bloqueo en la interfaz.
+
+> **Nota:** Los usuarios Free pueden obtener accesos Premium temporales (1-5 días) canjeando sus puntos acumulados en la sección de perfil.
+
+---
+
+## 📖 Uso de la Aplicación
 
 ### Crear una cuenta
-Al abrir la aplicación aparecerá la pantalla principal. Debes presionar **Comenzar** para ir a la pantalla de inicio de sesión.
-Si aún no tienes cuenta:
-- Haz clic en **Regístrate**.
-- Completa todos los campos: Nombre, Apellido, Email, Usuario, Contraseña.
-- Si deseas tener acceso a las funciones premium (chatbot), marca la casilla "Premium".
-- Presiona **Crear Usuario**.
-- **Importante:** Revisa la consola donde corre el servidor para ver el código OTP de 6 dígitos.
-- Ingresa el código para completar el registro.
+1.  Al abrir la aplicación presiona **Comenzar** para ir a la pantalla de inicio de sesión.
+2.  Haz clic en **Regístrate**.
+3.  Completa los campos: Nombre, Apellido, Email, Usuario, Contraseña.
+4.  Si deseas funciones premium desde el inicio, marca la casilla **"Premium"**.
+5.  Recibirás un código OTP de 6 dígitos en tu correo. Ingrésalo para completar el registro.
 
 ### Iniciar sesión
-- Escribe el usuario y contraseña que registraste.
-- Presiona **Iniciar sesión**.
+1.  Ingresa el usuario y contraseña registrados.
+2.  Si tu membresía Premium ha expirado, el sistema te lo notificará y te cambiará automáticamente al rol Free, bloqueando las funciones exclusivas con un mensaje explicativo.
 
 ### Publicar una receta
-1. En la navegación inferior, haz clic en **"Subir"**.
-2. Completa los campos: Título, Costo, Tiempo, Ingredientes y Pasos.
-3. (Opcional) Sube una imagen. Si eres Premium, puedes añadir links de video.
-4. Presiona **Publicar receta**.
+1.  En la navegación inferior, haz clic en **"Subir"**.
+2.  Completa el formulario: Título, Costo, Tiempo, Porciones, Ingredientes y Pasos.
+3.  Si eres Premium, verás la opción para añadir un **Link de YouTube** o **Subir un archivo de Video**.
 
-### Planificador semanal y Lista de compras
-1. En **"Planificador"**, define tu presupuesto.
-2. Agrega recetas a los diferentes días.
-3. Ve a **"Lista de Compras"**; verás los ingredientes organizados por categorías automáticamente.
-4. Puedes marcar lo que ya compraste y exportar la lista en PDF.
+### Planificador y Lista de Compras
+1.  Define tu presupuesto semanal.
+2.  Agrega recetas a los días de la semana. El sistema te avisará si te pasas de tu presupuesto.
+3.  Genera la lista de compras. Si agregas la misma receta dos veces, el sistema **suma automáticamente los ingredientes** (ej. si dos recetas usan 2 huevos, la lista dirá "4 huevos").
 
-### Chatbot (Chef IA - Solo Premium)
-- Haz clic en el botón flotante 🍳.
-- Pregunta por recetas, ingredientes o pide consejos de planificación.
-- El Chef IA te responderá y sugerirá recetas interactivas.
+---
 
-## Funcionalidades principales
-- Autenticación segura con OTP y JWT.
-- Sistema de puntos acumulables por actividad.
-- Canje de puntos por beneficios Premium.
-- Chatbot inteligente con procesamiento de lenguaje natural básico.
-- Exportación de planes y listas en formato PDF.
-- Modo oscuro integrado.
-- Diseño 100% responsive para móviles y tablets.
+## ✨ Funcionalidades Principales
 
-## Estructura del proyecto
+*   Registro de usuarios con verificación por correo **OTP**.
+*   Inicio de sesión con autenticación **JWT**.
+*   Recuperación de contraseña con código **OTP**.
+*   Publicación de recetas con imagen y video (solo Premium).
+*   Validaciones de calidad (bloqueo de spam, gibberish y lenguaje ofensivo).
+*   Búsqueda en tiempo real por título, ingredientes o autor.
+*   Filtros inteligentes (Económicas, Rápidas, Microondas, Menos de $30).
+*   Página de detalle con **Porciones Reales** y costo dinámico.
+*   Diferenciación de roles: Usuarios Free vs Usuarios Premium.
+*   **Planificador semanal** con control de presupuesto dinámico.
+*   **Lista de compras automática** con suma de ingredientes duplicados.
+*   **Chatbot Chef IA** para búsqueda inteligente (solo Premium).
+*   Limpieza automática de archivos multimedia al eliminar recetas.
+*   Botón de sugerencias/quejas directo al correo de soporte.
 
+---
+
+## 🔗 Ejemplos de uso de la API
+
+### Registro de usuario
+**POST** `/api/auth/register`
+```json
+{
+  "nombre": "Juan",
+  "apellido": "Perez",
+  "email": "juan@example.com",
+  "username": "juanito",
+  "password": "Password123",
+  "esPremium": true
+}
 ```
+
+### Verificar código OTP
+**POST** `/api/auth/verify-otp`
+```json
+{
+  "email": "juan@example.com",
+  "otp": "123456"
+}
+```
+
+### Inicio de sesión
+**POST** `/api/auth/login`
+```json
+{
+  "username": "juanito",
+  "password": "Password123"
+}
+```
+
+### Crear una nueva receta (Premium)
+**POST** `/api/recipes`
+**Headers:** `Authorization: Bearer <token>`
+```json
+{
+  "titulo": "Tacos de Pollo",
+  "ingredientes": "Tortillas, Pollo, Salsa",
+  "pasos": "1. Cocer pollo. 2. Armar tacos.",
+  "precioNumerico": 45,
+  "tiempoNumerico": 20,
+  "porciones": "4",
+  "videoUrl": "https://url-del-video.mp4"
+}
+```
+
+---
+
+## 📂 Estructura del Proyecto
+
+```text
 PROYECTO/
-└── ForaneoKitchen/
+└── 2.0/
+    ├── node_modules/           # Dependencias
     ├── public/                 # Frontend
-    │   ├── css/                # Estilos (Vanilla CSS)
-    │   ├── js/                 # Lógica (Vanilla JS)
-    │   └── *.html              # Vistas
-    ├── server.js               # Servidor Express & API
-    ├── package.json            # Dependencias
+    │   ├── css/                # Estilos
+    │   ├── js/                 # Lógica (Auth, Planificador, Chat, etc.)
+    │   ├── home.html           # Dashboard
+    │   ├── index.html          # Bienvenida
+    │   └── receta.html         # Detalle
+    ├── server.js               # Backend Node.js/Express
     └── README.md               # Documentación
 ```
 
-## Estado del proyecto
-⚠️ **Versión Beta**: Actualmente en fase de optimización. Se corrigen detalles de interfaz y fluidez constantemente.
+---
 
-## Autor
-Proyecto desarrollado con fines académicos para la comunidad de estudiantes foráneos.
+## ⚠️ Estado del Proyecto
+Este proyecto se encuentra en **Versión Beta**. Se han implementado robustos sistemas de seguridad y limpieza de datos, pero se recomienda su uso bajo supervisión.
+
+Developed with ❤️ by **Alison Lugo & Team**.

@@ -36,11 +36,11 @@ let tarjetaSeleccionadaId      = null;
 
 const REWARDS = [
   { id: 'comentarios_1d', name: 'Permiso Comentarios (1 día)', points: 50,  icon: '💬', benefit: 'Comenta en cualquier receta por 24h', days: 1, type: 'permiso_comentarios' },
-  { id: 'videos',         name: 'Desbloquear Videos',           points: 500, icon: '🎥', benefit: 'Acceso a videos permanentemente',       type: 'videos' },
-  { id: 'historial_acc',  name: 'Acceso Historial (1 día)',     points: 300, icon: '📜', benefit: 'Ver tu historial de recetas por 24h',   days: 1, type: 'permiso_historial' },
-  { id: 'comunidad_acc',  name: 'Acceso Comunidad (1 día)',     points: 400, icon: '👥', benefit: 'Ver actividad de la comunidad por 24h', days: 1, type: 'permiso_comunidad' },
-  { id: '1day',           name: '1 día Premium',               points: 120, icon: '👑', benefit: 'Acceso Premium TOTAL por 1 día',       days: 1 },
-  { id: '7days',          name: '7 días Premium',               points: 700, icon: '👑🌟', benefit: 'Acceso Premium por 7 días',          days: 7 }
+  { id: 'videos_3d',      name: 'Pase de Videos (3 días)',      points: 300, icon: '🎥', benefit: 'Acceso a videos por 72h',           days: 3, type: 'videos' },
+  { id: 'historial_1d',   name: 'Acceso Historial (1 día)',     points: 200, icon: '📜', benefit: 'Ver tu historial de recetas por 24h',   days: 1, type: 'permiso_historial' },
+  { id: 'comunidad_1d',   name: 'Acceso Comunidad (1 día)',     points: 250, icon: '👥', benefit: 'Ver actividad de la comunidad por 24h', days: 1, type: 'permiso_comunidad' },
+  { id: '1day_premium',   name: '1 día Premium',               points: 120, icon: '👑', benefit: 'Acceso Premium TOTAL por 1 día',       days: 1 },
+  { id: '5days_premium',  name: '5 días Premium',               points: 500, icon: '👑🌟', benefit: 'Acceso Premium por 5 días',          days: 5 }
 ];
 
 const PROFANITY = ['puto', 'puta', 'mierda', 'pendejo', 'pendeja', 'culero', 'cabron', 'chinga', 'verga', 'pito', 'fuck', 'shit', 'asshole', 'idiota', 'estupido'];
@@ -423,7 +423,12 @@ async function cargarHistorial() {
     const res = await fetch('/api/users/me/history', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (res.status === 403) { renderGrid('historial-grid', [], false); return; }
+    
+    if (res.status === 403) {
+      renderGrid('historial-grid', [], false, true);
+      return;
+    }
+
     if (!res.ok) throw new Error('Error en API');
     const history = await res.json();
     renderGrid('historial-grid', history || [], false);
@@ -434,9 +439,25 @@ async function cargarHistorial() {
   }
 }
 
-function renderGrid(containerId, recetas, misRecetas) {
+function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
   const container = document.getElementById(containerId);
   if (!container) return;
+
+  if (isLocked) {
+    container.innerHTML = `
+      <div class="premium-lock-box" style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;grid-column:1/-1;border:2px dashed #4caf50;margin:20px 0;">
+        <div style="font-size:3rem;margin-bottom:15px;">🔒</div>
+        <h3 style="color:#1b5e20;margin-bottom:10px;">Contenido Premium</h3>
+        <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">
+          Esta sección es exclusiva para usuarios <strong>Premium</strong> 👑
+        </p>
+        <button id="btn-upgrade-from-grid" onclick="window.location.href='perfil.html'" 
+          style="margin-top:20px;padding:10px 25px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;">
+          Mejorar Cuenta
+        </button>
+      </div>`;
+    return;
+  }
 
   if (!recetas.length) {
     const messages = {
@@ -573,7 +594,8 @@ async function guardarPerfil() {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({
         nombre, apellido, username, bio,
-        preferencias: preferenciasSeleccionadas
+        preferencias: preferenciasSeleccionadas,
+        foto_perfil: currentUser.foto_perfil // Asegurar que no se pierda la foto al guardar el resto
       })
     });
     
@@ -611,11 +633,34 @@ async function cambiarAvatar(file) {
   const reader = new FileReader();
   reader.onload = async (e) => {
     const base64 = e.target.result;
-    const { error } = await supabase.from('usuarios').update({ foto_perfil: base64 }).eq('id', currentUser.id);
-    if (error) { showToast('Error al subir foto', true); return; }
-    avatarImg.src = base64;
-    showToast('📷 Foto de perfil actualizada');
-    currentUser.foto_perfil = base64;
+    const token = localStorage.getItem('token');
+    
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ foto_perfil: base64 })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error al actualizar foto');
+      }
+
+      avatarImg.src = base64;
+      showToast('📷 Foto de perfil actualizada');
+      currentUser.foto_perfil = base64;
+      // Guardar también en el header para que se vea reflejado sin recargar
+      const headerAvatar = document.getElementById('avatar-img');
+      if (headerAvatar) headerAvatar.src = base64;
+      localStorage.setItem('userData', JSON.stringify(currentUser));
+    } catch (err) {
+      console.error('Error al subir foto:', err);
+      showToast(err.message || 'Error al subir foto', true);
+    }
   };
   reader.readAsDataURL(file);
 }

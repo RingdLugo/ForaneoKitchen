@@ -278,12 +278,7 @@ async function agregarReceta(dia, comida, receta) {
   if (!planSemanal[dia]) planSemanal[dia] = {};
   if (!planSemanal[dia][comida]) planSemanal[dia][comida] = [];
   
-  const yaExiste = planSemanal[dia][comida].some(r => r.id === receta.id);
-  if (yaExiste) {
-    mostrarNotificacion('Esta receta ya está en este apartado', true);
-    return;
-  }
-  
+  /* Permitir duplicados si el usuario lo desea (ej. para doble porción) */
   planSemanal[dia][comida].push(receta);
   renderizarPlanificador();
   actualizarPresupuesto();

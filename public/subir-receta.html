@@ -57,17 +57,19 @@
         <small class="input-hint">Mínimo 3 caracteres. Máximo 100 caracteres</small>
       </div>
 
-      <!-- Campos: Precio y Tiempo -->
-      <div class="form-row">
+      <!-- Campos: Precio, Tiempo y Porciones -->
+      <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
         <div class="form-group">
-          <label for="precio">💰 Costo aproximado *</label>
-          <input id="precio" type="text" placeholder="Ej: 28 o $28 MXN">
-          <small class="input-hint">Ingresa el costo total estimado</small>
+          <label for="precio">💰 Costo *</label>
+          <input id="precio" type="text" placeholder="Ej: 28">
         </div>
         <div class="form-group">
-          <label for="tiempo">⏱️ Tiempo de preparación *</label>
-          <input id="tiempo" type="text" placeholder="Ej: 15 o 15 min">
-          <small class="input-hint">Solo números en minutos</small>
+          <label for="tiempo">⏱️ Tiempo *</label>
+          <input id="tiempo" type="text" placeholder="Min">
+        </div>
+        <div class="form-group">
+          <label for="porciones">🍽️ Porciones *</label>
+          <input id="porciones" type="text" placeholder="Ej: 2-4">
         </div>
       </div>
 

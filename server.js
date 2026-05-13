@@ -126,6 +126,16 @@ function decodeToken(t) {
   catch { return null; }
 }
 
+async function checkPremiumExpiration(user) {
+  if (user && user.es_premium && user.premium_hasta && new Date(user.premium_hasta) < new Date()) {
+    await supabase.from('usuarios').update({ es_premium: false, rol: 'free' }).eq('id', user.id);
+    user.es_premium = false;
+    user.rol = 'free';
+    return true;
+  }
+  return false;
+}
+
 async function authMW(req, res, next) {
   const t = req.headers.authorization?.split(' ')[1];
   if (!t) return res.status(401).json({ error: 'No autorizado' });
@@ -135,12 +145,7 @@ async function authMW(req, res, next) {
   const { data } = await supabase.from('usuarios').select('*').eq('id', d.id).maybeSingle();
   if (!data) return res.status(401).json({ error: 'Sesión inválida' });
 
-  // Expirar premium si ya venció
-  if (data.es_premium && data.premium_hasta && new Date(data.premium_hasta) < new Date()) {
-    await supabase.from('usuarios').update({ es_premium: false, rol: 'free' }).eq('id', data.id);
-    data.es_premium = false;
-    data.rol = 'free';
-  }
+  await checkPremiumExpiration(data);
   req.user = data;
   next();
 }
@@ -154,10 +159,13 @@ async function optAuth(req, res, next) {
         req.userId = d.id;
         const { data } = await supabase
           .from('usuarios')
-          .select('id, rol, es_premium, preferencias')
+          .select('id, rol, es_premium, premium_hasta, preferencias')
           .eq('id', d.id)
           .maybeSingle();
-        if (data) req.user = data;
+        if (data) {
+          await checkPremiumExpiration(data);
+          req.user = data;
+        }
       }
     }
   } catch (e) { console.error('optAuth Error:', e); }
@@ -174,7 +182,9 @@ function tienePermiso(u, p) {
     const parts = tag.split(':');
     if (parts.length < 2) return false;
     const exp = parts[1];
-    return exp === 'PERMANENT' || new Date(exp) > new Date();
+    // Ya no se permiten accesos PERMANENT. Siempre debe haber una fecha válida.
+    if (exp === 'PERMANENT') return false; 
+    return new Date(exp) > new Date();
   }
   return false;
 }
@@ -376,7 +386,14 @@ app.put('/api/auth/me', authMW, async (req, res) => {
   if (nombre && !nameRegex.test(nombre)) return res.status(400).json({ error: 'Nombre inválido' });
   if (apellido && !nameRegex.test(apellido)) return res.status(400).json({ error: 'Apellido inválido' });
 
-  const updates = { nombre, apellido, bio, preferencias, foto_perfil };
+  const updates = {};
+  if (nombre !== undefined) updates.nombre = nombre;
+  if (apellido !== undefined) updates.apellido = apellido;
+  if (bio !== undefined) updates.bio = bio;
+  if (preferencias !== undefined) updates.preferencias = preferencias;
+  if (foto_perfil !== undefined) updates.foto_perfil = foto_perfil;
+
+  console.log(`[DEBUG] Actualizando perfil para usuario ${req.user.id}. Campos:`, Object.keys(updates));
 
   // Verificar que el nuevo username no esté en uso
   if (username && username !== req.user.username) {
@@ -391,7 +408,10 @@ app.put('/api/auth/me', authMW, async (req, res) => {
   const { error } = await supabase.from('usuarios')
     .update(updates).eq('id', req.user.id);
 
-  if (error) return res.status(500).json({ error: 'Error al guardar el perfil' });
+  if (error) {
+    console.error('❌ Error Supabase al actualizar perfil:', error);
+    return res.status(500).json({ error: 'Error al guardar el perfil' });
+  }
 
   // Sincronizar username en recetas y comentarios
   if (updates.username) {
@@ -614,6 +634,7 @@ app.post('/api/recipes', authMW, async (req, res) => {
     titulo, ingredientes, pasos, descripcion,
     precio, precioNumerico,
     tiempo, tiempoNumerico,
+    porciones,
     imagen,
     videoUrl, videoYoutube,
     esPremium, etiquetas
@@ -655,6 +676,7 @@ app.post('/api/recipes', authMW, async (req, res) => {
     precio_numerico: precioNumerico || 0,   // ← snake_case
     tiempo: tiempo || '30 min',
     tiempo_numerico: tiempoNumerico || 30,  // ← snake_case
+    porciones: porciones || '2-4',
     imagen: imagen || null,
     video_url: videoUrl || null, // ← snake_case
     video_youtube: videoYoutube || null, // ← snake_case
@@ -667,10 +689,10 @@ app.post('/api/recipes', authMW, async (req, res) => {
     comentarios_count: 0
   };
   
-  // Validar si el usuario puede agregar video (solo Premium)
+  // Validar si el usuario puede agregar video o marcar como premium (solo Premium)
   const isPremiumUser = req.user.es_premium || req.user.rol === 'premium' || req.user.rol === 'admin';
-  if (!isPremiumUser && (videoUrl || videoYoutube)) {
-    return res.status(403).json({ error: 'La función de video es exclusiva para usuarios Premium 👑' });
+  if (!isPremiumUser && (videoUrl || videoYoutube || esPremium)) {
+    return res.status(403).json({ error: 'Las funciones de video y recetas Premium son exclusivas para usuarios Premium 👑' });
   }
 
   const { data, error } = await supabase.from('recetas').insert(receta).select().maybeSingle();
@@ -689,6 +711,7 @@ app.put('/api/recipes/:id', authMW, async (req, res) => {
     titulo, ingredientes, pasos, descripcion,
     precio, precioNumerico,
     tiempo, tiempoNumerico,
+    porciones,
     imagen,
     videoUrl, videoYoutube,
     esPremium, etiquetas
@@ -716,23 +739,22 @@ app.put('/api/recipes/:id', authMW, async (req, res) => {
     precio_numerico: precioNumerico || 0,
     tiempo: tiempo || '30 min',
     tiempo_numerico: tiempoNumerico || 30,
+    porciones: porciones || '2-4',
     es_premium: esPremium || false,
     etiquetas: etiquetas || []
   };
 
-  if (imagen) updates.imagen = imagen;
+  if (imagen !== undefined) updates.imagen = imagen;
   
-  // Validar si el usuario puede agregar video (solo Premium)
+  // Validar si el usuario puede agregar video o marcar como premium (solo Premium)
   const isPremiumUser = req.user.es_premium || req.user.rol === 'premium' || req.user.rol === 'admin';
   if (isPremiumUser) {
     if (videoUrl !== undefined) updates.video_url = videoUrl;
     if (videoYoutube !== undefined) updates.video_youtube = videoYoutube;
+    if (esPremium !== undefined) updates.es_premium = esPremium;
   } else {
-    // Si no es premium, no permitimos actualizar campos de video (a menos que ya los tuviera, pero la regla dice que solo premium pueden agregarlos)
-    // Para ser estrictos: si intenta mandar video y no es premium, ignoramos esos campos o lanzamos error.
-    // El usuario pide que "si se convierten... pueden agregarlo", lo que implica que el free NO puede.
-    if (videoUrl || videoYoutube) {
-      return res.status(403).json({ error: 'La función de video es exclusiva para usuarios Premium 👑' });
+    if (videoUrl || videoYoutube || esPremium) {
+      return res.status(403).json({ error: 'Las funciones de video y recetas Premium son exclusivas para usuarios Premium 👑' });
     }
   }
 
@@ -752,12 +774,29 @@ app.put('/api/recipes/:id', authMW, async (req, res) => {
 });
 
 app.delete('/api/recipes/:id', authMW, async (req, res) => {
-  const { data } = await supabase.from('recetas').select('usuario_id').eq('id', req.params.id).maybeSingle();
+  const { data } = await supabase.from('recetas').select('usuario_id, imagen, video_url').eq('id', req.params.id).maybeSingle();
   if (!data) return res.status(404).json({ error: 'Receta no encontrada' });
   if (data.usuario_id !== req.user.id && req.user.rol !== 'admin')
     return res.status(403).json({ error: 'Sin permiso' });
+
+  // Intentar borrar archivos de storage si existen
+  try {
+    const filesToDelete = [];
+    if (data.imagen && data.imagen.includes('/storage/v1/object/public/recetas/')) {
+      filesToDelete.push(data.imagen.split('/recetas/')[1]);
+    }
+    if (data.video_url && data.video_url.includes('/storage/v1/object/public/recetas/')) {
+      filesToDelete.push(data.video_url.split('/recetas/')[1]);
+    }
+    if (filesToDelete.length > 0) {
+      await supabase.storage.from('recetas').remove(filesToDelete);
+    }
+  } catch (e) {
+    console.error('Error borrando archivos de storage:', e);
+  }
+
   await supabase.from('recetas').delete().eq('id', req.params.id);
-  res.json({ mensaje: 'Eliminada' });
+  res.json({ mensaje: 'Receta y archivos asociados eliminados' });
 });
 
 // ── COMENTARIOS ──────────────────────────────────────────────────────────────
@@ -1087,6 +1126,11 @@ app.get('/api/users/me/history', authMW, async (req, res) => {
     .eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(30);
   if (!hist?.length) return res.json([]);
 
+  // Solo Premium o con permiso pueden ver historial
+  if (!tienePermiso(req.user, 'HISTORIAL')) {
+    return res.status(403).json({ error: 'El historial de navegación es una función Premium 📜' });
+  }
+
   const esPremium = req.user.es_premium === true || req.user.rol === 'premium' || req.user.rol === 'admin';
   let query = supabase.from('recetas').select('*').in('id', hist.map(h => h.receta_id));
   /*
@@ -1188,31 +1232,39 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
   let message = `Canje exitoso: ${rewardId}`;
 
   if (days && days > 0) {
+    // Restringir recompensas a máximo 5 días
+    const safeDays = Math.min(Math.max(days, 1), 5);
     const base = user.es_premium && user.premium_hasta ? new Date(user.premium_hasta) : new Date();
-    base.setDate(base.getDate() + days);
+    base.setDate(base.getDate() + safeDays);
     updates.es_premium = true;
     updates.rol = 'premium';
     updates.premium_hasta = base.toISOString();
-    message = `¡Tienes ${days} día(s) Premium!`;
+    message = `¡Tienes ${safeDays} día(s) Premium!`;
   }
 
   if (type === 'videos') {
+    // Ya no es permanente, se otorga por 3 días por defecto o lo que indique reward
+    const videoDays = Math.min(Math.max(days || 3, 1), 5);
+    const expira = new Date(Date.now() + videoDays * 86400000).toISOString();
     const prefs = Array.isArray(user.preferencias) ? [...user.preferencias] : [];
-    if (!prefs.includes('PERMISO_VIDEOS:PERMANENT')) prefs.push('PERMISO_VIDEOS:PERMANENT');
-    updates.preferencias = prefs;
-    message = '¡Acceso a videos desbloqueado permanentemente!';
+    const tagPrefix = 'PERMISO_VIDEOS:';
+    const filtered = prefs.filter(p => !String(p).startsWith(tagPrefix));
+    filtered.push(`PERMISO_VIDEOS:${expira}`);
+    updates.preferencias = filtered;
+    message = `¡Acceso a videos desbloqueado por ${videoDays} días!`;
   }
 
   if (type && type.startsWith('permiso_') && type !== 'permiso_videos') {
     const prefs = Array.isArray(user.preferencias) ? [...user.preferencias] : [];
-    const expira = new Date(Date.now() + (days || 1) * 86400000).toISOString();
+    const safeDays = Math.min(Math.max(days || 1, 1), 5);
+    const expira = new Date(Date.now() + safeDays * 86400000).toISOString();
     const tagKey = type.replace('permiso_', '').toUpperCase();
     const tag = `PERMISO_${tagKey}:${expira}`;
     const tagPrefix = `PERMISO_${tagKey}:`;
     const filtered = prefs.filter(p => !String(p).startsWith(tagPrefix));
     filtered.push(tag);
     updates.preferencias = filtered;
-    message = `¡Permiso activado por ${days || 1} día(s)!`;
+    message = `¡Permiso activado por ${safeDays} día(s)!`;
   }
 
   const { data: updated, error } = await supabase.from('usuarios')
@@ -1274,10 +1326,10 @@ function clasificarIntencion(m) {
   if (/familiar|familia|para todos|muchas personas|para ninos|para grupo/.test(t)) return 'plan_familiar';
 
   // Tiempo específico en minutos
-  if (/([0-9]+)\s*(min|minutos?)/.test(t)) return 'tiempo_especifico';
+  if (/([0-9]+)\s*(min|minutos?|m)/.test(t)) return 'tiempo_especifico';
 
   // Presupuesto específico
-  if (/([0-9]+)\s*(peso|pesos?|mxn|\$)/.test(t) || /presupuesto.*[0-9]|precio.*[0-9]/.test(t)) return 'presupuesto_especifico';
+  if (/(\$|mxn|pesos?|precio|presupuesto)\s*([0-9]+)/.test(t) || /([0-9]+)\s*(peso|pesos?|mxn|\$)/.test(t)) return 'presupuesto_especifico';
 
   // Fitness / saludable
   if (/saludable|fitness|dieta|light|sin grasa|bajo.*(calorias|carb)|proteina|vegano|vegetarian/.test(t)) return 'saludable';
@@ -1319,10 +1371,14 @@ function generarRespuesta(intencion, ingrediente, dia, count) {
       return count > 0 ? `🥘 Aquí tienes recetas con ${ingrediente || 'ese ingrediente'}:` : `😕 No encontré recetas con ${ingrediente || 'ese ingrediente'}.`;
     case 'saludable':
       return count > 0 ? `🥗 Recetas saludables para tu bienestar:` : '😕 No encontré recetas saludables disponibles.';
+    case 'tiempo_especifico':
+      return count > 0 ? `⏱️ Aquí tienes recetas que puedes preparar rápido:` : '😕 No encontré recetas en ese rango de tiempo.';
+    case 'presupuesto_especifico':
+      return count > 0 ? `💰 ¡Ajustado al bolsillo! Estas recetas entran en tu presupuesto:` : '😕 No encontré recetas en ese rango de precio, intenta subir un poco el presupuesto.';
     case 'crear_plan':
       return count > 0 ? `📅 He preparado tu plan para el **${nombres[dia] || dia}**:` : '😕 No pude generar un plan en este momento.';
     default:
-      return count > 0 ? `🍳 Aquí te van unas recetas:` : '😕 No encontré resultados. Intenta buscar por ingrediente, tiempo o precio.';
+      return count > 0 ? `🍳 Encontré estas recetas para ti:` : '😕 No encontré resultados exactos. Intenta con frases como "recetas con pollo", "recetas de $40" o "postres rápidos".';
   }
 }
 
@@ -1358,7 +1414,7 @@ app.post('/api/chatbot', authMW, async (req, res) => {
       query = query.order('likes', { ascending: false });
     } else {
       // Búsqueda general: usar el texto del mensaje
-      const terminos = mensaje.trim().split(/\s+/).filter(w => w.length > 3).slice(0, 3);
+      const terminos = mensaje.trim().split(/\s+/).filter(w => w.length > 2).slice(0, 3);
       if (terminos.length > 0) {
         const orQuery = terminos.map(t => `titulo.ilike.%${t}%`).join(',');
         query = query.or(orQuery);
@@ -1366,11 +1422,22 @@ app.post('/api/chatbot', authMW, async (req, res) => {
     }
 
     // Aplicar filtros numéricos extra si están en el mensaje
-    const minMatch = mensaje.match(/(\d+)\s*(min|minutos?)/i);
-    if (minMatch && int === 'tiempo_especifico') query = query.lte('tiempo_numerico', parseInt(minMatch[1]));
+    const minMatch = mensaje.match(/([0-9]+)\s*(min|minutos?|m)/i);
+    if (minMatch) {
+      const mins = parseInt(minMatch[1]);
+      query = query.lte('tiempo_numerico', mins).order('tiempo_numerico', { ascending: true });
+    }
 
-    const precMatch = mensaje.match(/(\d+)\s*(peso|pesos?|mxn|\$)/i);
-    if (precMatch && int === 'presupuesto_especifico') query = query.lte('precio_numerico', parseInt(precMatch[1]));
+    const precMatch = mensaje.match(/(\$|mxn|pesos?|precio|presupuesto)\s*([0-9]+)/i) || mensaje.match(/([0-9]+)\s*(peso|pesos?|mxn|\$)/i);
+    if (precMatch) {
+      // Si el primer regex matcheó, el número está en el grupo 2.
+      // Si el segundo regex matcheó, el número está en el grupo 1.
+      const valor = (isNaN(parseInt(precMatch[1]))) ? precMatch[2] : precMatch[1];
+      const pesos = parseInt(valor);
+      if (!isNaN(pesos)) {
+        query = query.lte('precio_numerico', pesos).order('precio_numerico', { ascending: true });
+      }
+    }
 
     const { data: results } = await query.limit(30);
     const final = (results || []).sort(() => 0.5 - Math.random()).slice(0, 5);
