@@ -71,7 +71,7 @@
       const card = document.createElement('div');
       card.className = 'chat-receta-card';
       card.innerHTML =
-        '<img class="chat-receta-img" src="' + imgSrc + '" alt="' + (r.titulo || '') + '" onerror="this.style.display=\'none\'">' +
+        '<img class="chat-receta-img" src="' + imgSrc + '" alt="Receta" onerror="this.style.display=\'none\'">' +
         '<div class="chat-receta-info">' +
           '<div class="chat-receta-titulo">' + (r.titulo || 'Sin titulo') + '</div>' +
           '<div class="chat-receta-meta">' + (r.precio || '') + ' · ' + (r.tiempo || '') + ' · ❤️ ' + (r.likes || 0) + '</div>' +

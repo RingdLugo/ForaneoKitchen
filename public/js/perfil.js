@@ -782,12 +782,12 @@ window.seleccionarTarjeta = (id) => {
 };
 
 async function finalizarPago() {
-  const btn    = document.getElementById('btn-finalizar-pago');
-  const modal  = document.getElementById('modal-pago');
-  const esRenovacion = modal.dataset.renovar === 'true';
+  const btnText = document.getElementById('pay-btn-text');
+  const btnSpinner = document.getElementById('pay-btn-spinner');
 
-  btn.disabled   = true;
-  btn.textContent = 'Procesando...';
+  btn.disabled = true;
+  if (btnText) btnText.style.display = 'none';
+  if (btnSpinner) btnSpinner.style.display = 'inline';
 
   try {
     if (!tarjetaSeleccionadaId) {
@@ -800,25 +800,43 @@ async function finalizarPago() {
       if (!VALIDAR.tarjeta(numero)) {
         showToast('El número de tarjeta no es válido o es muy simple (ej: 1234...). Verifica los 16 dígitos.', true);
         btn.disabled = false;
-        btn.textContent = 'Pagar $30.00 MXN';
+        if (btnText) btnText.style.display = 'inline';
+        if (btnSpinner) btnSpinner.style.display = 'none';
         return;
       }
       if (!/^\d{2}\/\d{2}$/.test(exp)) {
         showToast('Escribe la expiración correcta en formato MM/AA (ej: 12/26)', true);
         btn.disabled = false;
-        btn.textContent = 'Pagar $30.00 MXN';
+        if (btnText) btnText.style.display = 'inline';
+        if (btnSpinner) btnSpinner.style.display = 'none';
+        return;
+      }
+
+      // Validar que la fecha sea futura
+      const [m, a] = exp.split('/').map(n => parseInt(n));
+      const ahora = new Date();
+      const mesActual = ahora.getMonth() + 1;
+      const anioActual = parseInt(ahora.getFullYear().toString().slice(-2));
+
+      if (a < anioActual || (a === anioActual && m < mesActual) || m > 12 || m < 1) {
+        showToast('La tarjeta ha expirado o el mes es inválido.', true);
+        btn.disabled = false;
+        if (btnText) btnText.style.display = 'inline';
+        if (btnSpinner) btnSpinner.style.display = 'none';
         return;
       }
       if (cvv.length < 3) {
         showToast('El código CVV debe tener al menos 3 dígitos', true);
         btn.disabled = false;
-        btn.textContent = 'Pagar $30.00 MXN';
+        if (btnText) btnText.style.display = 'inline';
+        if (btnSpinner) btnSpinner.style.display = 'none';
         return;
       }
       if (!titular || !VALIDAR.nombre(titular)) {
         showToast('Escribe el nombre completo del titular (solo letras)', true);
         btn.disabled = false;
-        btn.textContent = 'Pagar $30.00 MXN';
+        if (btnText) btnText.style.display = 'inline';
+        if (btnSpinner) btnSpinner.style.display = 'none';
         return;
       }
 
@@ -834,6 +852,9 @@ async function finalizarPago() {
       }
     }
 
+    // SIMULACIÓN DE PAGO SEGURO (Delay de 2 segundos para realismo)
+    await new Promise(r => setTimeout(r, 2000));
+
     const res = await fetch('/api/auth/subscribe', {
       method: 'POST',
       headers: {
@@ -846,9 +867,10 @@ async function finalizarPago() {
     const data = await res.json();
 
     if (!res.ok) {
-        showToast(data.error || 'Error en el pago', true);
-      btn.disabled   = false;
-      btn.textContent = 'Pagar $30.00 MXN';
+      showToast(data.error || 'Error en el pago', true);
+      btn.disabled = false;
+      if (btnText) btnText.style.display = 'inline';
+      if (btnSpinner) btnSpinner.style.display = 'none';
       return;
     }
 
@@ -863,10 +885,14 @@ async function finalizarPago() {
 
   } catch (err) {
     showToast('Error al procesar el pago. Intenta de nuevo.', true);
-    btn.disabled   = false;
-    btn.textContent = 'Pagar $30.00 MXN';
+    btn.disabled = false;
+    if (btnText) btnText.style.display = 'inline';
+    if (btnSpinner) btnSpinner.style.display = 'none';
     const btnGuardada = document.getElementById('btn-usar-guardada');
-    if (btnGuardada) { btnGuardada.disabled = false; btnGuardada.textContent = 'Usar esta tarjeta'; }
+    if (btnGuardada) { 
+      btnGuardada.disabled = false; 
+      btnGuardada.textContent = 'Usar esta tarjeta'; 
+    }
   }
 }
 

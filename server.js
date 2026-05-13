@@ -230,8 +230,18 @@ app.post('/api/auth/registro', async (req, res) => {
   if (password !== confirmPassword)
     return res.status(400).json({ error: 'Contraseñas no coinciden' });
 
-  const { data: eu } = await supabase.from('usuarios').select('id').eq('username', username).maybeSingle();
-  if (eu) return res.status(400).json({ error: 'Nombre de usuario ya existe' });
+  const { data: existingUser } = await supabase
+    .from('usuarios')
+    .select('id, username, email')
+    .or(`username.eq.${username},email.eq.${email}`)
+    .maybeSingle();
+
+  if (existingUser) {
+    const errorMsg = existingUser.username === username 
+      ? 'Nombre de usuario ya existe' 
+      : 'El correo electrónico ya está registrado';
+    return res.status(400).json({ error: errorMsg });
+  }
 
   const otp = genOTP();
   await supabase.from('otp_tokens').insert({
@@ -1290,58 +1300,28 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
 });
 
 // ── CHATBOT IA ───────────────────────────────────────────────────────────────
-function clasificarIntencion(m) {
-  const t = m.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos para comparar
-    .replace(/[¿?¡!]/g, '');
-
-  // Saludos coloquiales
-  if (/^(hola|holi|holaa|hey|hi|buenas|que tal|como estas|ola|buenas tardes|buen dia|buenos dias|buen dia)/.test(t)) return 'saludo';
-
-  // Plan alimenticio / semanal
-  if (/plan.*(semana|semanal|diario|dieta|alimenticio|alimentacion|comer|menu)|armar.*(plan|menu|dieta)|crear.*(plan|menu|dieta)|hacer.*(plan|menu|dieta)|sugiere.*(plan|dieta|menu)|dame.*(plan|dieta|menu)/.test(t)) return 'crear_plan';
-
-  // Top / mejores recetas
-  if (/top|mejores?|mas (populares?|likead|vistos?)|las mejores?|recomienda|recommend|suger|que (cocin|prepar|hag)|quiero (cocinar|hacer|comer)|que (como|hago|preparo|cocino)|que me recomiend/.test(t)) return 'recomendar';
-
-  // Por ingrediente principal (coloquial)
-  if (/pollo|res|carne|cerdo|pescado|salmon|atun|huevo|pasta|arroz|frijol|papa|verdura|vegetales|tofu|camar|camaron|mariscos/.test(t) && !/plan/.test(t)) return 'por_ingrediente';
-
-  // Receta específica por nombre
-  if (/receta.*(de |para |con )|como (hago|haces|preparo|se hace|cocino|cocinar)/.test(t)) return 'buscar';
-
-  // Día de la semana
-  if (/lunes|martes|miercoles|jueves|viernes|sabado|domingo/.test(t)) return 'crear_plan';
-
-  // Económica / barata
-  if (/barat[oa]|economi|poco dinero|sin dinero|barato|economico|low cost|barata/.test(t)) return 'economica';
-
-  // Rápida / fácil
-  if (/rapid[ao]|facil|sencill[ao]|rapido|en poco tiempo|pocos minutos|sin complicacion|quick|easy/.test(t)) return 'rapida';
-
-  // Postre / dulce
-  if (/dulce|postre|pastel|pastes|torta|galleta|helado|chocolate|azucar|dessert/.test(t)) return 'dulces';
-
-  // Familiar
-  if (/familiar|familia|para todos|muchas personas|para ninos|para grupo/.test(t)) return 'plan_familiar';
-
-  // Tiempo específico en minutos
-  if (/([0-9]+)\s*(min|minutos?|m)/.test(t)) return 'tiempo_especifico';
-
-  // Presupuesto específico
-  if (/(\$|mxn|pesos?|precio|presupuesto)\s*([0-9]+)/.test(t) || /([0-9]+)\s*(peso|pesos?|mxn|\$)/.test(t)) return 'presupuesto_especifico';
-
-  // Fitness / saludable
-  if (/saludable|fitness|dieta|light|sin grasa|bajo.*(calorias|carb)|proteina|vegano|vegetarian/.test(t)) return 'saludable';
-
-  return 'buscar';
+function clasificarIntenciones(m) {
+  const t = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[¿?¡!]/g, '');
+  const traits = {
+    economica: /barat[oa]|economi|poco dinero|sin dinero|low cost/.test(t),
+    rapida: /rapid[ao]|facil|sencill[ao]|poco tiempo|pocos minutos|quick|easy/.test(t),
+    dulce: /dulce|postre|pastel|torta|galleta|helado|chocolate|azucar|dessert/.test(t),
+    familiar: /familiar|familia|para todos|muchas personas|ninos|grupo/.test(t),
+    saludable: /saludable|fitness|dieta|light|grasa|calorias|carb|proteina|vegano|vegetarian|vegan|vegetal|healthy/.test(t),
+    recomendar: /top|mejores?|populares?|recomienda|recommend|sugerir|que (cocin|prepar|hag|com)|quiero (cocinar|hacer|comer)/.test(t),
+    crear_plan: /plan.*(semana|semanal|diario|dieta|alimenticio|alimentacion|comer|menu)|armar.*(plan|menu|dieta)|crear.*(plan|menu|dieta)|hacer.*(plan|menu|dieta)|lunes|martes|miercoles|jueves|viernes|sabado|domingo/.test(t),
+    charlar: /gracias|agradezco|buenisimo|genial|ok|entendido|adios|hasta luego|chao|bye|buenos dias|buenas tardes|buenas noches|hola|que tal|como estas/.test(t),
+    presupuesto_especifico: /(\$|mxn|pesos?|precio|presupuesto)\s*([0-9]+)/.test(t) || /([0-9]+)\s*(peso|pesos?|mxn|\$)/.test(t),
+    tiempo_especifico: /([0-9]+)\s*(min|minutos?|m)/.test(t)
+  };
+  return traits;
 }
 
 // Extraer ingrediente mencionado en el mensaje
-function extraerIngrediente(m) {
-  const ingredientes = ['pollo', 'res', 'carne', 'cerdo', 'pescado', 'salmon', 'atun', 'huevo', 'pasta', 'arroz', 'frijol', 'papa', 'verdura', 'tofu', 'camaron', 'mariscos'];
+function extraerIngredientes(m) {
+  const lista = ['pollo', 'res', 'carne', 'cerdo', 'pescado', 'salmon', 'atun', 'huevo', 'pasta', 'arroz', 'frijol', 'papa', 'verdura', 'tofu', 'camaron', 'mariscos', 'leche', 'queso', 'tomate', 'cebolla', 'ajo', 'limon'];
   const t = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return ingredientes.find(i => t.includes(i)) || null;
+  return lista.filter(i => t.includes(i));
 }
 
 // Extraer día de la semana
@@ -1352,34 +1332,32 @@ function extraerDia(m) {
 }
 
 // Respuesta amigable según intención
-function generarRespuesta(intencion, ingrediente, dia, count) {
+function generarRespuestaInteligente(traits, ingredientes, dia, count, mensaje) {
   const nombres = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
-  switch (intencion) {
-    case 'saludo':
-      return '¡Hola! Soy Chef IA 👨‍🍳✨ ¿Qué se te antoja cocinar hoy? Puedo ayudarte con recetas rápidas, económicas, planes semanales, o lo que quieras 🍽️';
-    case 'recomendar':
-      return count > 0 ? `🌟 Aquí están las recetas más populares para ti:` : '😕 No encontré recetas populares en este momento, intenta con otro tema.';
-    case 'economica':
-      return count > 0 ? `💰 Recetas económicas que no quemarán tu bolsillo:` : '😕 No encontré recetas económicas disponibles, intenta más tarde.';
-    case 'rapida':
-      return count > 0 ? `⚡ ¡Sin perder tiempo! Aquí van recetas rápidas:` : '😕 No encontré recetas rápidas disponibles.';
-    case 'dulces':
-      return count > 0 ? `🍰 ¡Para los más golosos! Aquí tus postres favoritos:` : '😕 No encontré postres disponibles.';
-    case 'plan_familiar':
-      return count > 0 ? `👨‍👩‍👧 Recetas ideales para toda la familia:` : '😕 No encontré recetas familiares disponibles.';
-    case 'por_ingrediente':
-      return count > 0 ? `🥘 Aquí tienes recetas con ${ingrediente || 'ese ingrediente'}:` : `😕 No encontré recetas con ${ingrediente || 'ese ingrediente'}.`;
-    case 'saludable':
-      return count > 0 ? `🥗 Recetas saludables para tu bienestar:` : '😕 No encontré recetas saludables disponibles.';
-    case 'tiempo_especifico':
-      return count > 0 ? `⏱️ Aquí tienes recetas que puedes preparar rápido:` : '😕 No encontré recetas en ese rango de tiempo.';
-    case 'presupuesto_especifico':
-      return count > 0 ? `💰 ¡Ajustado al bolsillo! Estas recetas entran en tu presupuesto:` : '😕 No encontré recetas en ese rango de precio, intenta subir un poco el presupuesto.';
-    case 'crear_plan':
-      return count > 0 ? `📅 He preparado tu plan para el **${nombres[dia] || dia}**:` : '😕 No pude generar un plan en este momento.';
-    default:
-      return count > 0 ? `🍳 Encontré estas recetas para ti:` : '😕 No encontré resultados exactos. Intenta con frases como "recetas con pollo", "recetas de $40" o "postres rápidos".';
+  
+  if (traits.charlar) {
+    const t = mensaje.toLowerCase();
+    if (/hola|buenos dias|que tal/.test(t)) return '¡Hola! Soy tu Chef IA personal. 👨‍🍳 ¿En qué puedo ayudarte hoy?';
+    if (/gracias|agradezco/.test(t)) return '¡De nada! Es un placer ayudarte a cocinar mejor. 😊';
+    if (/adios|hasta luego|chao|bye/.test(t)) return '¡Hasta luego! Vuelve pronto por más recetas. 👋';
+    return '¡Entendido! ¿Necesitas ayuda con algo más?';
   }
+
+  if (traits.crear_plan) return `📅 He preparado tu plan para el **${nombres[dia] || dia}** con lo mejor que encontré:`;
+  
+  let intro = '🍳 Encontré estas opciones para ti:';
+  if (traits.economica && traits.rapida) intro = '💰⚡ ¡Lo mejor de ambos mundos! Recetas económicas y rápidas:';
+  else if (traits.economica) intro = '💰 Aquí tienes opciones geniales para ahorrar:';
+  else if (traits.rapida) intro = '⚡ Estas recetas estarán listas en un abrir y cerrar de ojos:';
+  else if (traits.saludable) intro = '🥗 Opciones nutritivas y balanceadas para tu día:';
+  else if (traits.dulce) intro = '🍰 ¡Hora del postre! Mira estas delicias:';
+  else if (traits.recomendar) intro = '🌟 Estas son las favoritas de la comunidad:';
+  
+  if (ingredientes.length > 0) {
+    intro = `🥘 Con lo que tienes (**${ingredientes.join(', ')}**), te sugiero esto:`;
+  }
+
+  return count > 0 ? intro : '😕 No encontré recetas exactas con esos criterios, pero aquí tienes unas sugerencias populares:';
 }
 
 app.post('/api/chatbot', authMW, async (req, res) => {
@@ -1390,34 +1368,45 @@ app.post('/api/chatbot', authMW, async (req, res) => {
   if (!mensaje || !mensaje.trim())
     return res.json({ respuesta: '¡Hola! ¿En qué te puedo ayudar? Escribe algo como "receta rápida", "comida económica" o "receta de pollo" 😊', recetas: [] });
 
-  const int = clasificarIntencion(mensaje);
+  const traits = clasificarIntenciones(mensaje);
+  const ingredientes = extraerIngredientes(mensaje);
+  const dia = extraerDia(mensaje);
 
-  if (int === 'saludo')
-    return res.json({ respuesta: '¡Hola! Soy Chef IA 👨‍🍳✨ ¿Qué se te antoja cocinar hoy? Puedo ayudarte con recetas rápidas, económicas, planes semanales o buscar por ingrediente. ¡Solo dime!', recetas: [] });
+  if (traits.charlar && ingredientes.length === 0 && !traits.presupuesto_especifico && !traits.tiempo_especifico) {
+    return res.json({ respuesta: generarRespuestaInteligente(traits, [], null, 0, mensaje), recetas: [] });
+  }
 
   try {
     let query = supabase.from('recetas').select('*');
-    const ingrediente = extraerIngrediente(mensaje);
-    const dia = extraerDia(mensaje);
 
-    // Aplicar filtros según intención
-    if (int === 'economica') query = query.lte('precio_numerico', 40).order('precio_numerico', { ascending: true });
-    else if (int === 'rapida') query = query.lte('tiempo_numerico', 25).order('tiempo_numerico', { ascending: true });
-    else if (int === 'dulces') query = query.or('etiquetas.cs.{postre},titulo.ilike.%dulce%,titulo.ilike.%postre%');
-    else if (int === 'plan_familiar') query = query.or('etiquetas.cs.{familiar},titulo.ilike.%familiar%');
-    else if (int === 'saludable') query = query.or('etiquetas.cs.{saludable},etiquetas.cs.{fitness},etiquetas.cs.{vegetariano}');
-    else if (int === 'recomendar') query = query.order('likes', { ascending: false });
-    else if (int === 'por_ingrediente' && ingrediente) {
-      query = query.or(`titulo.ilike.%${ingrediente}%,ingredientes.ilike.%${ingrediente}%`);
-    } else if (int === 'crear_plan') {
-      // Plan del día: buscar variadas para cubrir desayuno/comida/cena
+    // Combinar filtros según los rasgos detectados
+    if (traits.economica) query = query.lte('precio_numerico', 45);
+    if (traits.rapida) query = query.lte('tiempo_numerico', 30);
+    if (traits.saludable) {
+      query = query.or('etiquetas.cs.{saludable},etiquetas.cs.{fitness},etiquetas.cs.{vegetariano},titulo.ilike.%saludable%,titulo.ilike.%vegetaria%');
+    }
+    if (traits.dulce) query = query.or('etiquetas.cs.{postre},titulo.ilike.%dulce%,titulo.ilike.%postre%');
+    if (traits.familiar) query = query.or('etiquetas.cs.{familiar},titulo.ilike.%familiar%');
+    
+    if (ingredientes.length > 0) {
+      const ingredientQuery = ingredientes.map(i => `ingredientes.ilike.%${i}%,titulo.ilike.%${i}%`).join(',');
+      query = query.or(ingredientQuery);
+    }
+
+    if (traits.recomendar) {
       query = query.order('likes', { ascending: false });
     } else {
-      // Búsqueda general: usar el texto del mensaje
-      const terminos = mensaje.trim().split(/\s+/).filter(w => w.length > 2).slice(0, 3);
+      // Búsqueda por texto si no hay rasgos específicos dominantes
+      const stopWords = ['receta', 'recetas', 'comida', 'comidas', 'platillo', 'platillos', 'cocinar', 'preparar', 'hacer', 'dame', 'busco', 'quiero', 'necesito', 'presupuesto', 'precio', 'pesos', 'minutos', 'minuto', 'menos', 'mas', 'que', 'sobre', 'alrededor', 'para', 'con', 'sin', 'una', 'un', 'el', 'la', 'los', 'las'];
+      const terminos = mensaje.toLowerCase().trim().split(/\s+/)
+        .filter(w => w.length > 2 && !stopWords.includes(w) && !/^\$?[0-9]+(mxn|min)?$/.test(w))
+        .slice(0, 3);
+      
       if (terminos.length > 0) {
-        const orQuery = terminos.map(t => `titulo.ilike.%${t}%`).join(',');
-        query = query.or(orQuery);
+        const textQuery = terminos.map(t => `titulo.ilike.%${t}%,ingredientes.ilike.%${t}%`).join(',');
+        query = query.or(textQuery);
+      } else {
+        query = query.order('likes', { ascending: false });
       }
     }
 
@@ -1440,12 +1429,18 @@ app.post('/api/chatbot', authMW, async (req, res) => {
     }
 
     const { data: results } = await query.limit(30);
-    const final = (results || []).sort(() => 0.5 - Math.random()).slice(0, 5);
+    
+    // Si la intención es 'recomendar' y hay un número (ej: top 3), respetarlo
+    let limit = 5;
+    const topMatch = mensaje.match(/top\s*([0-9]+)/i);
+    if (topMatch) limit = Math.min(parseInt(topMatch[1]), 10);
 
-    let resp = generarRespuesta(int, ingrediente, dia, final.length);
+    const final = (results || []).sort(() => 0.5 - Math.random()).slice(0, limit);
+
+    let resp = generarRespuestaInteligente(traits, ingredientes, dia, final.length, mensaje);
 
     // Si es plan semanal, crear el plan en la base de datos
-    if (int === 'crear_plan' && final.length > 0) {
+    if (traits.crear_plan && final.length > 0) {
       const tiposComida = ['desayuno', 'comida', 'cena'];
       const { data: p } = await supabase.from('planes_semanales').select('plan').eq('usuario_id', req.user.id).maybeSingle();
       const nP = p?.plan || {};

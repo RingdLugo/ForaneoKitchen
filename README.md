@@ -119,68 +119,58 @@ Desbloquea el potencial total de la plataforma:
 
 ## ✨ Funcionalidades Principales
 
-*   Registro de usuarios con verificación por correo **OTP**.
-*   Inicio de sesión con autenticación **JWT**.
-*   Recuperación de contraseña con código **OTP**.
-*   Publicación de recetas con imagen y video (solo Premium).
-*   Validaciones de calidad (bloqueo de spam, gibberish y lenguaje ofensivo).
-*   Búsqueda en tiempo real por título, ingredientes o autor.
-*   Filtros inteligentes (Económicas, Rápidas, Microondas, Menos de $30).
-*   Página de detalle con **Porciones Reales** y costo dinámico.
-*   Diferenciación de roles: Usuarios Free vs Usuarios Premium.
-*   **Planificador semanal** con control de presupuesto dinámico.
-*   **Lista de compras automática** con suma de ingredientes duplicados.
-*   **Chatbot Chef IA** para búsqueda inteligente (solo Premium).
-*   Limpieza automática de archivos multimedia al eliminar recetas.
-*   Botón de sugerencias/quejas directo al correo de soporte.
+*   **Autenticación Robusta:** Registro de usuarios con verificación por correo **OTP** y manejo de sesiones seguras mediante **JWT**.
+*   **Validación de Identidad:** Sistema que impide la creación de cuentas con correos o nombres de usuario duplicados, garantizando la integridad de la base de datos.
+*   **Chef IA (Inteligencia Multi-Rasgo):** Asistente inteligente capaz de procesar múltiples criterios simultáneamente (ej. "barato, saludable y con pollo"). Incluye un modo conversacional para interacciones naturales.
+*   **Filtro de Ruido (Stop Words):** El buscador y el chatbot ignoran automáticamente palabras irrelevantes (ej. "receta", "necesito", "sobre") para enfocar los resultados en ingredientes y términos clave.
+*   **Pago Seguro con Validación Real:** Pasarela de pago simulada que utiliza el **Algoritmo de Luhn** para validar tarjetas, verifica fechas de expiración futuras y ofrece una interfaz con señales de confianza (SSL, Visa, Mastercard).
+*   **Gestión Multimedia Avanzada:** Soporte para imágenes y videos (YouTube o MP4 local). Los usuarios Premium pueden subir tutoriales directamente.
+*   **Limpieza Automática (Garbage Collection):** Al eliminar una receta, el sistema borra físicamente del servidor todos los archivos de imagen y video asociados para ahorrar espacio.
+*   **Planificador e Inteligencia de Compras:** Sistema que detecta ingredientes duplicados en el plan semanal y los suma automáticamente en la lista de compras final.
+*   **Validaciones Anti-Spam:** Algoritmos que detectan texto sin sentido (*Gibberish*), palabras ofensivas (*Profanity*) y caracteres repetidos para mantener la calidad del contenido.
+
+---
+
+## 🛡️ Seguridad y Validaciones Técnicas
+
+El proyecto implementa varias capas de seguridad para proteger los datos y mejorar la experiencia:
+
+1.  **Encriptación:** Las contraseñas se almacenan cifradas con `bcryptjs` (salt rounds: 10).
+2.  **Validación de Tarjetas:** La pasarela de pago implementa el estándar industrial de validación de números de tarjeta y checks de caducidad dinámica.
+3.  **Sanitización:** Todas las entradas de texto son limpiadas de etiquetas HTML para prevenir ataques **XSS**.
+4.  **Middleware de Acceso:** Las rutas sensibles del servidor están protegidas por un middleware que verifica la validez del token JWT y el nivel de membresía (Free/Premium).
 
 ---
 
 ## 🔗 Ejemplos de uso de la API
 
 ### Registro de usuario
-**POST** `/api/auth/register`
+**POST** `/api/auth/registro`
 ```json
 {
   "nombre": "Juan",
   "apellido": "Perez",
   "email": "juan@example.com",
   "username": "juanito",
-  "password": "Password123",
-  "esPremium": true
-}
-```
-
-### Verificar código OTP
-**POST** `/api/auth/verify-otp`
-```json
-{
-  "email": "juan@example.com",
-  "otp": "123456"
-}
-```
-
-### Inicio de sesión
-**POST** `/api/auth/login`
-```json
-{
-  "username": "juanito",
   "password": "Password123"
 }
 ```
 
-### Crear una nueva receta (Premium)
-**POST** `/api/recipes`
+### Suscripción Premium
+**POST** `/api/auth/subscribe`
 **Headers:** `Authorization: Bearer <token>`
 ```json
 {
-  "titulo": "Tacos de Pollo",
-  "ingredientes": "Tortillas, Pollo, Salsa",
-  "pasos": "1. Cocer pollo. 2. Armar tacos.",
-  "precioNumerico": 45,
-  "tiempoNumerico": 20,
-  "porciones": "4",
-  "videoUrl": "https://url-del-video.mp4"
+  "renovar": false
+}
+```
+
+### Consulta al Chef IA
+**POST** `/api/chatbot`
+**Headers:** `Authorization: Bearer <token>`
+```json
+{
+  "mensaje": "tengo pollo y arroz, algo de menos de 40 min"
 }
 ```
 
@@ -191,20 +181,20 @@ Desbloquea el potencial total de la plataforma:
 ```text
 PROYECTO/
 └── 2.0/
-    ├── node_modules/           # Dependencias
-    ├── public/                 # Frontend
-    │   ├── css/                # Estilos
-    │   ├── js/                 # Lógica (Auth, Planificador, Chat, etc.)
-    │   ├── home.html           # Dashboard
-    │   ├── index.html          # Bienvenida
-    │   └── receta.html         # Detalle
-    ├── server.js               # Backend Node.js/Express
-    └── README.md               # Documentación
+    ├── node_modules/           # Dependencias del servidor
+    ├── uploads/                # Archivos multimedia (Imágenes/Videos)
+    ├── public/                 # Frontend (Archivos estáticos)
+    │   ├── css/                # Diseño y Temas (Claro/Oscuro)
+    │   ├── js/                 # Lógica (Auth, Perfil, Chat, Recetas)
+    │   ├── components/         # Snippets de UI reutilizables
+    │   └── *.html              # Vistas de la aplicación
+    ├── server.js               # Backend (Express + Supabase SDK)
+    └── README.md               # Documentación técnica
 ```
 
 ---
 
 ## ⚠️ Estado del Proyecto
-Este proyecto se encuentra en **Versión Beta**. Se han implementado robustos sistemas de seguridad y limpieza de datos, pero se recomienda su uso bajo supervisión.
+Este proyecto se encuentra en una fase estable de desarrollo. Se han implementado robustos sistemas de seguridad y optimización de datos, cumpliendo con los estándares de una aplicación profesional escalable.
 
-Developed with ❤️ by **Alison Lugo & Team**.
+Developed with ❤️ by **RingdLugo & Team**.

@@ -197,10 +197,25 @@
         </div>
 
         <div id="form-pago" class="form-pago">
+          <div class="secure-badge-banner" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; background: #f8fcf9; padding: 10px; border-radius: 12px; border: 1px solid #e8f5e9;">
+            <span style="font-size: 0.75rem; color: #2e7d32; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+              🛡️ Pago Encriptado SSL
+            </span>
+            <span style="font-size: 0.75rem; color: #2e7d32; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+              ✅ Verificado
+            </span>
+          </div>
+
           <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">Detalles de la tarjeta:</p>
           <div class="input-group">
             <label>Número de Tarjeta</label>
-            <input type="text" id="pago-numero" placeholder="0000 0000 0000 0000" maxlength="19">
+            <div style="position: relative;">
+              <input type="text" id="pago-numero" placeholder="0000 0000 0000 0000" maxlength="19">
+              <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; gap: 5px;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" style="height: 12px; opacity: 0.6;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="MC" style="height: 12px; opacity: 0.6;">
+              </div>
+            </div>
           </div>
           <div style="display:flex; gap:15px;">
             <div class="input-group" style="flex:1;">
@@ -219,10 +234,17 @@
           
           <div class="checkbox-group" style="margin-top:10px;">
             <input type="checkbox" id="guardar-tarjeta" checked>
-            <label for="guardar-tarjeta">Guardar para futuras renovaciones</label>
+            <label for="guardar-tarjeta" style="font-size: 0.85rem;">Guardar tarjeta de forma segura para renovaciones</label>
           </div>
 
-          <button id="btn-finalizar-pago" class="btn-pay-confirm">Pagar $30.00 MXN</button>
+          <button id="btn-finalizar-pago" class="btn-pay-confirm">
+            <span id="pay-btn-text">Pagar $30.00 MXN</span>
+            <span id="pay-btn-spinner" style="display:none;">🔒 Procesando pago seguro...</span>
+          </button>
+          
+          <p style="text-align: center; font-size: 0.7rem; color: #999; margin-top: 15px;">
+            Sus datos están protegidos por encriptación de 256 bits.
+          </p>
         </div>
       </div>
     </div>
