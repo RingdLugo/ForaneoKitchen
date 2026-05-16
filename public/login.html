@@ -1,17 +1,33 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ForaneoKitchen - Iniciar Sesión</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/login.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  <!-- Selector de Tema (Diseño Naranja Premium) -->
+  <button id="dark-mode-toggle" class="dark-mode-toggle" style="position: fixed !important; bottom: 100px !important; right: 20px !important; z-index: 10000 !important; width: 45px !important; height: 45px !important; border-radius: 50% !important; border: none !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; background: #D95D39 !important; box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;">
+    <i data-lucide="moon" class="moon-icon" style="color: white !important; width: 22px; height: 22px;"></i>
+    <i data-lucide="sun" class="sun-icon" style="color: white !important; width: 22px; height: 22px;"></i>
+  </button>
+
+
+
+
+
+
+
 
   <div class="login-screen">
     <div class="login-container">
@@ -20,12 +36,13 @@
 
       <!-- LOGIN BOX -->
       <div class="login-card" id="login-box">
+        <div class="login-avatar-icon"><i data-lucide="user-circle"></i></div>
         <h2>Iniciar Sesión</h2>
         <p class="welcome">¡Bienvenido de vuelta!</p>
         <input id="login-username" type="text" placeholder="Usuario" autocomplete="username">
         <div class="password-container">
           <input id="login-password" type="password" placeholder="Contraseña">
-          <span class="eye-toggle" data-target="login-password">👁️</span>
+          <span class="eye-toggle" data-target="login-password"><i data-lucide="eye"></i></span>
         </div>
         <button id="login-btn">Iniciar Sesión →</button>
         <p class="register-link">
@@ -35,46 +52,58 @@
 
       <!-- REGISTRO BOX - PASO 1 -->
       <div class="login-card" id="registro-box" style="display:none;">
+        <div class="login-avatar-icon"><i data-lucide="user-plus"></i></div>
         <h2>Registrarse</h2>
         <div id="reg-step-1">
           <p class="welcome">Crea tu cuenta básica</p>
-          <input id="reg-nombre"    placeholder="Nombre *" autocomplete="given-name">
-          <input id="reg-apellido"  placeholder="Apellido *" autocomplete="family-name">
-          <input id="reg-username"  placeholder="Usuario *" autocomplete="username">
-          <input id="reg-email"     type="email" placeholder="Correo electrónico *" autocomplete="email">
-          <div class="password-container">
-            <input id="reg-password"  type="password" placeholder="Contraseña *">
-            <span class="eye-toggle" data-target="reg-password">👁️</span>
+          <div class="form-row">
+            <input id="reg-nombre" placeholder="Nombre" autocomplete="given-name">
+            <input id="reg-apellido" placeholder="Apellido" autocomplete="family-name">
           </div>
-          <div class="password-container">
-            <input id="reg-confirm"   type="password" placeholder="Confirmar contraseña *">
-            <span class="eye-toggle" data-target="reg-confirm">👁️</span>
+          <div class="form-row">
+            <input id="reg-username" placeholder="Usuario" autocomplete="username">
+            <input id="reg-email" type="email" placeholder="Correo electrónico" autocomplete="email">
           </div>
-          <button id="next-step-btn" style="margin-top:20px;">Siguiente →</button>
+          <div class="form-row">
+            <div class="password-container">
+              <input id="reg-password" type="password" placeholder="Contraseña">
+              <span class="eye-toggle" data-target="reg-password"><i data-lucide="eye"></i></span>
+            </div>
+            <div class="password-container">
+              <input id="reg-confirm" type="password" placeholder="Confirmar contraseña">
+              <span class="eye-toggle" data-target="reg-confirm"><i data-lucide="eye"></i></span>
+            </div>
+          </div>
+          <button id="next-step-btn" style="margin-top:10px; padding: 10px;">Siguiente →</button>
         </div>
 
         <!-- PASO 2: ELECCIÓN PREMIUM -->
         <div id="reg-step-2" style="display:none;">
-          <p class="welcome">💎 ¡Eleva tu experiencia!</p>
+          <p class="welcome"><i data-lucide="sparkles" style="color:#F2CC8F;"></i> ¡Eleva tu experiencia!</p>
           <div class="premium-choice-box">
             <p>Por solo <strong>$30 MXN/mes</strong> obtén:</p>
-            <ul style="text-align:left; font-size:0.9rem; margin:10px 0;">
-              <li>🎥 Videos exclusivos paso a paso</li>
-              <li>💬 Comenta en todas las recetas</li>
-              <li>📖 Historial completo de cocina</li>
-              <li>🤖 Chef IA avanzado</li>
+            <ul style="text-align:left; font-size:0.9rem; margin:10px 0; list-style:none; padding:0;">
+              <li style="margin-bottom:8px;"><i data-lucide="video" style="width:16px;color:#E07A5F;"></i> Videos
+                exclusivos paso a paso</li>
+              <li style="margin-bottom:8px;"><i data-lucide="message-square" style="width:16px;color:#E07A5F;"></i>
+                Comenta en todas las recetas</li>
+              <li style="margin-bottom:8px;"><i data-lucide="history" style="width:16px;color:#E07A5F;"></i> Historial
+                completo de cocina</li>
+              <li style="margin-bottom:8px;"><i data-lucide="bot" style="width:16px;color:#E07A5F;"></i> Chef IA
+                avanzado</li>
             </ul>
             <div style="display:flex; gap:10px; margin-top:20px;">
-              <button id="btn-choose-free" style="background:#eee; color:#333;">Seguir Gratis 🆓</button>
-              <button id="btn-choose-premium">Ser Premium 👑</button>
+              <button id="btn-choose-free" style="background:#eee; color:#333;">Seguir Gratis</button>
+              <button id="btn-choose-premium"><i data-lucide="crown"></i> Ser Premium</button>
             </div>
           </div>
         </div>
 
         <!-- PASO 3: PAGO (SIMULADO) -->
         <div id="reg-step-3" style="display:none;">
-          <p class="welcome">💳 Pago Seguro</p>
-          <p style="font-size:0.85rem; margin-bottom:15px; color:#666;">Introduce los datos de tu tarjeta para el cobro mensual de $30 MXN.</p>
+          <p class="welcome"><i data-lucide="credit-card"></i> Pago Seguro</p>
+          <p style="font-size:0.85rem; margin-bottom:15px; color:#666;">Introduce los datos de tu tarjeta para el cobro
+            mensual de $30 MXN.</p>
           <div class="payment-form">
             <input id="card-name" placeholder="Nombre del titular">
             <input id="card-number" placeholder="Número de tarjeta (16 dígitos)" maxlength="16">
@@ -82,7 +111,8 @@
               <input id="card-expiry" placeholder="MM/AA" maxlength="5">
               <input id="card-cvv" placeholder="CVV" maxlength="3" type="password">
             </div>
-            <button id="finalize-reg-btn" style="margin-top:20px;">Pagar y Registrarse 🔒</button>
+            <button id="finalize-reg-btn" style="margin-top:20px;">Pagar y Registrarse <i
+                data-lucide="lock"></i></button>
           </div>
         </div>
 
@@ -92,22 +122,22 @@
       </div>
 
       <!-- INVITADO -->
-      <div class="guest-option">
-        <a href="home.html" class="btn-guest">👤 Continuar como invitado</a>
+      <div class="guest-option" id="guest-option">
+        <a href="home.html" class="btn-guest"><i data-lucide="user"></i> Continuar como invitado</a>
       </div>
 
       <!-- PREMIUM SECTION -->
       <div class="premium-section">
         <div class="premium-card">
           <div class="premium-header">
-            <span class="crown">👑</span>
+            <span class="crown"><i data-lucide="crown"></i></span>
             <h3>Premium</h3>
           </div>
           <ul class="premium-benefits">
-            <li>✨ Recetas exclusivas</li>
-            <li>📅 Planificador IA</li>
-            <li>🎥 Videos paso a paso</li>
-            <li>💰 Ahorra 30% mensual</li>
+            <li><i data-lucide="sparkles"></i> Recetas exclusivas</li>
+            <li><i data-lucide="calendar"></i> Planificador IA</li>
+            <li><i data-lucide="video"></i> Videos paso a paso</li>
+            <li><i data-lucide="dollar-sign"></i> Ahorra 30% mensual</li>
           </ul>
         </div>
       </div>
@@ -116,5 +146,9 @@
 
   <script src="js/dark-mode.js"></script>
   <script src="js/login.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
+
 </html>

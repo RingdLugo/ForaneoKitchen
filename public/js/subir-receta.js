@@ -1,43 +1,48 @@
 // subir-receta.js
 import { supabase } from './supabaseClient.js';
 
-const premiumForm          = document.getElementById('premium-form');
-const puntosMonto          = document.getElementById('puntos-monto');
-const tituloInput          = document.getElementById('titulo');
-const precioInput          = document.getElementById('precio');
-const tiempoInput          = document.getElementById('tiempo');
-const porcionesInput       = document.getElementById('porciones');
+const premiumForm = document.getElementById('premium-form');
+const puntosMonto = document.getElementById('puntos-monto');
+const tituloInput = document.getElementById('titulo');
+const precioInput = document.getElementById('precio');
+const tiempoInput = document.getElementById('tiempo');
+const porcionesInput = document.getElementById('porciones');
 const ingredientesTextarea = document.getElementById('ingredientes');
-const pasosTextarea        = document.getElementById('pasos');
-const imagenInput          = document.getElementById('receta-imagen');
-const esPremiumCheckbox    = document.getElementById('es-premium-receta');
-const publicarBtn          = document.getElementById('publicar-btn');
+const pasosTextarea = document.getElementById('pasos');
+const imagenInput = document.getElementById('receta-imagen');
+const esPremiumCheckbox = document.getElementById('es-premium-receta');
+const publicarBtn = document.getElementById('publicar-btn');
 
-const videoYoutubeInput      = document.getElementById('video-youtube');
-const videoFileInput         = document.getElementById('video-file');
-const optYoutube             = document.getElementById('opt-youtube');
-const optFile                = document.getElementById('opt-file');
-const youtubeArea            = document.getElementById('youtube-input-area');
-const fileArea               = document.getElementById('file-input-area');
-const videoPreviewContainer  = document.getElementById('video-preview-container');
-const videoPreviewPlayer     = document.getElementById('video-preview-player');
-const removeVideoBtn         = document.getElementById('remove-video-btn');
+const videoYoutubeInput = document.getElementById('video-youtube');
+const videoFileInput = document.getElementById('video-file');
+const optYoutube = document.getElementById('opt-youtube');
+const optFile = document.getElementById('opt-file');
+const youtubeArea = document.getElementById('youtube-input-area');
+const fileArea = document.getElementById('file-input-area');
+const videoPreviewContainer = document.getElementById('video-preview-container');
+const videoPreviewPlayer = document.getElementById('video-preview-player');
+const removeVideoBtn = document.getElementById('remove-video-btn');
 
-const addTagBtn            = document.getElementById('add-tag-btn');
-const customTagInput       = document.getElementById('custom-tag-input');
-const selectedCustomTagsDiv= document.getElementById('selected-custom-tags');
+const addTagBtn = document.getElementById('add-tag-btn');
+const customTagInput = document.getElementById('custom-tag-input');
+const selectedCustomTagsDiv = document.getElementById('selected-custom-tags');
 
-let currentUser       = null;
-let imagenSeleccionada= null;
+let currentUser = null;
+let imagenSeleccionada = null;
 let videoSeleccionado = null;
-let customTags        = [];
-let editRecipeId      = new URLSearchParams(window.location.search).get('edit');
+let customTags = [];
+let editRecipeId = new URLSearchParams(window.location.search).get('edit');
 
 function mostrarNotificacion(mensaje, tipo = 'success') {
   const notificacion = document.createElement('div');
   notificacion.className = `temp-notification ${tipo}`;
-  notificacion.textContent = mensaje;
+
+  const iconName = tipo === 'success' ? 'check-circle' : (tipo === 'error' ? 'alert-circle' : 'info');
+  notificacion.innerHTML = `<i data-lucide="${iconName}"></i> <span>${mensaje}</span>`;
+
   document.body.appendChild(notificacion);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
   setTimeout(() => notificacion.classList.add('show'), 10);
   setTimeout(() => {
     notificacion.classList.remove('show');
@@ -135,26 +140,30 @@ async function verificarSesion() {
         optFile.title = 'Solo usuarios Premium pueden subir videos';
         optFile.style.opacity = '0.5';
       }
-      
+
       const premiumCheckboxContainer = document.querySelector('.checkbox-group');
       if (premiumCheckboxContainer) premiumCheckboxContainer.style.display = 'none';
 
       const videoSection = document.getElementById('video-section');
       if (videoSection) {
         videoSection.innerHTML = `
-          <label>🎥 Video de la receta (solo Premium 👑)</label>
-          <div style="background: #fff3e0; border: 1px solid #ffb74d; border-radius: 12px; padding: 15px; text-align: center; margin-top: 5px;">
-            <p style="margin: 0; color: #e65100; font-size: 0.9rem; font-weight: 500;">
-              🔒 Los videos son una función exclusiva para usuarios <strong>Premium</strong>.
+          <label><i data-lucide="video"></i> Video de la receta (solo Premium <i data-lucide="crown"></i>)</label>
+          <div style="background: #FDFBF7; border: 1px solid #F2CC8F; border-radius: 12px; padding: 15px; text-align: center; margin-top: 5px;">
+            <p style="margin: 0; color: #E07A5F; font-size: 0.9rem; font-weight: 500;">
+              <i data-lucide="lock" style="width:14px;height:14px;"></i> Los videos son una función exclusiva para usuarios <strong>Premium</strong>.
             </p>
-            <button type="button" onclick="window.location.href='perfil.html'" style="margin-top: 10px; padding: 5px 15px; background: #ff9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Mejorar cuenta 👑</button>
+            <button type="button" onclick="window.location.href='perfil.html'" style="margin-top: 10px; padding: 8px 18px; background: #E07A5F; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; display:inline-flex; align-items:center; gap:6px;">Mejorar cuenta <i data-lucide="crown" style="width:14px;height:14px;"></i></button>
           </div>
         `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
       }
     }
 
     if (editRecipeId) {
-      await cargarDatosEdicion(editRecipeId);
+      document.getElementById('form-title').innerHTML = '<i data-lucide="edit-3"></i> Editar receta';
+      document.getElementById('form-desc').textContent = 'Actualiza los detalles de tu creación culinaria';
+      publicarBtn.innerHTML = 'Guardar cambios <i data-lucide="arrow-right" style="width:18px;"></i>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     return true;
@@ -239,10 +248,11 @@ addTagBtn?.addEventListener('click', () => {
 
 function renderCustomTags() {
   selectedCustomTagsDiv.innerHTML = customTags.map(tag => `
-    <span class="recipe-tag" style="background:#e8f5e9; color:#2e7d32; padding:5px 12px; border-radius:20px; font-size:0.8rem; display:flex; align-items:center; gap:5px;">
-      ${tag} <b onclick="window.removeTag('${tag}')" style="cursor:pointer">&times;</b>
+    <span class="recipe-tag" style="background:#F4F1DE; color:#E07A5F; padding:5px 12px; border-radius:20px; font-size:0.8rem; display:flex; align-items:center; gap:8px; border: 1px solid #F2CC8F;">
+      ${tag} <i data-lucide="x" onclick="window.removeTag('${tag}')" style="width:14px;height:14px;cursor:pointer"></i>
     </span>
   `).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 window.removeTag = (tag) => {
@@ -253,7 +263,7 @@ window.removeTag = (tag) => {
 optYoutube?.addEventListener('click', () => {
   const isPremium = currentUser?.es_premium || currentUser?.rol === 'premium' || currentUser?.rol === 'admin';
   if (!isPremium) {
-    mostrarNotificacion('Los videos son exclusivos Premium 👑', 'error');
+    mostrarNotificacion('Los videos son exclusivos Premium', 'error');
     return;
   }
   optYoutube.classList.add('active');
@@ -265,7 +275,7 @@ optYoutube?.addEventListener('click', () => {
 optFile?.addEventListener('click', () => {
   const isPremium = currentUser?.es_premium || currentUser?.rol === 'premium' || currentUser?.rol === 'admin';
   if (!isPremium) {
-    mostrarNotificacion('La subida de archivos es exclusiva Premium 👑', 'error');
+    mostrarNotificacion('La subida de archivos es exclusiva Premium', 'error');
     return;
   }
   optFile.classList.add('active');
@@ -299,25 +309,26 @@ async function publicarReceta() {
   const vTitulo = validar.titulo(tituloInput.value);
   const vPrecio = validar.precio(precioInput.value);
   const vTiempo = validar.tiempo(tiempoInput.value);
-  const vPorc   = validar.porciones(porcionesInput.value);
+  const vPorc = validar.porciones(porcionesInput.value);
   const vIngred = validar.ingredientes(ingredientesTextarea.value);
-  const vPasos  = validar.pasos(pasosTextarea.value);
+  const vPasos = validar.pasos(pasosTextarea.value);
 
   if (!vTitulo.v) return mostrarNotificacion(vTitulo.m, 'error');
   if (!vIngred.v) return mostrarNotificacion(vIngred.m, 'error');
-  if (!vPasos.v)  return mostrarNotificacion(vPasos.m, 'error');
+  if (!vPasos.v) return mostrarNotificacion(vPasos.m, 'error');
   if (!vTiempo.v) return mostrarNotificacion(vTiempo.m, 'error');
-  if (!vPorc.v)   return mostrarNotificacion(vPorc.m, 'error');
+  if (!vPorc.v) return mostrarNotificacion(vPorc.m, 'error');
   if (!vPrecio.v) return mostrarNotificacion(vPrecio.m, 'error');
 
   const ingredientes = vIngred.val;
-  const pasos        = vPasos.val;
+  const pasos = vPasos.val;
 
   const selectedTags = Array.from(document.querySelectorAll('#receta-etiquetas input:checked')).map(cb => cb.value);
   const allTags = [...new Set([...selectedTags, ...customTags])];
 
   publicarBtn.disabled = true;
-  publicarBtn.textContent = editRecipeId ? 'Guardando...' : 'Publicando...';
+  publicarBtn.innerHTML = editRecipeId ? 'Guardando... <i data-lucide="loader" class="spin"></i>' : 'Publicando... <i data-lucide="loader" class="spin"></i>';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   try {
     let finalImage = null;
@@ -338,7 +349,7 @@ async function publicarReceta() {
     const isPremium = currentUser.es_premium || currentUser.rol === 'premium' || currentUser.rol === 'admin';
 
     if (isPremium && videoSeleccionado && fileArea.style.display === 'block') {
-      mostrarNotificacion('🎥 Subiendo video...', 'info');
+      mostrarNotificacion('Subiendo video...', 'info');
       const fileName = `videos/${currentUser.id}/${Date.now()}-${videoSeleccionado.name.replace(/\s+/g, '_')}`;
       const { error: uploadError } = await supabase.storage
         .from('recetas')
@@ -385,13 +396,14 @@ async function publicarReceta() {
       throw new Error(err.error || 'Fallo en el servidor');
     }
 
-    mostrarNotificacion(editRecipeId ? '✅ ¡Receta actualizada!' : '✅ ¡Receta publicada!', 'success');
+    mostrarNotificacion(editRecipeId ? '¡Receta actualizada!' : '¡Receta publicada!', 'success');
     setTimeout(() => window.location.href = editRecipeId ? `receta.html?id=${editRecipeId}` : 'home.html', 2000);
 
   } catch (error) {
     mostrarNotificacion(error.message, 'error');
     publicarBtn.disabled = false;
-    publicarBtn.textContent = editRecipeId ? 'Guardar cambios →' : 'Publicar receta →';
+    publicarBtn.innerHTML = editRecipeId ? 'Guardar cambios <i data-lucide="arrow-right"></i>' : 'Publicar receta <i data-lucide="arrow-right"></i>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 }
 
@@ -419,6 +431,48 @@ document.getElementById('remove-image-btn')?.addEventListener('click', () => {
 async function init() {
   if (await verificarSesion()) {
     publicarBtn?.addEventListener('click', publicarReceta);
+
+    // Regla de Mayúscula Inicial Automática (por cada línea)
+    const autoCapitalize = (el) => {
+      if (!el) return;
+      el.addEventListener('input', (e) => {
+        let val = e.target.value;
+        if (val.length > 0) {
+          // Detecta inicio de texto, nueva línea, o letra después de "1. " o "- "
+          e.target.value = val.replace(/(^|\n|(?:\d+\.\s+)|(?:-\s+))([a-z])/g, (match, separator, letter) => {
+            return separator + letter.toUpperCase();
+          });
+        }
+      });
+
+    };
+
+
+    autoCapitalize(tituloInput);
+    autoCapitalize(ingredientesTextarea);
+    autoCapitalize(pasosTextarea);
+
+    // Cargar datos si estamos en modo edición
+    if (editRecipeId) {
+      cargarDatosEdicion(editRecipeId);
+    }
   }
 }
 init();
+
+
+
+// Lógica de ocultado automático de la navegación al scroll
+(function() {
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    if (window.scrollY > lastScrollY && window.scrollY > 100) {
+      nav.classList.add('nav-hidden');
+    } else {
+      nav.classList.remove('nav-hidden');
+    }
+    lastScrollY = window.scrollY;
+  });
+})();

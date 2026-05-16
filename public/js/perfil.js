@@ -35,12 +35,12 @@ let formVisible                = false;
 let tarjetaSeleccionadaId      = null;
 
 const REWARDS = [
-  { id: 'comentarios_1d', name: 'Permiso Comentarios (1 día)', points: 50,  icon: '💬', benefit: 'Comenta en cualquier receta por 24h', days: 1, type: 'permiso_comentarios' },
-  { id: 'videos_3d',      name: 'Pase de Videos (3 días)',      points: 300, icon: '🎥', benefit: 'Acceso a videos por 72h',           days: 3, type: 'videos' },
-  { id: 'historial_1d',   name: 'Acceso Historial (1 día)',     points: 200, icon: '📜', benefit: 'Ver tu historial de recetas por 24h',   days: 1, type: 'permiso_historial' },
-  { id: 'comunidad_1d',   name: 'Acceso Comunidad (1 día)',     points: 250, icon: '👥', benefit: 'Ver actividad de la comunidad por 24h', days: 1, type: 'permiso_comunidad' },
-  { id: '1day_premium',   name: '1 día Premium',               points: 120, icon: '👑', benefit: 'Acceso Premium TOTAL por 1 día',       days: 1 },
-  { id: '5days_premium',  name: '5 días Premium',               points: 500, icon: '👑🌟', benefit: 'Acceso Premium por 5 días',          days: 5 }
+  { id: 'comentarios_1d', name: 'Permiso Comentarios (1 día)', points: 50,  icon: 'message-square', benefit: 'Comenta en cualquier receta por 24h', days: 1, type: 'permiso_comentarios' },
+  { id: 'videos_3d',      name: 'Pase de Videos (3 días)',      points: 300, icon: 'video',          benefit: 'Acceso a videos por 72h',           days: 3, type: 'videos' },
+  { id: 'historial_1d',   name: 'Acceso Historial (1 día)',     points: 200, icon: 'history',        benefit: 'Ver tu historial de recetas por 24h',   days: 1, type: 'permiso_historial' },
+  { id: 'comunidad_1d',   name: 'Acceso Comunidad (1 día)',     points: 250, icon: 'users',          benefit: 'Ver actividad de la comunidad por 24h', days: 1, type: 'permiso_comunidad' },
+  { id: '1day_premium',   name: '1 día Premium',               points: 120, icon: 'crown',          benefit: 'Acceso Premium TOTAL por 1 día',       days: 1 },
+  { id: '5days_premium',  name: '5 días Premium',               points: 500, icon: 'sparkles',       benefit: 'Acceso Premium por 5 días',          days: 5 }
 ];
 
 const PROFANITY = ['puto', 'puta', 'mierda', 'pendejo', 'pendeja', 'culero', 'cabron', 'chinga', 'verga', 'pito', 'fuck', 'shit', 'asshole', 'idiota', 'estupido'];
@@ -87,7 +87,7 @@ function escapeHTML(str) {
 }
 
 function imgPlaceholder() {
-  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FDFBF7'/%3E%3Ccircle cx='50' cy='38' r='20' fill='%23E07A5F'/%3E%3Cpath d='M20 90 c0-25 15-35 30-35 s30 10 30 35' fill='%23E07A5F'/%3E%3C/svg%3E`;
 }
 
 async function cargarPerfil() {
@@ -141,19 +141,19 @@ async function cargarPerfil() {
   displayBio.textContent      = currentUser.bio || 'Sin biografía aún.';
   
   if (!esPerfilAjeno) {
-    if (displayEmail) displayEmail.textContent = `📧 ${currentUser.email || ''}`;
+    if (displayEmail) displayEmail.innerHTML = `<i data-lucide="mail"></i> ${currentUser.email || ''}`;
   } else {
     if (displayEmail) displayEmail.style.display = 'none';
   }
 
   const esPremium = currentUser.es_premium || currentUser.esPremium;
-  roleBadge.textContent = esPremium ? '👑 Premium' : '🆓 Free';
+  roleBadge.innerHTML = esPremium ? '<i data-lucide="crown"></i> Premium' : 'Free';
   roleBadge.classList.toggle('free', !esPremium);
 
-  puntosBadge.textContent = `⭐ ${currentUser.puntos || 0} pts`;
+  puntosBadge.innerHTML = `<i data-lucide="star"></i> ${currentUser.puntos || 0} pts`;
   localStorage.setItem('userPoints', currentUser.puntos || 0);
 
-  avatarImg.src = currentUser.foto_perfil || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%234caf50'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='white' font-size='45'%3E${(currentUser.nombre?.charAt(0) || username?.charAt(0) || 'U').toUpperCase()}%3C/text%3E%3C/svg%3E`;
+  avatarImg.src = currentUser.foto_perfil || imgPlaceholder();
 
   if (!esPerfilAjeno) {
     if (rewardsSection) rewardsSection.style.display = esPremium ? 'none' : 'block';
@@ -188,16 +188,16 @@ async function cargarPerfil() {
         if (currentUser.premium_cancelado) {
           if (estadoElemento) {
             estadoElemento.textContent = 'Activa (cancelada al final del periodo)';
-            estadoElemento.style.color = '#ff9800';
+            estadoElemento.style.color = '#E07A5F';
           }
           if (cancelNote) cancelNote.style.display = 'block';
           if (btnCancel)  btnCancel.style.display  = 'none';
-          if (btnRenew)   btnRenew.textContent      = '🔄 Reactivar membresía';
+          if (btnRenew)   btnRenew.innerHTML      = '<i data-lucide="refresh-cw"></i> Reactivar membresía';
           if (btnRenew)   btnRenew.disabled          = false;
         } else {
           if (estadoElemento) {
             estadoElemento.textContent = 'Activo';
-            estadoElemento.style.color = '#2e7d32';
+            estadoElemento.style.color = '#E07A5F';
           }
           if (cancelNote) cancelNote.style.display = 'none';
           if (btnCancel)  btnCancel.style.display  = 'inline-block';
@@ -211,11 +211,11 @@ async function cargarPerfil() {
             if (diasRestantes > 7) {
               btnRenew.disabled   = true;
               btnRenew.title      = `Podrás renovar cuando queden 7 días o menos (te quedan ${diasRestantes} días)`;
-              btnRenew.textContent = `🔒 Renovar (disponible en ${diasRestantes - 7} días)`;
+              btnRenew.innerHTML = `<i data-lucide="lock"></i> Renovar (disponible en ${diasRestantes - 7} días)`;
             } else {
               btnRenew.disabled    = false;
               btnRenew.title       = '';
-              btnRenew.textContent = '🔄 Renovar ahora';
+              btnRenew.innerHTML = '<i data-lucide="refresh-cw"></i> Renovar ahora';
             }
           }
         }
@@ -235,12 +235,14 @@ async function cargarPerfil() {
   } else {
     const premiumManageSection = document.getElementById('premium-manage-section');
     if (premiumManageSection) premiumManageSection.style.display = 'none';
-    if (rewardsSection)        rewardsSection.style.display      = 'none';
+    if (rewardsSection) rewardsSection.style.display = 'none';
+    
     await Promise.all([
       cargarMisRecetas(currentUser.id),
       actualizarStatsAjeno(currentUser.id)
     ]);
   }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function cargarMisRecetas(targetUserId = null) {
@@ -283,7 +285,7 @@ function renderRewards() {
     }
     return `
       <div class="reward-card ${isActive ? 'active' : ''}">
-        <span class="reward-icon">${reward.icon}</span>
+        <span class="reward-icon"><i data-lucide="${reward.icon}"></i></span>
         <div class="reward-title">${reward.name}</div>
         <div class="reward-points">${reward.points} pts</div>
         <div class="reward-benefit">${reward.benefit}</div>
@@ -293,7 +295,7 @@ function renderRewards() {
           data-days="${reward.days || 0}"
           data-type="${reward.type || ''}"
           ${!canAfford || isActive ? 'disabled' : ''}>
-          ${isActive ? '✅ Activo' : canAfford ? 'Canjear' : 'Puntos insuficientes'}
+          ${isActive ? '<i data-lucide="check"></i> Activo' : canAfford ? 'Canjear' : 'Puntos insuficientes'}
         </button>
       </div>`;
   }).join('');
@@ -309,6 +311,7 @@ function renderRewards() {
       );
     });
   });
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) {
@@ -338,9 +341,10 @@ async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) 
     }
 
     const data = await res.json();
-    showToast(`✅ ${data.message || 'Canje exitoso'}`);
+    showToast('Canje exitoso');
     currentUser.puntos = data.points;
-    puntosBadge.textContent = `⭐ ${data.points} pts`;
+    puntosBadge.innerHTML = `<i data-lucide="star"></i> ${data.points} pts`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     localStorage.setItem('userPuntos',  data.points);
     if (data.es_premium !== undefined)  localStorage.setItem('userPremium', data.es_premium);
     if (data.rol !== undefined)         localStorage.setItem('userRol', data.rol);
@@ -349,7 +353,8 @@ async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) 
   } catch (error) {
     showToast(error.message || 'Error al procesar el canje', true);
     currentUser.puntos = puntosActuales;
-    puntosBadge.textContent = `⭐ ${puntosActuales} pts`;
+    puntosBadge.innerHTML = `<i data-lucide="star"></i> ${puntosActuales} pts`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     renderRewards();
   }
 }
@@ -445,15 +450,15 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
 
   if (isLocked) {
     container.innerHTML = `
-      <div class="premium-lock-box" style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;grid-column:1/-1;border:2px dashed #4caf50;margin:20px 0;">
-        <div style="font-size:3rem;margin-bottom:15px;">🔒</div>
-        <h3 style="color:#1b5e20;margin-bottom:10px;">Contenido Premium</h3>
+      <div class="premium-lock-box" style="text-align:center;padding:60px 20px;background:#FDFBF7;border-radius:24px;grid-column:1/-1;border:2px dashed #E07A5F;margin:20px 0;">
+        <div style="font-size:3rem;margin-bottom:15px;color:#D95D39;"><i data-lucide="lock" style="width:64px;height:64px;"></i></div>
+        <h3 style="color:#D95D39;margin-bottom:10px;">Contenido Premium</h3>
         <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">
-          Esta sección es exclusiva para usuarios <strong>Premium</strong> 👑
+          Esta sección es exclusiva para usuarios <strong>Premium</strong> <i data-lucide="crown" style="width:18px;height:18px;display:inline-block;vertical-align:middle;"></i>
         </p>
         <button id="btn-upgrade-from-grid" onclick="window.location.href='perfil.html'" 
-          style="margin-top:20px;padding:10px 25px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;">
-          Mejorar Cuenta
+          style="margin-top:20px;padding:12px 30px;background:#E07A5F;color:white;border:none;border-radius:30px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+          Mejorar Cuenta <i data-lucide="arrow-right" style="width:18px;"></i>
         </button>
       </div>`;
     return;
@@ -461,13 +466,13 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
 
   if (!recetas.length) {
     const messages = {
-      'mis-recetas-grid': { icon: '📝', text: 'No has subido recetas aún' },
-      'favoritos-grid':   { icon: '⭐', text: 'No tienes recetas guardadas' },
-      'likes-grid':       { icon: '❤️', text: 'Aún no has dado like a ninguna receta' },
-      'historial-grid':   { icon: '👁️', text: 'No has visto recetas aún' }
+      'mis-recetas-grid': { icon: 'file-text', text: 'No has subido recetas aún' },
+      'favoritos-grid':   { icon: 'star', text: 'No tienes recetas guardadas' },
+      'likes-grid':       { icon: 'heart', text: 'Aún no has dado like a ninguna receta' },
+      'historial-grid':   { icon: 'history', text: 'No has visto recetas aún' }
     };
-    const msg = messages[containerId] || { icon: '🍳', text: 'Sin recetas' };
-    container.innerHTML = `<div class="vacio-mensaje"><span>${msg.icon}</span><p>${msg.text}</p></div>`;
+    const msg = messages[containerId] || { icon: 'chef-hat', text: 'Sin recetas' };
+    container.innerHTML = `<div class="vacio-mensaje"><i data-lucide="${msg.icon}" style="width:48px;height:48px;color:#ccc;margin-bottom:10px;"></i><p>${msg.text}</p></div>`;
     return;
   }
 
@@ -475,11 +480,11 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
     const img = r.imagen || imgPlaceholder();
     let btnEliminar = '';
     if (misRecetas) {
-      btnEliminar = `<button class="btn-eliminar-receta-overlay" data-id="${r.id}" title="Eliminar receta">✖</button>`;
+      btnEliminar = `<button class="btn-eliminar-receta-overlay" data-id="${r.id}" title="Eliminar receta"><i data-lucide="trash-2"></i></button>`;
     } else if (containerId === 'historial-grid') {
-      btnEliminar = `<button class="btn-eliminar-historial-overlay" data-id="${r.id}" title="Quitar de historial">✖</button>`;
+      btnEliminar = `<button class="btn-eliminar-historial-overlay" data-id="${r.id}" title="Quitar de historial"><i data-lucide="x"></i></button>`;
     } else if (containerId === 'favoritos-grid') {
-      btnEliminar = `<button class="btn-eliminar-favorito-overlay" data-id="${r.id}" title="Quitar de favoritos">✖</button>`;
+      btnEliminar = `<button class="btn-eliminar-favorito-overlay" data-id="${r.id}" title="Quitar de favoritos"><i data-lucide="trash-2"></i></button>`;
     }
     return `
       <div class="receta-grid-item" data-id="${r.id}">
@@ -491,13 +496,15 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
           <div class="receta-info-pie" style="padding:8px; background:white;">
             <div class="receta-titulo" style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(r.titulo)}</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-              <span style="font-size:0.75rem; color:#666;">${r.likedByUser ? '❤️' : '🤍'} ${r.likes || 0}</span>
-              ${r.favoriteByUser || containerId === 'favoritos-grid' ? '<span style="color:#4caf50; font-size:0.9rem;">⭐</span>' : ''}
+              <span style="font-size:0.75rem; color:#666; display:flex; align-items:center; gap:4px;"><i data-lucide="heart" style="width:12px;height:12px;${r.likedByUser ? 'fill:#E07A5F;color:#E07A5F;' : ''}"></i> ${r.likes || 0}</span>
+              ${r.favoriteByUser || containerId === 'favoritos-grid' ? '<i data-lucide="star" style="width:14px;height:14px;fill:#F2CC8F;color:#F2CC8F;"></i>' : ''}
             </div>
           </div>
           ${btnEliminar}
         </div>`;
   }).join('');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   container.querySelectorAll('.receta-grid-item').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -602,7 +609,7 @@ async function guardarPerfil() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error en API');
 
-    showToast('✅ Perfil actualizado');
+    showToast('Perfil actualizado');
     currentUser.nombre   = nombre;
     currentUser.apellido = apellido;
     currentUser.username = data.username || username;
@@ -622,7 +629,8 @@ async function guardarPerfil() {
     showToast(err.message || 'Error al guardar perfil', true);
   } finally {
     guardarPerfilBtn.disabled   = false;
-    guardarPerfilBtn.textContent = '💾 Guardar cambios';
+    guardarPerfilBtn.innerHTML = '<i data-lucide="save"></i> Guardar cambios';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 }
 
@@ -651,7 +659,7 @@ async function cambiarAvatar(file) {
       }
 
       avatarImg.src = base64;
-      showToast('📷 Foto de perfil actualizada');
+      showToast('Foto de perfil actualizada');
       currentUser.foto_perfil = base64;
       // Guardar también en el header para que se vea reflejado sin recargar
       const headerAvatar = document.getElementById('avatar-img');
@@ -668,7 +676,8 @@ async function cambiarAvatar(file) {
 function mostrarForm() {
   const section = document.getElementById('perfil-form-section');
   if (section) section.classList.add('visible');
-  if (toggleFormBtn) toggleFormBtn.textContent = '✕ Cancelar edición';
+  if (toggleFormBtn) toggleFormBtn.innerHTML = '<i data-lucide="x"></i> Cancelar edición';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   formVisible = true;
 
   if (perfilNombre)   perfilNombre.value   = currentUser.nombre   || '';
@@ -686,7 +695,8 @@ function mostrarForm() {
 function ocultarForm() {
   const section = document.getElementById('perfil-form-section');
   if (section) section.classList.remove('visible');
-  if (toggleFormBtn) toggleFormBtn.textContent = '✏️ Editar perfil';
+  if (toggleFormBtn) toggleFormBtn.innerHTML = '<i data-lucide="edit-3"></i> Editar perfil';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   formVisible = false;
   if (perfilNombre)   perfilNombre.value   = currentUser.nombre   || '';
   if (perfilApellido) perfilApellido.value = currentUser.apellido || '';
@@ -761,11 +771,12 @@ async function cargarMetodosPago() {
       lista.innerHTML = tarjetas.map(t => `
         <div class="tarjeta-item" data-id="${t.id}" onclick="window.seleccionarTarjeta(${t.id})">
           <div class="tarjeta-info">
-            <span class="tarjeta-icon">💳</span>
+            <span class="tarjeta-icon"><i data-lucide="credit-card"></i></span>
             <span>${escapeHTML(t.tarjeta_mask)}</span>
           </div>
-          <span class="check">✔️</span>
+          <span class="check"><i data-lucide="check"></i></span>
         </div>`).join('');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       window.seleccionarTarjeta(tarjetas[0].id);
     } else {
       if (seccion)   seccion.style.display  = 'none';
@@ -782,10 +793,11 @@ window.seleccionarTarjeta = (id) => {
 };
 
 async function finalizarPago() {
+  const btn = document.getElementById('btn-finalizar-pago');
   const btnText = document.getElementById('pay-btn-text');
   const btnSpinner = document.getElementById('pay-btn-spinner');
 
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   if (btnText) btnText.style.display = 'none';
   if (btnSpinner) btnSpinner.style.display = 'inline';
 
@@ -999,11 +1011,12 @@ function initEventListeners() {
       
       if (input.type === 'password') {
         input.type = 'text';
-        eye.textContent = '🙈';
+        eye.innerHTML = '<i data-lucide="eye-off"></i>';
       } else {
         input.type = 'password';
-        eye.textContent = '👁️';
+        eye.innerHTML = '<i data-lucide="eye"></i>';
       }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     });
   });
 
@@ -1050,7 +1063,7 @@ async function cambiarPassword() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al cambiar contraseña');
     
-    showToast('✅ Contraseña actualizada correctamente');
+    showToast('Contraseña actualizada correctamente');
     document.getElementById('pass-actual').value = '';
     document.getElementById('pass-nueva').value = '';
   } catch (err) {
@@ -1069,3 +1082,18 @@ async function init() {
 }
 
 init();
+
+// Lógica de ocultado automático de la navegación al scroll
+(function() {
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    if (window.scrollY > lastScrollY && window.scrollY > 100) {
+      nav.classList.add('nav-hidden');
+    } else {
+      nav.classList.remove('nav-hidden');
+    }
+    lastScrollY = window.scrollY;
+  });
+})();

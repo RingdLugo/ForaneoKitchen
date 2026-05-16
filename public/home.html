@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ForananeoKitchen - Inicio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     /* Estilos para botones de like/fav en tarjetas */
     .recipe-social {
@@ -17,7 +21,9 @@
       margin: 8px 0;
       align-items: center;
     }
-    .btn-like-mini, .btn-fav-mini {
+
+    .btn-like-mini,
+    .btn-fav-mini {
       background: #f5f5f5;
       border: none;
       border-radius: 20px;
@@ -30,10 +36,25 @@
       gap: 4px;
       font-family: inherit;
     }
-    .btn-like-mini:hover { background: #ffebee; }
-    .btn-like-mini.liked { background: #ff5252; color: white; }
-    .btn-fav-mini:hover { background: #fff3e0; }
-    .btn-fav-mini.favorited { background: #ff9800; color: white; }
+
+    .btn-like-mini:hover {
+      background: #ffebee;
+    }
+
+    .btn-like-mini.liked {
+      background: #ff5252;
+      color: white;
+    }
+
+    .btn-fav-mini:hover {
+      background: #fff3e0;
+    }
+
+    .btn-fav-mini.favorited {
+      background: #ff9800;
+      color: white;
+    }
+
     .badge-premium {
       position: absolute;
       top: 10px;
@@ -45,23 +66,32 @@
       padding: 3px 10px;
       border-radius: 20px;
     }
+
     .recipe-autor {
       font-size: 0.8rem;
       color: #888;
       margin-bottom: 8px;
     }
+
     .loading-spinner {
       width: 50px;
       height: 50px;
-      border: 4px solid #e8f5e9;
-      border-top-color: #4caf50;
+      border: 4px solid rgba(224, 122, 95, 0.1);
+      border-top-color: #E07A5F;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 60px auto;
+      grid-column: 1 / -1; /* Centrar en el grid */
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .puntos-display {
-      color: rgba(255,255,255,0.9);
+      color: rgba(255, 255, 255, 0.9);
       font-size: 0.9rem;
       margin-top: 8px;
       display: block;
@@ -70,8 +100,15 @@
   <link rel="stylesheet" href="css/bottom-nav.css">
   <link rel="stylesheet" href="css/chatbot.css">
 </head>
+
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  <div class="floating-actions">
+    <button id="chat-boton" style="display:none;"><i data-lucide="bot"></i></button>
+    <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+      <i data-lucide="moon" class="moon-icon"></i>
+      <i data-lucide="sun" class="sun-icon"></i>
+    </button>
+  </div>
 
   <div class="home-screen">
 
@@ -79,13 +116,9 @@
     <header class="header-green">
       <div class="header-top">
         <div class="greeting-section">
-          <h1 class="greeting">¡Hola, <span id="user-name">Invitado</span>! 👋</h1>
+          <h1 class="greeting">¡Hola, <span id="user-name">Invitado</span>!</h1>
           <p class="question">¿Qué cocinamos hoy?</p>
-          <span id="puntos-display" class="puntos-display">⭐ 0 pts</span>
-        </div>
-        <div class="header-actions">
-          <div id="premium-badge" class="premium-badge" style="display:none;">👑 Premium</div>
-          <img id="user-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='65' text-anchor='middle' font-size='50'%3E👤%3C/text%3E%3C/svg%3E" alt="Perfil" class="header-avatar" onclick="window.location.href='perfil.html'">
+          <span id="puntos-display" class="puntos-display">0 pts</span>
         </div>
       </div>
     </header>
@@ -93,7 +126,7 @@
     <!-- Búsqueda -->
     <div class="search-wrapper">
       <div class="search-bar">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon"><i data-lucide="search"></i></span>
         <input id="search-input" type="text" placeholder="Buscar recetas económicas...">
       </div>
     </div>
@@ -101,18 +134,18 @@
     <!-- Filtros -->
     <div class="filters-section">
       <div class="filters-header">
-        <span>🎯</span> Filtros rápidos
+        <i data-lucide="target"></i> Filtros rápidos
       </div>
       <div class="filter-tags">
-        <button class="tag active-filter" data-filter="todas">🍽️ Todas</button>
-        <button class="tag" data-filter="populares">🔥 Populares</button>
-        <button class="tag" data-filter="economicas">💰 Económicas (-$35)</button>
-        <button class="tag" data-filter="rapidas">⚡ Rápidas (-20min)</button>
+        <button class="tag active-filter" data-filter="todas"><i data-lucide="utensils"></i> Todas</button>
+        <button class="tag" data-filter="populares"><i data-lucide="flame"></i> Populares</button>
+        <button class="tag" data-filter="economicas"><i data-lucide="banknote"></i> Económicas</button>
+        <button class="tag" data-filter="rapidas"><i data-lucide="zap"></i> Rápidas</button>
       </div>
     </div>
 
     <!-- Recetas -->
-    <h2 class="section-title">🍳 Recetas</h2>
+    <h2 class="section-title"><i data-lucide="chef-hat"></i> Recetas</h2>
     <div id="recetas" class="recipes-list">
       <div class="loading-spinner"></div>
     </div>
@@ -120,30 +153,35 @@
     <!-- Navegación inferior -->
     <nav class="bottom-nav">
       <a href="home.html" class="nav-item active">
-        <span>🏠</span> Inicio
+        <i data-lucide="home"></i>
+        <span>Inicio</span>
       </a>
       <a href="subir-receta.html" class="nav-item">
-        <span>📝</span> Subir
+        <i data-lucide="plus-circle"></i>
+        <span>Subir</span>
       </a>
       <a href="planificador.html" class="nav-item">
-        <span>📅</span> Plan
+        <i data-lucide="calendar"></i>
+        <span>Plan</span>
       </a>
       <a href="comunidad.html" class="nav-item">
-        <span>👥</span> Comunidad
+        <i data-lucide="users"></i>
+        <span>Comunidad</span>
       </a>
       <a href="perfil.html" class="nav-item">
-        <span>👤</span> Perfil
+        <i data-lucide="user"></i>
+        <span>Perfil</span>
       </a>
     </nav>
   </div>
 
   <!-- Chat IA (solo Premium) -->
-  <button id="chat-boton" style="display:none;">🤖</button>
+  <!-- Movido arriba -->
 
   <div id="chat-window" style="display:none;">
     <div id="chat-header">
-      🤖 Chef IA
-      <button id="cerrar-chat-btn">×</button>
+      <i data-lucide="bot"></i> Chef IA
+      <button id="cerrar-chat-btn" title="Minimizar"><i data-lucide="minus"></i></button>
     </div>
     <div id="chat-messages">
       <div class="msg msg-bot">¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?</div>
@@ -158,6 +196,9 @@
   <script src="js/home.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
   <script src="js/chatbot.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
-</html>
 
+</html>

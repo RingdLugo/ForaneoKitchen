@@ -21,7 +21,7 @@ const modalComentarios = document.getElementById('modal-comentarios');
 const modalRespuesta = document.getElementById('modal-respuesta');
 
 
-const PLACEHOLDER_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
+const PLACEHOLDER_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FDFBF7'/%3E%3Ccircle cx='50' cy='38' r='20' fill='%23E07A5F'/%3E%3Cpath d='M20 90 c0-25 15-35 30-35 s30 10 30 35' fill='%23E07A5F'/%3E%3C/svg%3E`;
 
 // Cargar usuario desde la API
 async function cargarUsuario() {
@@ -67,7 +67,7 @@ function showToast(msg, isError = false) {
     document.body.appendChild(t);
   }
   t.textContent = msg;
-  t.style.background = isError ? '#e53935' : '#4caf50';
+  t.style.background = isError ? '#e53935' : '#E07A5F';
   t.classList.add('show');
   clearTimeout(t._timeout);
   t._timeout = setTimeout(() => t.classList.remove('show'), 3000);
@@ -162,17 +162,18 @@ async function cargarActividadReciente() {
 
   if (!esPremium) {
     actividadContainer.innerHTML = `
-      <div class="premium-lock-box" style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;border:2px dashed #4caf50;margin:20px 0;">
-        <div style="font-size:3rem;margin-bottom:15px;">🔒</div>
-        <h3 style="color:#1b5e20;margin-bottom:10px;">Actividad Exclusiva</h3>
+      <div class="premium-lock-box" style="text-align:center;padding:60px 20px;background:#FDFBF7;border-radius:24px;border:2px dashed #E07A5F;margin:20px 0;">
+        <div style="font-size:3rem;margin-bottom:15px;color:#D95D39;"><i data-lucide="lock" style="width:64px;height:64px;"></i></div>
+        <h3 style="color:#D95D39;margin-bottom:10px;">Actividad Exclusiva</h3>
         <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">
-          La actividad de la comunidad y los comentarios son exclusivos para usuarios <strong>Premium</strong> 👑
+          La actividad de la comunidad y los comentarios son exclusivos para usuarios <strong>Premium</strong> <i data-lucide="crown" style="width:18px;height:18px;display:inline-block;vertical-align:middle;"></i>
         </p>
         <button onclick="window.location.href='perfil.html'" 
-          style="margin-top:20px;padding:10px 25px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;">
-          Mejorar Cuenta
+          style="margin-top:20px;padding:12px 30px;background:#E07A5F;color:white;border:none;border-radius:30px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+          Mejorar Cuenta <i data-lucide="arrow-right" style="width:18px;"></i>
         </button>
       </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     return;
   }
 
@@ -184,13 +185,14 @@ async function cargarActividadReciente() {
 
     if (res.status === 403) {
       actividadContainer.innerHTML = `
-        <div style="text-align:center;padding:60px 20px;background:#f9f9f9;border-radius:24px;border:2px dashed #4caf50;">
-          <span style="font-size:3rem">🔒</span>
-          <h3 style="color:#1b5e20;margin-top:15px">Actividad Exclusiva Premium</h3>
+        <div style="text-align:center;padding:60px 20px;background:#FDFBF7;border-radius:24px;border:2px dashed #E07A5F;">
+          <div style="font-size:3rem;color:#D95D39;"><i data-lucide="lock" style="width:64px;height:64px;"></i></div>
+          <h3 style="color:#D95D39;margin-top:15px">Actividad Exclusiva Premium</h3>
           <p style="margin:10px 0;color:#666;font-size:0.95rem;line-height:1.5;">Actualiza tu cuenta para ver la actividad de la comunidad.</p>
-          <button onclick="window.location.href='perfil.html'" class="tab-btn active" style="margin-top:20px;padding:10px 25px;border-radius:20px;">Mejorar a Premium</button>
+          <button onclick="window.location.href='perfil.html'" class="tab-btn active" style="margin-top:20px;padding:12px 30px;border-radius:30px;background:#E07A5F;">Mejorar a Premium</button>
         </div>
       `;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
 
@@ -228,13 +230,13 @@ function renderizarRecetas(container, recetasList) {
     const favClass = r.favoriteByUser ? 'favorited' : '';
     const autorPremium = r.usuario?.es_premium || false;
     const autorBadge = autorPremium 
-      ? '<span class="autor-badge premium">👑 Premium</span>' 
-      : '<span class="autor-badge free">🆓 Free</span>';
+      ? '<span class="autor-badge premium"><i data-lucide="crown"></i> Premium</span>' 
+      : '<span class="autor-badge free">Free</span>';
     
 
     const comentarBtn = esPremiumActual
-      ? `<button class="comentar-btn" onclick="window.abrirComentarios(${r.id}, '${escapeHTML(r.titulo)}')">💬 Comentar</button>`
-      : `<button class="comentar-btn comentar-bloqueado" onclick="window.mostrarBloqueoComentarios()" title="Solo Premium">🔒 Comentar</button>`;
+      ? `<button class="comentar-btn" onclick="window.abrirComentarios(${r.id}, '${escapeHTML(r.titulo)}')"><i data-lucide="message-square"></i> Comentar</button>`
+      : `<button class="comentar-btn comentar-bloqueado" onclick="window.mostrarBloqueoComentarios()" title="Solo Premium"><i data-lucide="lock"></i> Comentar</button>`;
     
     return `
       <div class="receta-comunidad-card" data-id="${r.id}" onclick="window.irAReceta(${r.id}, event)">
@@ -244,25 +246,25 @@ function renderizarRecetas(container, recetasList) {
         </div>
         <div class="receta-info-comunidad">
           <h3>${escapeHTML(r.titulo)}</h3>
-          <p class="receta-autor" ${r.usuario_id || r.usuario?.id ? `onclick="event.stopPropagation(); window.location.href='perfil.html?id=${r.usuario_id || r.usuario?.id}'"` : ''} style="${r.usuario_id || r.usuario?.id ? 'cursor:pointer; color:#4caf50;' : 'color:#999;'}">
-            👨‍🍳 ${escapeHTML(r.usuario?.username || 'Anónimo')}
+          <p class="receta-autor" ${r.usuario_id || r.usuario?.id ? `onclick="event.stopPropagation(); window.location.href='perfil.html?id=${r.usuario_id || r.usuario?.id}'"` : ''} style="${r.usuario_id || r.usuario?.id ? 'cursor:pointer; color:#E07A5F;' : 'color:#999;'}">
+            <i data-lucide="user"></i> ${escapeHTML(r.usuario?.username || 'Anónimo')}
             ${autorBadge}
           </p>
           <div class="receta-stats">
-            <span class="receta-precio">💰 ${escapeHTML(r.precio || '$$')}</span>
-            <span class="receta-tiempo">⏱️ ${escapeHTML(r.tiempo || '30 min')}</span>
-            <span class="receta-likes">❤️ ${r.likes || 0}</span>
+            <span class="receta-precio"><i data-lucide="dollar-sign"></i> ${escapeHTML(r.precio || '$$')}</span>
+            <span class="receta-tiempo"><i data-lucide="clock"></i> ${escapeHTML(r.tiempo || '30 min')}</span>
+            <span class="receta-likes"><i data-lucide="heart" style="${r.likedByUser ? 'fill:#E07A5F;color:#E07A5F;' : ''}"></i> ${r.likes || 0}</span>
           </div>
           <div class="acciones-comunidad" onclick="event.stopPropagation()">
             <button class="like-btn ${likedClass}"
               data-id="${r.id}" data-liked="${r.likedByUser ? '1' : '0'}"
               onclick="window.toggleLike(${r.id}, this)">
-              ❤️ <span class="like-count">${r.likes || 0}</span>
+              <i data-lucide="heart"></i> <span class="like-count">${r.likes || 0}</span>
             </button>
             <button class="favorito-btn ${favClass}"
               data-id="${r.id}" data-fav="${r.favoriteByUser ? '1' : '0'}"
               onclick="window.toggleFavorito(${r.id}, this)">
-              ⭐ ${r.favoriteByUser ? 'Guardado' : 'Guardar'}
+              <i data-lucide="star"></i> ${r.favoriteByUser ? 'Guardado' : 'Guardar'}
             </button>
             ${comentarBtn}
           </div>
@@ -270,6 +272,7 @@ function renderizarRecetas(container, recetasList) {
       </div>
     `;
   }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 
@@ -285,13 +288,13 @@ function renderizarActividad(items) {
       ? `<img src="${item.usuario.foto_perfil}" alt="${escapeHTML(item.usuario.username)}">`
       : `<div class="avatar-placeholder">${(item.usuario?.username?.charAt(0) || 'U').toUpperCase()}</div>`;
     
-    const autorBadge = item.usuario?.es_premium ? '👑' : '🆓';
+    const autorBadge = item.usuario?.es_premium ? '<i data-lucide="crown"></i>' : '';
     
     let activityText = '';
     if (item.tipo === 'comentario') {
       activityText = `comentó: "${escapeHTML(item.texto.substring(0, 80))}${item.texto.length > 80 ? '...' : ''}"`;
     } else if (item.tipo === 'like') {
-      activityText = `le dio ❤️ a <strong>${escapeHTML(item.receta?.titulo || 'una receta')}</strong>`;
+      activityText = `le dio <i data-lucide="heart" style="fill:#E07A5F;color:#E07A5F;display:inline-block;"></i> a <strong>${escapeHTML(item.receta?.titulo || 'una receta')}</strong>`;
     } else if (item.tipo === 'receta') {
       activityText = `publicó una nueva receta: <strong>${escapeHTML(item.receta?.titulo || 'Sin título')}</strong>`;
     }
@@ -301,9 +304,9 @@ function renderizarActividad(items) {
         <div class="actividad-avatar">${avatar}</div>
         <div class="actividad-contenido">
           <div class="actividad-header">
-            <span class="actividad-autor" style="color:#4caf50;">
+            <span class="actividad-autor" style="color:#E07A5F;">
               ${escapeHTML(item.usuario?.username || 'Usuario')} 
-              <span style="font-size:0.7rem">${autorBadge}</span>
+              <span style="display:inline-block;vertical-align:middle;">${autorBadge}</span>
             </span>
             <span class="actividad-fecha">${formatFecha(item.fecha)}</span>
           </div>
@@ -312,23 +315,25 @@ function renderizarActividad(items) {
       </div>
     `;
   }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function renderizarActividadPersonal(activity) {
   if (!actividadContainer) return;
-  actividadContainer.innerHTML = '<h4 style="margin-bottom:15px; color:#2e7d32">Tu actividad reciente:</h4>' + activity.map(a => {
-    const iconos = { like: '❤️', favorito: '⭐', comentario: '💬', receta: '📝', punto: '🪙' };
+  actividadContainer.innerHTML = '<h4 style="margin-bottom:15px; color:#D95D39">Tu actividad reciente:</h4>' + activity.map(a => {
+    const iconos = { like: 'heart', favorito: 'star', comentario: 'message-square', receta: 'file-text', punto: 'award' };
     return `
       <div class="actividad-item personal">
-        <div class="actividad-icon" style="font-size:1.5rem; margin-right:15px">${iconos[a.tipo] || '📌'}</div>
+        <div class="actividad-icon" style="font-size:1.5rem; margin-right:15px; color:#E07A5F;"><i data-lucide="${iconos[a.tipo] || 'pin'}"></i></div>
         <div class="actividad-contenido">
           <div class="actividad-texto">${escapeHTML(a.texto)}</div>
-          <div class="actividad-fecha" style="font-size:0.8rem; color:#999">${formatFecha(a.fecha)}</div>
-          ${a.id ? `<button onclick="window.location.href='receta.html?id=${a.id}'" style="border:none; background:none; color:#4caf50; cursor:pointer; padding:0; font-size:0.8rem; margin-top:5px">Ver receta →</button>` : ''}
+          <div class="actividad-fecha" style="font-size:0.8rem; color:#666">${formatFecha(a.fecha)}</div>
+          ${a.id ? `<button onclick="window.location.href='receta.html?id=${a.id}'" style="border:none; background:none; color:#E07A5F; cursor:pointer; padding:0; font-size:0.8rem; margin-top:5px; font-weight:600;">Ver receta →</button>` : ''}
         </div>
       </div>
     `;
   }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 
@@ -353,7 +358,7 @@ async function toggleLike(recipeId, btn) {
     if (!res.ok) throw new Error('Error');
     const data = await res.json();
     if (data.likes !== undefined) countEl.textContent = data.likes;
-    showToast(liked ? 'Like eliminado' : '❤️ ¡Like!');
+    showToast(liked ? 'Like eliminado' : '¡Like!');
   } catch (error) {
     countEl.textContent = oldCount;
     btn.classList.toggle('liked', liked);
@@ -374,19 +379,21 @@ async function toggleFavorito(recipeId, btn) {
   const fav = btn.dataset.fav === '1';
   btn.disabled = true;
   btn.classList.toggle('favorited', !fav);
-  btn.innerHTML = `⭐ ${!fav ? 'Guardado' : 'Guardar'}`;
+  btn.innerHTML = `<i data-lucide="star"></i> ${!fav ? 'Guardado' : 'Guardar'}`;
   btn.dataset.fav = fav ? '0' : '1';
+  if (typeof lucide !== 'undefined') lucide.createIcons();
   try {
     const res = await fetch(`${API_BASE}/recipes/${recipeId}/favorite`, {
       method: fav ? 'DELETE' : 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('Error');
-    showToast(fav ? '⭐ Eliminado de favoritos' : '⭐ Guardado en favoritos');
+    showToast(fav ? 'Eliminado de favoritos' : 'Guardado en favoritos');
   } catch (error) {
     btn.classList.toggle('favorited', fav);
-    btn.innerHTML = `⭐ ${fav ? 'Guardado' : 'Guardar'}`;
+    btn.innerHTML = `<i data-lucide="star"></i> ${fav ? 'Guardado' : 'Guardar'}`;
     btn.dataset.fav = fav ? '1' : '0';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     showToast('Error al procesar favorito', true);
   } finally {
     btn.disabled = false;
@@ -397,7 +404,7 @@ async function toggleFavorito(recipeId, btn) {
 async function abrirComentarios(recipeId, titulo) {
   recetaModalId = recipeId;
   comentarioPadreId = null;
-  document.getElementById('modal-comentarios-titulo').textContent = `💬 ${escapeHTML(titulo)}`;
+  document.getElementById('modal-comentarios-titulo').innerHTML = `<i data-lucide="message-circle"></i> ${escapeHTML(titulo)}`;
   
   const lista = document.getElementById('comentarios-lista');
   const inputArea = document.querySelector('.modal-input-area');
@@ -406,13 +413,14 @@ async function abrirComentarios(recipeId, titulo) {
   
   if (!tienePermiso(currentUser, 'comentarios')) {
     lista.innerHTML = `
-      <div class="premium-lock-box" style="text-align:center;padding:40px 20px;background:#f9f9f9;border-radius:24px;margin-top:16px;border:2px dashed #4caf50;">
-        <div style="font-size:3rem;margin-bottom:15px;">🔒</div>
-        <h3 style="color:#1b5e20;margin-bottom:10px;">¡Únete a la conversación!</h3>
-        <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">Los comentarios y consejos del Chef IA son exclusivos para usuarios <strong>Premium</strong> 👑</p>
-        <button onclick="window.location.href='perfil.html'" style="margin-top:20px;padding:10px 25px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;transition:all .3s;">Actualizar a Premium</button>
+      <div class="premium-lock-box" style="text-align:center;padding:40px 20px;background:#FDFBF7;border-radius:24px;margin-top:16px;border:2px dashed #E07A5F;">
+        <div style="font-size:3rem;margin-bottom:15px;color:#D95D39;"><i data-lucide="lock" style="width:48px;height:48px;"></i></div>
+        <h3 style="color:#D95D39;margin-bottom:10px;">¡Únete a la conversación!</h3>
+        <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">Los comentarios y consejos del Chef IA son exclusivos para usuarios <strong>Premium</strong> <i data-lucide="crown" style="width:18px;height:18px;display:inline-block;vertical-align:middle;"></i></p>
+        <button onclick="window.location.href='perfil.html'" style="margin-top:20px;padding:12px 25px;background:#E07A5F;color:white;border:none;border-radius:25px;font-weight:600;cursor:pointer;transition:all .3s;">Actualizar a Premium</button>
       </div>
     `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     if (inputArea) inputArea.style.display = 'none';
     return;
   }
@@ -442,7 +450,8 @@ async function cargarComentarios(recipeId) {
     const allComments = await res.json();
     
     if (!allComments?.length) {
-      lista.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa">Sin comentarios. ¡Sé el primero! 🍳</div>';
+      lista.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa">Sin comentarios. ¡Sé el primero! <i data-lucide="message-square-plus" style="width:24px;display:inline-block;vertical-align:middle;"></i></div>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       return;
     }
     
@@ -456,6 +465,7 @@ async function cargarComentarios(recipeId) {
     });
     
     lista.innerHTML = padres.map(p => renderComentario(p, hijosPorPadre[p.id] || [])).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     
   } catch (error) {
     console.error('Error cargando comentarios:', error);
@@ -469,7 +479,7 @@ function renderComentario(comentario, respuestas = []) {
   const inicial = uname[0].toUpperCase();
   const foto = comentario.usuario?.foto_perfil;
   const autorPremium = comentario.usuario?.es_premium || false;
-  const autorBadge = autorPremium ? '<span style="font-size:0.7rem">👑</span>' : '<span style="font-size:0.7rem">🆓</span>';
+  const autorBadge = autorPremium ? '<i data-lucide="crown" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>' : '';
   const esPropio = currentUser && comentario.usuario?.id === currentUser.id;
   const puedeResponder = currentUser?.es_premium || false;
   
@@ -496,8 +506,8 @@ function renderComentario(comentario, respuestas = []) {
         </div>
         <p style="font-style: ${comentario.texto === '🚫 [Comentario eliminado]' ? 'italic' : 'normal'}; color: ${comentario.texto === '🚫 [Comentario eliminado]' ? '#999' : 'inherit'};">${escapeHTML(comentario.texto)}</p>
         <div class="comentario-acciones">
-          ${puedeResponder && comentario.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-responder" onclick="window.abrirResponder(${comentario.id}, '${escapeHTML(uname)}')">💬 Responder</button>` : ''}
-          ${esPropio && comentario.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${comentario.id}', this)">🗑️</button>` : ''}
+          ${puedeResponder && comentario.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-responder" onclick="window.abrirResponder(${comentario.id}, '${escapeHTML(uname)}')"><i data-lucide="message-circle"></i> Responder</button>` : ''}
+          ${esPropio && comentario.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${comentario.id}', this)"><i data-lucide="trash-2"></i></button>` : ''}
         </div>
         ${respuestasHTML}
       </div>
@@ -510,7 +520,7 @@ function renderComentarioRespuesta(respuesta) {
   const inicial = uname[0].toUpperCase();
   const foto = respuesta.usuario?.foto_perfil;
   const autorPremium = respuesta.usuario?.es_premium || false;
-  const autorBadge = autorPremium ? '👑' : '🆓';
+  const autorBadge = autorPremium ? '<i data-lucide="crown" style="width:12px;height:12px;display:inline-block;vertical-align:middle;"></i>' : '';
   const esPropio = currentUser && respuesta.usuario?.id === currentUser.id;
   
   const avatarHTML = foto
@@ -527,7 +537,7 @@ function renderComentarioRespuesta(respuesta) {
         </div>
         <p style="font-style: ${respuesta.texto === '🚫 [Comentario eliminado]' ? 'italic' : 'normal'}; color: ${respuesta.texto === '🚫 [Comentario eliminado]' ? '#999' : 'inherit'};">${escapeHTML(respuesta.texto)}</p>
         <div class="comentario-acciones">
-          ${esPropio && respuesta.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${respuesta.id}', this)">🗑️</button>` : ''}
+          ${esPropio && respuesta.texto !== '🚫 [Comentario eliminado]' ? `<button class="btn-eliminar-comentario" onclick="window.eliminarComentario('${respuesta.id}', this)"><i data-lucide="trash-2"></i></button>` : ''}
         </div>
       </div>
     </div>
@@ -546,8 +556,8 @@ function abrirResponder(comentarioId, autorNombre) {
     const restrictionDiv = document.createElement('div');
     restrictionDiv.className = 'restriction-message';
     restrictionDiv.innerHTML = `
-      <p>🔒 Solo usuarios Premium pueden participar en conversaciones.</p>
-      <a href="perfil.html" class="premium-link">🌟 Mejorar a Premium</a>
+      <p><i data-lucide="lock"></i> Solo usuarios Premium pueden participar en conversaciones.</p>
+      <a href="perfil.html" class="premium-link"><i data-lucide="sparkles"></i> Mejorar a Premium</a>
     `;
     modalRespuesta.querySelector('.respuesta-contexto').innerHTML = '';
     modalRespuesta.querySelector('.respuesta-contexto').appendChild(restrictionDiv);
@@ -588,7 +598,7 @@ async function enviarRespuesta() {
       body: JSON.stringify({ texto, padre_id: comentarioPadreId })
     });
     if (!res.ok) throw new Error('Error');
-    showToast('💬 Respuesta publicada');
+    showToast('Respuesta publicada');
     modalRespuesta.classList.remove('active');
     await cargarComentarios(recetaModalId);
   } catch (error) {
@@ -627,11 +637,11 @@ async function enviarComentario() {
     });
     if (!res.ok) throw new Error('Error');
     input.value = '';
-    showToast('💬 Comentario publicado');
+    showToast('Comentario publicado');
     await cargarComentarios(recetaModalId);
   } catch (error) {
     console.error('Error al publicar:', error);
-    showToast('🔒 Opción bloqueada. ¡Cámbiate a Premium para participar!', true);
+    showToast('Opción bloqueada. ¡Cámbiate a Premium para participar!', true);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Enviar';
@@ -739,7 +749,7 @@ async function init() {
 
 
 function mostrarBloqueoComentarios() {
-  showToast('🔒 Los comentarios son exclusivos para usuarios Premium 👑', true);
+  showToast('Los comentarios son exclusivos para usuarios Premium', true);
 }
 
 // Funciones globales
@@ -752,3 +762,18 @@ window.abrirResponder = abrirResponder;
 window.mostrarBloqueoComentarios = mostrarBloqueoComentarios;
 
 init();
+
+// Lógica de ocultado automático de la navegación al scroll
+(function() {
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    if (window.scrollY > lastScrollY && window.scrollY > 100) {
+      nav.classList.add('nav-hidden');
+    } else {
+      nav.classList.remove('nav-hidden');
+    }
+    lastScrollY = window.scrollY;
+  });
+})();

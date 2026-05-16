@@ -9,16 +9,32 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/subir-receta.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <style>
+    [data-lucide] {
+      width: 18px !important;
+      height: 18px !important;
+      stroke-width: 2.5px;
+    }
+  </style>
   <link rel="stylesheet" href="css/bottom-nav.css">
+  <link rel="stylesheet" href="css/chatbot.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  <div class="floating-actions">
+    <button id="chat-boton" style="display:none;"><i data-lucide="bot"></i></button>
+    <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+      <i data-lucide="moon" class="moon-icon"></i>
+      <i data-lucide="sun" class="sun-icon"></i>
+    </button>
+  </div>
 
   <div class="subir-receta-screen">
     <header class="header-subir">
-      <button class="back-btn" onclick="window.location.href='home.html'">← Volver a recetas</button>
-      <h1 id="form-title">📝 Subir nueva receta</h1>
+      <button class="back-btn" onclick="window.location.href='home.html'"><i data-lucide="arrow-left"></i> Volver a recetas</button>
+      <h1 id="form-title"><i data-lucide="pen-tool"></i> Subir nueva receta</h1>
       <p id="form-desc">Comparte tus creaciones culinarias con la comunidad</p>
+
     </header>
 
     <!-- Formulario para todos los usuarios (Video restringido a Premium) -->
@@ -27,32 +43,41 @@
     <div id="premium-form" class="form-container" style="display:none;">
       
       <div class="puntos-info" id="puntos-info">
-        <span>⭐ Tus puntos acumulados:</span>
-        <span class="puntos-valor" id="puntos-monto">0</span>
-        <span style="font-size: 0.8rem;">+20 pts por receta publicada</span>
+        <div class="puntos-label-side">
+          <i data-lucide="award"></i> Tus puntos acumulados:
+        </div>
+        <div class="puntos-right-block">
+          <span class="puntos-valor" id="puntos-monto">0</span>
+          <div class="puntos-badge-hint">+20 pts por receta publicada</div>
+        </div>
       </div>
+
+
+
 
       <!-- Campo: Etiquetas -->
       <div class="form-group">
-        <label>🏷️ Etiquetas / Categorías</label>
+        <label><i data-lucide="tag"></i> Etiquetas / Categorías</label>
         <div class="tags-selector" id="receta-etiquetas">
-          <label class="tag-check"><input type="checkbox" value="fitness"> ⚡ Fitness</label>
-          <label class="tag-check"><input type="checkbox" value="vegetariano"> 🌱 Vegetariano</label>
-          <label class="tag-check"><input type="checkbox" value="vegano"> 🌿 Vegano</label>
-          <label class="tag-check"><input type="checkbox" value="sin gluten"> 🚫 Sin gluten</label>
-          <label class="tag-check"><input type="checkbox" value="keto"> 🥑 Keto</label>
-          <label class="tag-check"><input type="checkbox" value="alto proteina"> 💪 Alto proteina</label>
+          <label class="tag-check"><input type="checkbox" value="fitness"> <i data-lucide="zap"></i> Fitness</label>
+          <label class="tag-check"><input type="checkbox" value="vegetariano"> <i data-lucide="leaf"></i> Vegetariano</label>
+          <label class="tag-check"><input type="checkbox" value="vegano"> <i data-lucide="sprout"></i> Vegano</label>
+          <label class="tag-check"><input type="checkbox" value="sin gluten"> <i data-lucide="wheat-off"></i> Sin gluten</label>
+          <label class="tag-check"><input type="checkbox" value="keto"> <i data-lucide="egg"></i> Keto</label>
+          <label class="tag-check"><input type="checkbox" value="alto proteina"> <i data-lucide="dumbbell"></i> Alto proteína</label>
+
         </div>
         <div class="custom-tags-area" style="margin-top:10px;">
-          <input type="text" id="custom-tag-input" placeholder="Agregar nueva categoría (Ej: Mexicana, Postre...)" style="width: calc(100% - 100px); display: inline-block;">
-          <button type="button" id="add-tag-btn" style="width: 90px; padding: 10px; border-radius: 8px; background: #4caf50; color: white; border: none; cursor: pointer;">Añadir</button>
+          <input type="text" id="custom-tag-input" placeholder="Agregar nueva categoría (Ej: Mexicana, Postre...)">
+          <button type="button" id="add-tag-btn">Añadir</button>
+
           <div id="selected-custom-tags" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;"></div>
         </div>
       </div>
 
       <!-- Campo: Título -->
       <div class="form-group">
-        <label for="titulo">🍽️ Título de la receta *</label>
+        <label for="titulo"><i data-lucide="utensils"></i> Título de la receta *</label>
         <input id="titulo" type="text" placeholder="Ej: Pasta Alfredo Económica" maxlength="100">
         <small class="input-hint">Mínimo 3 caracteres. Máximo 100 caracteres</small>
       </div>
@@ -60,36 +85,36 @@
       <!-- Campos: Precio, Tiempo y Porciones -->
       <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
         <div class="form-group">
-          <label for="precio">💰 Costo *</label>
+          <label for="precio"><i data-lucide="banknote"></i> Costo *</label>
           <input id="precio" type="text" placeholder="Ej: 28">
         </div>
         <div class="form-group">
-          <label for="tiempo">⏱️ Tiempo *</label>
+          <label for="tiempo"><i data-lucide="clock"></i> Tiempo *</label>
           <input id="tiempo" type="text" placeholder="Min">
         </div>
         <div class="form-group">
-          <label for="porciones">🍽️ Porciones *</label>
+          <label for="porciones"><i data-lucide="users"></i> Porciones *</label>
           <input id="porciones" type="text" placeholder="Ej: 2-4">
         </div>
       </div>
 
       <!-- Campo: Ingredientes -->
       <div class="form-group">
-        <label for="ingredientes">🥘 Ingredientes *</label>
+        <label for="ingredientes"><i data-lucide="soup"></i> Ingredientes *</label>
         <textarea id="ingredientes" rows="5" placeholder="Ej: 2 huevos, 1 taza de leche, 3 piezas de pan, 100g de queso"></textarea>
         <small class="input-hint">Separa cada ingrediente con comas. Incluye cantidades</small>
       </div>
 
       <!-- Campo: Pasos -->
       <div class="form-group">
-        <label for="pasos">📝 Pasos de preparación *</label>
+        <label for="pasos"><i data-lucide="book-open"></i> Pasos de preparación *</label>
         <textarea id="pasos" rows="8" placeholder="Ej: 1. Hervir la pasta en agua con sal&#10;2. Derretir mantequilla y sofreír ajo&#10;3. Agregar crema y queso&#10;4. Mezclar con la pasta escurrida&#10;5. ¡Servir caliente!"></textarea>
         <small class="input-hint">Puedes usar números (1., 2.) o saltos de línea</small>
       </div>
 
       <!-- Campo: Video (solo Premium) -->
       <div class="form-group premium-video" id="video-section">
-        <label>🎥 Video de la receta (solo Premium 👑)</label>
+        <label><i data-lucide="video"></i> Video de la receta (solo Premium <i data-lucide="crown"></i>)</label>
         <div class="video-options" style="display: flex; gap: 10px; margin-bottom: 10px;">
           <button type="button" class="video-opt-btn active" id="opt-youtube">Link YouTube</button>
           <button type="button" class="video-opt-btn" id="opt-file">Subir Archivo</button>
@@ -103,7 +128,7 @@
         <div id="file-input-area" style="display:none;">
           <div class="video-upload-area">
             <label for="video-file" class="image-upload-label">
-              <span class="upload-icon">📹</span>
+              <i data-lucide="video" class="upload-icon"></i>
               <span>Seleccionar archivo de video</span>
               <span class="upload-hint">MP4, MOV (máx. 20MB)</span>
             </label>
@@ -118,10 +143,10 @@
 
       <!-- Campo: Imagen -->
       <div class="form-group">
-        <label>🖼️ Imagen de la receta (opcional)</label>
+        <label><i data-lucide="image"></i> Imagen de la receta (opcional)</label>
         <div class="image-upload-area">
           <label for="receta-imagen" class="image-upload-label">
-            <span class="upload-icon">📷</span>
+            <i data-lucide="camera" class="upload-icon"></i>
             <span>Haz clic para subir una imagen</span>
             <span class="upload-hint">PNG, JPG o WEBP (máx. 5MB)</span>
           </label>
@@ -136,7 +161,7 @@
       <!-- Checkbox: Receta Premium -->
       <label class="checkbox-premium">
         <input type="checkbox" id="es-premium-receta">
-        <span>✨ <strong>Marcar como receta Premium</strong> (solo usuarios Premium podrán verla)</span>
+        <span><i data-lucide="sparkles"></i> <strong>Marcar como receta Premium</strong> (solo usuarios Premium podrán verla)</span>
       </label>
       <small class="input-hint" style="display: block; margin-top: -8px; margin-bottom: 16px;">
         Las recetas Premium te dan <strong>30 puntos</strong> (vs 15 normales)
@@ -153,31 +178,49 @@
     <!-- Navegación inferior -->
     <nav class="bottom-nav">
       <a href="home.html" class="nav-item">
-        <span>🏠</span>
+        <i data-lucide="home"></i>
         <span>Inicio</span>
       </a>
       <a href="subir-receta.html" class="nav-item active">
-        <span>📝</span>
+        <i data-lucide="plus-circle"></i>
         <span>Subir</span>
       </a>
       <a href="planificador.html" class="nav-item">
-        <span>📅</span>
+        <i data-lucide="calendar"></i>
         <span>Plan</span>
       </a>
       <a href="comunidad.html" class="nav-item">
-        <span>👥</span>
+        <i data-lucide="users"></i>
         <span>Comunidad</span>
       </a>
       <a href="perfil.html" class="nav-item">
-        <span>👤</span>
+        <i data-lucide="user"></i>
         <span>Perfil</span>
       </a>
     </nav>
 
   </div>
 
+    <div id="chat-window" style="display:none;">
+      <div id="chat-header">
+        <i data-lucide="bot"></i> Chef IA
+        <button id="cerrar-chat-btn" title="Minimizar"><i data-lucide="minus"></i></button>
+      </div>
+      <div id="chat-messages">
+        <div class="msg msg-bot">¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?</div>
+      </div>
+      <div id="chat-input-area">
+        <input id="chat-input" type="text" placeholder="Pregúntame una receta...">
+        <button id="enviar-chat-btn">Enviar</button>
+      </div>
+    </div>
+
   <script src="js/supabaseClient.js" type="module"></script>
   <script src="js/subir-receta.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>

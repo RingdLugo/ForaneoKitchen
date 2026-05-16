@@ -8,10 +8,23 @@
   display: flex;
   justify-content: space-around;
   padding: 12px 0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) !important;
+}
+
+/* Estado oculto para el efecto scroll */
+.bottom-nav.nav-hidden {
+  transform: translateY(120%) !important;
+  opacity: 0 !important;
+}
+
+@media (min-width: 768px) {
+  .bottom-nav.nav-hidden {
+    transform: translateX(-50%) translateY(150%) !important;
+  }
 }
 
 .nav-item {
@@ -25,27 +38,30 @@
 }
 
 .nav-item.active {
-  color: #4caf50;
-  font-weight: bold;
+  color: #E07A5F;
+  font-weight: 600;
 }
 
-.nav-item span:first-child {
-  font-size: 1.5rem;
-  margin-bottom: 2px;
+.nav-item [data-lucide] {
+  width: 22px;
+  height: 22px;
+  margin-bottom: 4px;
+  stroke-width: 2.2px;
 }
 
 /* Modo oscuro */
 body.dark-mode .bottom-nav {
-  background: var(--card-bg, #1e1e1e);
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
+  background: #2D2D35;
+  box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.4);
+  border-top: 1px solid #3B3B45;
 }
 
 body.dark-mode .nav-item {
-  color: #aaa;
+  color: #8b949e;
 }
 
 body.dark-mode .nav-item.active {
-  color: #81c784;
+  color: #E07A5F;
 }
 
 /* Ajustes para PC */

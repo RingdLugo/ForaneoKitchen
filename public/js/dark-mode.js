@@ -3,7 +3,6 @@
   function apply(isDark) {
     document.body.classList.toggle('dark-mode', isDark);
     document.querySelectorAll('.dark-mode-toggle').forEach(b => {
-      b.textContent = isDark ? '☀️' : '🌙';
       b.title = isDark ? 'Modo claro' : 'Modo oscuro';
     });
   }
@@ -21,7 +20,13 @@
   }
   // Aplicar sin flash al cargar
   if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => {
+    init();
+    if (window.lucide) lucide.createIcons();
+  });
+  else {
+    init();
+    if (window.lucide) lucide.createIcons();
+  }
   window.toggleDarkMode = toggle;
 })();

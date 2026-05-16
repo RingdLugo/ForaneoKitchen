@@ -6,8 +6,8 @@
 }
 
 body.dark-mode {
-  background: #0d1117 !important;
-  color: #c9d1d9 !important
+  background: #1E1E24 !important;
+  color: #F4F1DE !important
 }
 
 body.dark-mode .home-screen,
@@ -38,24 +38,24 @@ body.dark-mode .receta-comunidad-card,
 body.dark-mode .info-card,
 body.dark-mode .paso-item,
 body.dark-mode .puntos-card {
-  background: #161b22 !important;
-  border-color: #30363d !important;
+  background: #2D2D35 !important;
+  border: 1.5px solid #3B3B45 !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, .4) !important
 }
 
 body.dark-mode .info-card,
 body.dark-mode .paso-item,
 body.dark-mode .vacio-recetas {
-  background: #1c2128 !important
+  background: #34343D !important
 }
 
 /* Headers */
 body.dark-mode .header-green {
-  background: linear-gradient(135deg, #1a4d1e, #0d2b10) !important
+  background: linear-gradient(135deg, #4A2E25, #2F1D17) !important
 }
 
 body.dark-mode .dia-header {
-  background: linear-gradient(135deg, #1a2e1a, #0f1f0f) !important
+  background: linear-gradient(135deg, #3B2D26, #1E1E24) !important
 }
 
 /* Textos verdes */
@@ -68,7 +68,7 @@ body.dark-mode .comunidad-header h1,
 body.dark-mode .perfil-header h1,
 body.dark-mode .planificador-header h1,
 body.dark-mode .categoria-titulo {
-  color: #7ee787 !important
+  color: #E07A5F !important
 }
 
 body.dark-mode h1,
@@ -85,28 +85,80 @@ body.dark-mode .planificador-header p,
 body.dark-mode .receta-autor,
 body.dark-mode .stat-label,
 body.dark-mode .input-hint {
-  color: #8b949e !important
+  color: #c9d1d9 !important
 }
 
-body.dark-mode .recipe-price,
+body.dark-mode .recipe-price {
+  background: rgba(46, 125, 50, 0.15) !important;
+  color: #81c784 !important;
+  border: 1px solid rgba(46, 125, 50, 0.2) !important;
+  padding: 4px 8px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+body.dark-mode .unused-class-temp-91,
 body.dark-mode .receta-precio,
 body.dark-mode .modal-receta-precio,
 body.dark-mode .info-value,
 body.dark-mode .stat-value.restante {
-  color: #7ee787 !important
+  color: #E07A5F !important
 }
 
-body.dark-mode .recipe-time,
+body.dark-mode .recipe-time {
+  background: rgba(245, 124, 0, 0.15) !important;
+  color: #ffb74d !important;
+  border: 1px solid rgba(245, 124, 0, 0.2) !important;
+  padding: 4px 8px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+body.dark-mode .recipe-likes {
+  background: rgba(229, 57, 53, 0.15) !important;
+  color: #ef5350 !important;
+  border: 1px solid rgba(229, 57, 53, 0.2) !important;
+  padding: 4px 8px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+body.dark-mode .recipe-favorite {
+  background: rgba(251, 192, 45, 0.15) !important;
+  color: #fff176 !important;
+  border: 1px solid rgba(251, 192, 45, 0.2) !important;
+  padding: 4px 8px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+body.dark-mode .recipe-likes.active i {
+  fill: #ef5350 !important;
+}
+
+body.dark-mode .recipe-favorite.active i {
+  fill: #fff176 !important;
+}
+
+body.dark-mode .unused-class-temp-99,
 body.dark-mode .receta-tiempo,
 body.dark-mode .stat-value.gasto,
 body.dark-mode .item-cantidad,
 body.dark-mode .info-value.total {
-  color: #f0883e !important
+  color: #F2CC8F !important
 }
 
 /* Inputs */
 body.dark-mode input:not([type=checkbox]):not([type=file]),
-body.dark-mode textarea,
+body.dark-mode textarea:not(#nuevo-comentario),
 body.dark-mode .search-bar input,
 body.dark-mode .modal-search input,
 body.dark-mode .form-group input,
@@ -115,9 +167,9 @@ body.dark-mode #chat-input,
 body.dark-mode .nuevo-comentario-area textarea,
 body.dark-mode #presupuesto-input,
 body.dark-mode #modal-search-input {
-  background: #0d1117 !important;
-  border-color: #30363d !important;
-  color: #c9d1d9 !important
+  background: #1E1E24 !important;
+  border-color: #3B3B45 !important;
+  color: #F4F1DE !important
 }
 
 body.dark-mode input::placeholder,
@@ -127,8 +179,17 @@ body.dark-mode textarea::placeholder {
 
 body.dark-mode input:focus,
 body.dark-mode textarea:focus {
-  border-color: #238636 !important;
-  box-shadow: 0 0 0 3px rgba(35, 134, 54, .2) !important
+  border-color: #E07A5F !important;
+  box-shadow: 0 0 0 3px rgba(224, 122, 95, .2) !important
+}
+
+/* Consistencia de Autofill en Modo Oscuro */
+body.dark-mode input:-webkit-autofill,
+body.dark-mode input:-webkit-autofill:hover,
+body.dark-mode input:-webkit-autofill:focus,
+body.dark-mode input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #1E1E24 inset !important;
+  -webkit-text-fill-color: #F4F1DE !important;
 }
 
 body.dark-mode input:disabled,
@@ -137,36 +198,40 @@ body.dark-mode textarea:disabled {
   color: #6e7681 !important
 }
 
+body.dark-mode .eye-toggle {
+  color: #E07A5F !important;
+}
+
 /* Búsqueda */
 body.dark-mode .search-bar {
-  background: #161b22 !important;
+  background: #2D2D35 !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, .4) !important
 }
 
 body.dark-mode .search-icon {
-  color: #7ee787 !important
+  color: #E07A5F !important
 }
 
 /* Tags */
 body.dark-mode .tag {
-  background: #1c2128 !important;
-  color: #7ee787 !important;
-  border-color: #238636 !important
+  background: #34343D !important;
+  color: #E07A5F !important;
+  border-color: #D95D39 !important
 }
 
 body.dark-mode .tag:hover,
 body.dark-mode .tag.active-filter {
-  background: #238636 !important;
+  background: #D95D39 !important;
   color: #fff !important
 }
 
 body.dark-mode .filters-header {
-  color: #7ee787 !important
+  color: #E07A5F !important
 }
 
 body.dark-mode .recipe-tag {
   background: #1c2128 !important;
-  color: #8b949e !important
+  color: #c9d1d9 !important
 }
 
 /* Botones */
@@ -175,7 +240,7 @@ body.dark-mode .btn-publicar,
 body.dark-mode .guardar-btn,
 body.dark-mode .btn-plan-semanal,
 body.dark-mode #enviar-chat-btn {
-  background: linear-gradient(135deg, #238636, #196127) !important;
+  background: linear-gradient(135deg, #E07A5F, #D95D39) !important;
   color: #fff !important
 }
 
@@ -185,14 +250,14 @@ body.dark-mode .btn-exportar,
 body.dark-mode .btn-compartir,
 body.dark-mode .back-btn,
 body.dark-mode .btn-guest {
-  background: #1c2128 !important;
-  color: #7ee787 !important;
-  border-color: #238636 !important
+  background: #34343D !important;
+  color: #E07A5F !important;
+  border-color: #D95D39 !important
 }
 
 body.dark-mode .btn-ver-mas {
-  border-color: #238636 !important;
-  color: #7ee787 !important;
+  border-color: #D95D39 !important;
+  color: #E07A5F !important;
   background: transparent !important
 }
 
@@ -205,14 +270,14 @@ body.dark-mode #cerrar-sesion-btn {
 
 /* Planificador */
 body.dark-mode .presupuesto-valor input {
-  color: #7ee787 !important;
+  color: #F2CC8F !important;
   background: transparent !important;
   border: none !important
 }
 
 body.dark-mode .dia-gasto {
   background: rgba(126, 231, 135, .1) !important;
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .comida-header {
@@ -221,17 +286,17 @@ body.dark-mode .comida-header {
 
 body.dark-mode .receta-item {
   background: #0d1117 !important;
-  border-left-color: #238636 !important
+  border-left-color: #E07A5F !important
 }
 
 body.dark-mode .btn-agregar {
   border-color: #30363d !important;
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .btn-agregar:hover {
-  background: #1a2e1a !important;
-  border-color: #238636 !important
+  background: #3B2D26 !important;
+  border-color: #E07A5F !important
 }
 
 body.dark-mode .btn-eliminar {
@@ -276,12 +341,12 @@ body.dark-mode .modal-header {
 }
 
 body.dark-mode .modal-header h3 {
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .modal-close,
 body.dark-mode .close-modal {
-  color: #8b949e !important
+  color: #c9d1d9 !important
 }
 
 body.dark-mode .modal-receta-item {
@@ -293,10 +358,14 @@ body.dark-mode .modal-receta-item:hover {
 }
 
 /* Nav */
+/* Nav Dock Dark Mode */
 body.dark-mode .bottom-nav {
-  background: rgba(22, 27, 34, .97) !important;
-  box-shadow: 0 -2px 20px rgba(0, 0, 0, .5) !important;
-  border-top: 1px solid #30363d !important
+  background: rgba(30, 30, 36, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 50px !important;
 }
 
 body.dark-mode .nav-item {
@@ -304,12 +373,12 @@ body.dark-mode .nav-item {
 }
 
 body.dark-mode .nav-item.active {
-  background: #1a2e1a !important;
-  color: #7ee787 !important
+  background: #34343D !important;
+  color: #E07A5F !important
 }
 
 body.dark-mode .nav-item:hover {
-  color: #7ee787 !important
+  color: #E07A5F !important
 }
 
 /* Chat */
@@ -341,7 +410,7 @@ body.dark-mode .msg-bot {
 }
 
 body.dark-mode .msg-user {
-  background: #238636 !important;
+  background: #E07A5F !important;
   color: #fff !important
 }
 
@@ -367,8 +436,8 @@ body.dark-mode .favorito-btn.favorited {
 }
 
 body.dark-mode .comentar-btn {
-  background: #1a2e1a !important;
-  color: #7ee787 !important
+  background: #3B2D26 !important;
+  color: #F2CC8F !important
 }
 
 body.dark-mode .comentarios-lista {
@@ -384,7 +453,7 @@ body.dark-mode .comentario-contenido p {
 }
 
 body.dark-mode .comentario-header strong {
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .nuevo-comentario-area {
@@ -393,25 +462,25 @@ body.dark-mode .nuevo-comentario-area {
 }
 
 body.dark-mode .nuevo-comentario-area button {
-  background: linear-gradient(135deg, #238636, #196127) !important;
+  background: linear-gradient(135deg, #E07A5F, #D95D39) !important;
   color: #fff !important
 }
 
 /* Perfil */
 body.dark-mode .pref-tag {
   background: #1c2128 !important;
-  color: #7ee787 !important;
+  color: #F2CC8F !important;
   border: 1px solid #30363d !important
 }
 
 body.dark-mode .pref-tag.selected {
-  background: #238636 !important;
+  background: #E07A5F !important;
   color: #fff !important;
-  border-color: #196127 !important
+  border-color: #D95D39 !important
 }
 
 body.dark-mode .avatar-img {
-  border-color: #238636 !important
+  border-color: #E07A5F !important
 }
 
 body.dark-mode .secciones-perfil {
@@ -419,29 +488,29 @@ body.dark-mode .secciones-perfil {
 }
 
 body.dark-mode .seccion-btn {
-  color: #8b949e !important;
+  color: #c9d1d9 !important;
   background: none !important
 }
 
 body.dark-mode .seccion-btn.active {
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .seccion-btn.active::after {
-  background: #7ee787 !important
+  background: #F2CC8F !important
 }
 
 body.dark-mode .stat-number {
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .form-group label {
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .btn-cambiar-avatar {
   background: #1c2128 !important;
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .receta-grid-item {
@@ -460,7 +529,7 @@ body.dark-mode .badge-premium {
 
 body.dark-mode .badge-free {
   background: #1c2128 !important;
-  color: #8b949e !important
+  color: #c9d1d9 !important
 }
 
 /* Login */
@@ -469,11 +538,11 @@ body.dark-mode .login-screen {
 }
 
 body.dark-mode .welcome {
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .register-link a {
-  color: #7ee787 !important
+  color: #F2CC8F !important
 }
 
 body.dark-mode .premium-card h3 {
@@ -491,12 +560,12 @@ body.dark-mode .screen {
 
 body.dark-mode .logo-circle {
   background: #161b22 !important;
-  border-color: #238636 !important;
+  border-color: #E07A5F !important;
   box-shadow: 0 0 0 4px rgba(35, 134, 54, .2) !important
 }
 
 body.dark-mode .btn-comenzar {
-  background: linear-gradient(135deg, #238636, #196127) !important;
+  background: linear-gradient(135deg, #E07A5F, #D95D39) !important;
   color: #fff !important
 }
 
@@ -504,9 +573,9 @@ body.dark-mode .btn-comenzar {
 body.dark-mode .notification-toast,
 body.dark-mode .temp-notification,
 body.dark-mode .notification {
-  background: #238636 !important;
+  background: #E07A5F !important;
   color: #fff !important;
-  border: 1px solid #2ea043 !important
+  border: 1px solid #D95D39 !important
 }
 
 body.dark-mode .notification-toast.error,
@@ -519,12 +588,12 @@ body.dark-mode .temp-notification.error {
 body.dark-mode .image-upload-label {
   background: #1c2128 !important;
   border-color: #30363d !important;
-  color: #8b949e !important
+  color: #c9d1d9 !important
 }
 
 body.dark-mode .image-upload-label:hover {
-  border-color: #238636 !important;
-  background: #1a2e1a !important
+  border-color: #E07A5F !important;
+  background: #3B2D26 !important
 }
 
 /* Scrollbar */
@@ -537,7 +606,202 @@ body.dark-mode ::-webkit-scrollbar-thumb {
 }
 
 body.dark-mode ::-webkit-scrollbar-thumb:hover {
-  background: #238636 !important
+  background: #E07A5F !important
+}
+
+/* Skeleton */
+body.dark-mode .like-btn {
+  background: #3d1515 !important;
+  color: #f85149 !important
+}
+
+body.dark-mode .like-btn.liked {
+  background: #f85149 !important;
+  color: #fff !important
+}
+
+body.dark-mode .favorito-btn {
+  background: #3d2a10 !important;
+  color: #f0883e !important
+}
+
+body.dark-mode .favorito-btn.favorited {
+  background: #f0883e !important;
+  color: #fff !important
+}
+
+body.dark-mode .comentar-btn {
+  background: #3B2D26 !important;
+  color: #F2CC8F !important
+}
+
+body.dark-mode .comentarios-lista {
+  background: #0d1117 !important
+}
+
+body.dark-mode .comentario-item {
+  border-bottom-color: #21262d !important
+}
+
+body.dark-mode .comentario-contenido p {
+  color: #c9d1d9 !important
+}
+
+body.dark-mode .comentario-header strong {
+  color: #F2CC8F !important
+}
+
+body.dark-mode .nuevo-comentario-area {
+  background: #161b22 !important;
+  border-top-color: #30363d !important
+}
+
+body.dark-mode .nuevo-comentario-area button {
+  background: linear-gradient(135deg, #E07A5F, #D95D39) !important;
+  color: #fff !important
+}
+
+/* Perfil */
+body.dark-mode .pref-tag {
+  background: #1c2128 !important;
+  color: #F2CC8F !important;
+  border: 1px solid #30363d !important
+}
+
+body.dark-mode .pref-tag.selected {
+  background: #E07A5F !important;
+  color: #fff !important;
+  border-color: #D95D39 !important
+}
+
+body.dark-mode .avatar-img {
+  border-color: #E07A5F !important
+}
+
+body.dark-mode .secciones-perfil {
+  border-bottom-color: #30363d !important
+}
+
+body.dark-mode .seccion-btn {
+  color: #c9d1d9 !important;
+  background: none !important
+}
+
+body.dark-mode .seccion-btn.active {
+  color: #F2CC8F !important
+}
+
+body.dark-mode .seccion-btn.active::after {
+  background: #F2CC8F !important
+}
+
+body.dark-mode .stat-number {
+  color: #F2CC8F !important
+}
+
+body.dark-mode .form-group label {
+  color: #F2CC8F !important
+}
+
+body.dark-mode .btn-cambiar-avatar {
+  background: #1c2128 !important;
+  color: #F2CC8F !important
+}
+
+body.dark-mode .receta-grid-item {
+  border: 1px solid #30363d !important
+}
+
+body.dark-mode .receta-titulo {
+  background: linear-gradient(transparent, rgba(0, 0, 0, .85)) !important
+}
+
+/* Badge premium */
+body.dark-mode .badge-premium {
+  background: linear-gradient(90deg, #b8860b, #d4a017) !important;
+  color: #fff !important
+}
+
+body.dark-mode .badge-free {
+  background: #1c2128 !important;
+  color: #c9d1d9 !important
+}
+
+/* Login */
+body.dark-mode .login-screen {
+  background: linear-gradient(160deg, #0d1117, #161b22, #1c2128) !important
+}
+
+body.dark-mode .welcome {
+  color: #F2CC8F !important
+}
+
+body.dark-mode .register-link a {
+  color: #F2CC8F !important
+}
+
+body.dark-mode .premium-card h3 {
+  color: #f0883e !important
+}
+
+body.dark-mode .premium-benefits li {
+  color: #c9d1d9 !important
+}
+
+/* Index */
+body.dark-mode .screen {
+  background: linear-gradient(135deg, #0d1117, #161b22) !important
+}
+
+body.dark-mode .logo-circle {
+  background: #161b22 !important;
+  border-color: #E07A5F !important;
+  box-shadow: 0 0 0 4px rgba(35, 134, 54, .2) !important
+}
+
+body.dark-mode .btn-comenzar {
+  background: linear-gradient(135deg, #E07A5F, #D95D39) !important;
+  color: #fff !important
+}
+
+/* Notificaciones */
+body.dark-mode .notification-toast,
+body.dark-mode .temp-notification,
+body.dark-mode .notification {
+  background: #E07A5F !important;
+  color: #fff !important;
+  border: 1px solid #D95D39 !important
+}
+
+body.dark-mode .notification-toast.error,
+body.dark-mode .temp-notification.error {
+  background: #8b2020 !important;
+  border-color: #c62828 !important
+}
+
+/* Subir receta */
+body.dark-mode .image-upload-label {
+  background: #1c2128 !important;
+  border-color: #30363d !important;
+  color: #c9d1d9 !important
+}
+
+body.dark-mode .image-upload-label:hover {
+  border-color: #E07A5F !important;
+  background: #3B2D26 !important
+}
+
+/* Scrollbar */
+body.dark-mode ::-webkit-scrollbar-track {
+  background: #0d1117 !important
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: #30363d !important
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #E07A5F !important
 }
 
 /* Skeleton */
@@ -548,41 +812,286 @@ body.dark-mode .skeleton {
 
 /* Toggle */
 .dark-mode-toggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .95);
-  border: none;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: #E07A5F !important;
+  color: white !important;
+  border: none !important;
   cursor: pointer;
-  font-size: 1.25rem;
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, .15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
   transition: transform .3s;
-  z-index: 1001;
-  backdrop-filter: blur(10px)
+  z-index: 10000 !important;
+  backdrop-filter: blur(10px);
 }
 
-body.dark-mode .dark-mode-toggle {
-  background: rgba(22, 27, 34, .97) !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, .5) !important;
-  border: 1px solid #30363d !important
+.dark-mode-toggle i {
+  color: white !important;
+  width: 20px !important;
+  height: 20px !important;
 }
 
-.dark-mode-toggle:hover {
-  transform: scale(1.1) rotate(15deg)
+.dark-mode-toggle .sun-icon {
+  display: none !important;
 }
 
-@media(max-width:768px) {
-  .dark-mode-toggle {
-    top: 12px;
-    right: 12px;
-    width: 38px;
-    height: 38px;
-    font-size: 1.1rem
-  }
+.dark-mode-toggle .moon-icon {
+  display: flex !important;
+}
+
+body.dark-mode .dark-mode-toggle .sun-icon {
+  display: flex !important;
+}
+
+body.dark-mode .dark-mode-toggle .moon-icon {
+  display: none !important;
+}
+
+/* Eliminado para evitar conflictos de posición */
+
+/* Overrides específicos para legibilidad en Receta (Dark Mode) */
+body.dark-mode .lista-ingredientes li {
+  color: #c9d1d9 !important;
+  border-bottom-color: #3B3B45 !important;
+}
+
+body.dark-mode .lista-ingredientes li:hover {
+  background: #34343D !important;
+}
+
+body.dark-mode .lista-ingredientes li.seleccionado {
+  background: rgba(224, 122, 95, 0.15) !important;
+  color: #8b949e !important;
+}
+
+body.dark-mode .paso-texto {
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .receta-autor {
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .seccion h2 {
+  color: #F4F1DE !important;
+}
+
+body.dark-mode .btn-dia,
+body.dark-mode .btn-comida {
+  background: #2D2D35 !important;
+  border-color: #3B3B45 !important;
+  color: #E07A5F !important;
+}
+
+body.dark-mode .btn-dia:hover,
+body.dark-mode .btn-comida:hover {
+  background: #E07A5F !important;
+  color: #fff !important;
+}
+
+/* Overrides específicos para Subir Receta (Dark Mode) */
+body.dark-mode .tag-check,
+body.dark-mode .video-opt-btn,
+body.dark-mode .checkbox-premium {
+  background: #2D2D35 !important;
+  border-color: #3B3B45 !important;
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .tag-check:hover,
+body.dark-mode .video-opt-btn:hover {
+  background: #3B3B45 !important;
+  border-color: #E07A5F !important;
+}
+
+body.dark-mode .tag-check:has(input:checked),
+body.dark-mode .video-opt-btn.active {
+  background: #E07A5F !important;
+  color: #fff !important;
+  border-color: #D95D39 !important;
+}
+
+body.dark-mode .puntos-info {
+  background: linear-gradient(135deg, #3B2D26, #4A2E25) !important;
+  color: #F2CC8F !important;
+}
+
+body.dark-mode .puntos-valor {
+  background: #E07A5F !important;
+  color: #fff !important;
+}
+
+/* Overrides específicos para Comunidad (Dark Mode) */
+body.dark-mode .actividad-item {
+  background: #2D2D35 !important;
+  border-color: #3B3B45 !important;
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .actividad-item.personal {
+  background: #34343D !important;
+  border-left-color: #F2CC8F !important;
+}
+
+body.dark-mode .actividad-texto {
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .tab-btn {
+  background: #2D2D35 !important;
+  border-color: #3B3B45 !important;
+  color: #8b949e !important;
+}
+
+body.dark-mode .tab-btn:hover {
+  color: #E07A5F !important;
+  border-color: #E07A5F !important;
+}
+
+body.dark-mode .tab-btn.active {
+  background: linear-gradient(135deg, #E07A5F, #D95D39) !important;
+  color: #fff !important;
+  border-color: #D95D39 !important;
+}
+
+body.dark-mode .receta-info-comunidad h3 {
+  color: #F4F1DE !important;
+}
+
+body.dark-mode .comentarios-lista {
+  background: #1E1E24 !important;
+}
+
+body.dark-mode .comentario-item {
+  border-bottom-color: #3B3B45 !important;
+}
+
+body.dark-mode .comentario-item.respuesta {
+  background: #2D2D35 !important;
+}
+
+/* Overrides específicos para Perfil (Dark Mode) */
+body.dark-mode .perfil-info-card,
+body.dark-mode .premium-manage-card,
+body.dark-mode .reward-card {
+  background: #2D2D35 !important;
+  border-color: #3B3B45 !important;
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .perfil-username-display,
+body.dark-mode .stat-number,
+body.dark-mode .reward-title {
+  color: #F4F1DE !important;
+}
+
+body.dark-mode .perfil-nombre-display,
+body.dark-mode .perfil-bio-display,
+body.dark-mode .premium-manage-body p,
+body.dark-mode .reward-benefit,
+body.dark-mode .stat-label {
+  color: #8b949e !important;
+}
+
+body.dark-mode .btn-editar-perfil,
+body.dark-mode .btn-cancel-sub,
+body.dark-mode .pref-tag {
+  background: #3B3B45 !important;
+  border-color: #4A4A55 !important;
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .btn-editar-perfil:hover,
+body.dark-mode .btn-cancel-sub:hover,
+body.dark-mode .pref-tag:hover {
+  background: #4A4A55 !important;
+  color: #E07A5F !important;
+}
+
+body.dark-mode .btn-logout-main {
+  background: rgba(198, 40, 40, 0.1) !important;
+  border-color: rgba(198, 40, 40, 0.3) !important;
+  color: #ff5252 !important;
+}
+
+body.dark-mode .btn-logout-main:hover {
+  background: #c62828 !important;
+  color: #fff !important;
+}
+
+body.dark-mode .btn-feedback {
+  background: rgba(21, 101, 192, 0.1) !important;
+  border-color: rgba(21, 101, 192, 0.3) !important;
+  color: #64b5f6 !important;
+}
+
+body.dark-mode .btn-feedback:hover {
+  background: #1565c0 !important;
+  color: #fff !important;
+}
+
+body.dark-mode .form-group input,
+body.dark-mode .form-group textarea {
+  background: #1E1E24 !important;
+  border-color: #3B3B45 !important;
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .form-group input:focus,
+body.dark-mode .form-group textarea:focus {
+  border-color: #E07A5F !important;
+  background: #2D2D35 !important;
+}
+
+body.dark-mode .seccion-btn.active {
+  color: #F4F1DE !important;
+}
+
+body.dark-mode .seccion-btn.active::before {
+  background: #E07A5F !important;
+}
+
+body.dark-mode .rewards-section {
+  background: linear-gradient(135deg, #3B2D26, #4A2E25) !important;
+  border-color: #D95D39 !important;
+}
+
+body.dark-mode .puntos-badge {
+  background: #3B2D26 !important;
+  color: #F2CC8F !important;
+}
+
+body.dark-mode .perfil-badge.free {
+  background: #3B3B45 !important;
+  color: #8b949e !important;
+}
+
+body.dark-mode .login-avatar-icon {
+  background: #3B2D26 !important;
+  color: #F2CC8F !important;
+}
+
+body.dark-mode .puntos-display {
+  background: rgba(224, 122, 95, 0.2) !important;
+  color: #F2CC8F !important;
+  border: 1px solid rgba(224, 122, 95, 0.3) !important;
+}
+
+body.dark-mode .header-avatar {
+  border-color: #E07A5F !important;
+  background: #1E1E24 !important;
+}
+
+body.dark-mode .puntos-display {
+  background: rgba(224, 122, 95, 0.2) !important;
+  color: #F2CC8F !important;
+  border: 1px solid rgba(224, 122, 95, 0.3) !important;
+}
+
+body.dark-mode .header-avatar {
+  border-color: #E07A5F !important;
+  background: #1E1E24 !important;
 }

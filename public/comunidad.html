@@ -9,22 +9,37 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/comunidad.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <style>
+    [data-lucide] {
+      width: 18px !important;
+      height: 18px !important;
+      stroke-width: 2.5px;
+    }
+  </style>
   <link rel="stylesheet" href="css/bottom-nav.css">
+  <link rel="stylesheet" href="css/chatbot.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  <div class="floating-actions">
+    <button id="chat-boton" style="display:none;"><i data-lucide="bot"></i></button>
+    <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+      <i data-lucide="moon" class="moon-icon"></i>
+      <i data-lucide="sun" class="sun-icon"></i>
+    </button>
+  </div>
   
   <div class="comunidad-screen">
     <div class="comunidad-header">
-      <h1>👥 Comunidad</h1>
+      <h1><i data-lucide="users"></i> Comunidad</h1>
       <p>Descubre recetas de otros usuarios, comenta y comparte</p>
     </div>
 
     <!-- Tabs -->
     <div class="comunidad-tabs">
-      <button class="tab-btn active" data-tab="recetas">📖 Recetas Recientes</button>
-      <button class="tab-btn" data-tab="populares">🔥 Populares</button>
-      <button class="tab-btn" data-tab="comentarios">💬 Actividad Reciente</button>
+      <button class="tab-btn active" data-tab="recetas"><i data-lucide="book-open"></i> Recetas Recientes</button>
+      <button class="tab-btn" data-tab="populares"><i data-lucide="flame"></i> Populares</button>
+      <button class="tab-btn" data-tab="comentarios"><i data-lucide="message-circle"></i> Actividad Reciente</button>
     </div>
 
     <!-- Contenido Recetas -->
@@ -67,7 +82,7 @@
     <div id="modal-respuesta" class="modal-comentarios">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>💬 Responder comentario</h3>
+          <h3><i data-lucide="message-square"></i> Responder comentario</h3>
           <button class="close-respuesta-modal">&times;</button>
         </div>
         <div class="respuesta-contexto" id="respuesta-contexto"></div>
@@ -79,26 +94,34 @@
     </div>
 
     <nav class="bottom-nav">
-      <a href="home.html" class="nav-item">
-        <span>🏠</span> Inicio
-      </a>
-      <a href="subir-receta.html" class="nav-item">
-        <span>📝</span> Subir
-      </a>
-      <a href="planificador.html" class="nav-item">
-        <span>📅</span> Planificador
-      </a>
-      <a href="comunidad.html" class="nav-item active">
-        <span>👥</span> Comunidad
-      </a>
-      <a href="perfil.html" class="nav-item">
-        <span>👤</span> Perfil
-      </a>
+      <a href="home.html" class="nav-item"><i data-lucide="home"></i> Inicio</a>
+      <a href="subir-receta.html" class="nav-item"><i data-lucide="plus-circle"></i> Subir</a>
+      <a href="planificador.html" class="nav-item"><i data-lucide="calendar"></i> Planificador</a>
+      <a href="comunidad.html" class="nav-item active"><i data-lucide="users"></i> Comunidad</a>
+      <a href="perfil.html" class="nav-item"><i data-lucide="user"></i> Perfil</a>
     </nav>
   </div>
+
+    <div id="chat-window" style="display:none;">
+      <div id="chat-header">
+        <i data-lucide="bot"></i> Chef IA
+        <button id="cerrar-chat-btn" title="Minimizar"><i data-lucide="minus"></i></button>
+      </div>
+      <div id="chat-messages">
+        <div class="msg msg-bot">¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?</div>
+      </div>
+      <div id="chat-input-area">
+        <input id="chat-input" type="text" placeholder="Pregúntame una receta...">
+        <button id="enviar-chat-btn">Enviar</button>
+      </div>
+    </div>
 
   <script src="js/supabaseClient.js" type="module"></script>
   <script src="js/comunidad.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>

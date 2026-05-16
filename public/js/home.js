@@ -2,6 +2,7 @@
 import { supabase } from './supabaseClient.js';
 
 let currentUser = null;
+const pts = document.getElementById('puntos-display');
 
 function showToast(m, err = false) {
   let t = document.getElementById('home-toast');
@@ -12,7 +13,7 @@ function showToast(m, err = false) {
     document.body.appendChild(t);
   }
   t.textContent = m;
-  t.style.background = err ? '#e53935' : '#333';
+  t.style.background = err ? '#e53935' : '#E07A5F';
   t.classList.add('show');
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('show'), 3000);
@@ -29,9 +30,9 @@ async function cargarUsuario() {
       document.getElementById('user-name').textContent = currentUser.username || currentUser.nombre || 'Usuario';
       const avatar = document.getElementById('user-avatar');
       if (avatar && currentUser.foto_perfil) avatar.src = currentUser.foto_perfil;
-      const pts = document.getElementById('puntos-display');
-      if (pts) pts.textContent = `⭐ ${currentUser.puntos || 0} pts`;
-    } catch(e) {}
+      if (pts) pts.innerHTML = `<i data-lucide="star" style="width:14px;height:14px;"></i> ${currentUser.puntos || 0} pts`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (e) { }
   }
 
   if (!token) return;
@@ -46,12 +47,12 @@ async function cargarUsuario() {
       document.getElementById('user-name').textContent = currentUser.username || currentUser.nombre || 'Usuario';
       const avatar = document.getElementById('user-avatar');
       if (avatar && currentUser.foto_perfil) avatar.src = currentUser.foto_perfil;
-      const pts = document.getElementById('puntos-display');
-      if (pts) pts.textContent = `⭐ ${currentUser.puntos || 0} pts`;
+      if (pts) pts.innerHTML = `<i data-lucide="star" style="width:14px;height:14px;"></i> ${currentUser.puntos || 0} pts`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
 
       // Mostrar chatbot y badge si tiene acceso
       const hasChat = currentUser.es_premium || currentUser.esPremium ||
-                      (currentUser.preferencias || []).some(p => String(p).startsWith('PERMISO_CHAT:'));
+        (currentUser.preferencias || []).some(p => String(p).startsWith('PERMISO_CHAT:'));
       if (hasChat) {
         const b = document.getElementById('premium-badge');
         if (b) b.style.display = 'flex';
@@ -107,7 +108,7 @@ async function cargarRecetas(params = {}) {
     try {
       const cached = localStorage.getItem('recetas_cache');
       if (cached) renderizarRecetas(JSON.parse(cached));
-      else container.innerHTML = '<p class="error-msg">⚠️ No se pudieron cargar las recetas. Revisa tu conexión.</p>';
+      else container.innerHTML = '<p class="error-msg"><i data-lucide="alert-triangle"></i> No se pudieron cargar las recetas. Revisa tu conexión.</p>';
     } catch (e) {
       container.innerHTML = '<p class="error-msg">⚠️ Error de almacenamiento. Revisa tu conexión.</p>';
     }
@@ -134,39 +135,38 @@ function renderizarRecetas(recetas) {
   if (!container) return;
 
   if (!recetas || recetas.length === 0) {
-    container.innerHTML = '<div class="no-results" style="opacity:0; animation: fadeIn 0.5s forwards;"><span>🍳</span><p>No hay recetas disponibles por ahora</p></div>';
+    container.innerHTML = '<div class="no-results" style="opacity:0; animation: fadeIn 0.5s forwards;"><i data-lucide="chef-hat" style="width:48px;height:48px;margin-bottom:10px;"></i><p>No hay recetas disponibles por ahora</p></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     return;
   }
 
-  const placeholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f5f5f5'/%3E%3Ctext x='50' y='60' text-anchor='middle' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
+  const placeholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FDFBF7'/%3E%3Ccircle cx='50' cy='38' r='20' fill='%23E07A5F'/%3E%3Cpath d='M20 90 c0-25 15-35 30-35 s30 10 30 35' fill='%23E07A5F'/%3E%3C/svg%3E`;
 
   container.innerHTML = recetas.map((r, i) => {
     const tagsHtml = (r.etiquetas || []).slice(0, 3).map(t => `<span class="recipe-tag">${t}</span>`).join('');
     return `
       <div class="recipe-card" style="opacity:0; animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${i * 0.05}s;" onclick="window.location.href='receta.html?id=${r.id}'">
         <div class="recipe-image">
-          ${r.es_premium ? '<span class="badge-premium">👑 Premium</span>' : ''}
+          ${r.es_premium ? '<span class="badge-premium"><i data-lucide="crown"></i> Premium</span>' : ''}
           <img src="${r.imagen || placeholder}" alt="${r.titulo}" onerror="this.src='${placeholder}'" loading="lazy">
         </div>
         <div class="recipe-content">
           <h3>${r.titulo}</h3>
           <p class="recipe-autor">Por ${r.autor || 'Chef Foráneo'}</p>
           <div class="recipe-meta">
-            <span class="recipe-time">⏱️ ${r.tiempo || '30 min'}</span>
-            <span class="recipe-price">💰 ${r.precio || '$$'}</span>
+            <span class="recipe-time"><i data-lucide="clock"></i> ${r.tiempo || '30 min'}</span>
+            <span class="recipe-price"><i data-lucide="banknote"></i> ${r.precio || '$$'}</span>
+            <span class="recipe-likes ${r.likedByUser ? 'active' : ''}"><i data-lucide="heart"></i> ${r.likes || 0}</span>
+            <span class="recipe-favorite ${r.favoriteByUser ? 'active' : ''}"><i data-lucide="star"></i></span>
           </div>
           <div class="recipe-tags">${tagsHtml}</div>
-          <div class="recipe-footer-stats" style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-            <span class="recipe-likes" style="font-size:0.85rem; color:#666;">
-              ${r.likedByUser ? '❤️' : '🤍'} ${r.likes || 0}
-            </span>
-            ${r.favoriteByUser ? '<span class="recipe-saved-indicator" title="Guardada" style="color:#4caf50; font-size:1.1rem;">⭐</span>' : ''}
-          </div>
           <button class="btn-ver-mas">Ver detalles</button>
         </div>
       </div>
     `;
   }).join('');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function setupFilters() {
@@ -174,15 +174,17 @@ async function setupFilters() {
   if (!container) return;
 
   const fijos = [
-    { id: 'todas',      icon: '🍽️', label: 'Todas' },
-    { id: 'populares',  icon: '🔥', label: 'Populares' },
-    { id: 'economicas', icon: '💰', label: 'Económicas' },
-    { id: 'rapidas',    icon: '⚡', label: 'Rápidas' }
+    { id: 'todas', icon: 'utensils', label: 'Todas' },
+    { id: 'populares', icon: 'flame', label: 'Populares' },
+    { id: 'economicas', icon: 'banknote', label: 'Económicas' },
+    { id: 'rapidas', icon: 'zap', label: 'Rápidas' }
   ];
 
   container.innerHTML = fijos.map(f => `
-    <button class="tag ${f.id === 'todas' ? 'active-filter' : ''}" data-filter="${f.id}">${f.icon} ${f.label}</button>
+    <button class="tag ${f.id === 'todas' ? 'active-filter' : ''}" data-filter="${f.id}"><i data-lucide="${f.icon}"></i> ${f.label}</button>
   `).join('');
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   container.querySelectorAll('.tag').forEach(tag => {
     tag.addEventListener('click', () => {
@@ -209,3 +211,16 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// Lógica de ocultado automático de la navegación
+let lastScrollY = window.scrollY;
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('.bottom-nav');
+  if (!nav) return;
+  if (window.scrollY > lastScrollY && window.scrollY > 100) {
+    nav.classList.add('nav-hidden');
+  } else {
+    nav.classList.remove('nav-hidden');
+  }
+  lastScrollY = window.scrollY;
+});

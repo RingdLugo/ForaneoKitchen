@@ -25,7 +25,7 @@ body {
 .back-btn {
   background: transparent;
   border: none;
-  color: #4caf50;
+  color: #E07A5F;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -39,14 +39,14 @@ body {
 
 .back-btn:hover {
   transform: translateX(-4px);
-  color: #2e7d32;
+  color: #D95D39;
 }
 
 .lista-header h1 {
   font-family: 'Poppins', sans-serif;
   font-size: 2rem;
   font-weight: 700;
-  color: #2e7d32;
+  color: #D95D39;
   margin-bottom: 20px;
 }
 
@@ -67,14 +67,14 @@ body {
 
 .progreso-bar {
   height: 8px;
-  background: #e8f5e9;
+  background: #FDFBF7;
   border-radius: 10px;
   overflow: hidden;
 }
 
 .progreso-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4caf50, #2e7d32);
+  background: linear-gradient(90deg, #E07A5F, #D95D39);
   border-radius: 10px;
   width: 0%;
   transition: width 0.3s ease;
@@ -89,7 +89,7 @@ body {
 
 .btn-exportar, .btn-sincronizar {
   background: white;
-  border: 2px solid #a5d6a7;
+  border: 2px solid #F2CC8F;
   padding: 10px 24px;
   border-radius: 40px;
   font-size: 0.9rem;
@@ -97,12 +97,12 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: inherit;
-  color: #2e7d32;
+  color: #D95D39;
 }
 
 .btn-exportar:hover, .btn-sincronizar:hover {
-  background: #e8f5e9;
-  border-color: #4caf50;
+  background: #FDFBF7;
+  border-color: #E07A5F;
   transform: translateY(-2px);
 }
 
@@ -126,10 +126,10 @@ body {
   font-family: 'Poppins', sans-serif;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #2e7d32;
+  color: #D95D39;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 2px solid #e8f5e9;
+  border-bottom: 2px solid #FDFBF7;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -163,7 +163,7 @@ body {
   height: 20px;
   margin-top: 2px;
   cursor: pointer;
-  accent-color: #4caf50;
+  accent-color: #E07A5F;
 }
 
 .item-contenido {
@@ -208,8 +208,8 @@ body {
 }
 
 .btn-editar-cantidad:hover {
-  color: #4caf50;
-  background: #e8f5e9;
+  color: #E07A5F;
+  background: #FDFBF7;
 }
 
 .btn-eliminar-item:hover {
@@ -252,10 +252,10 @@ body {
 .vacio-mensaje button {
   margin-top: 16px;
   background: white;
-  border: 2px solid #a5d6a7;
+  border: 2px solid #F2CC8F;
   padding: 10px 20px;
   border-radius: 30px;
-  color: #2e7d32;
+  color: #D95D39;
   font-weight: 600;
   cursor: pointer;
 }
@@ -294,12 +294,12 @@ body {
 }
 
 .nav-item.active {
-  background: #e8f5e9;
-  color: #4caf50;
+  background: #FDFBF7;
+  color: #E07A5F;
 }
 
 .nav-item:hover {
-  color: #4caf50;
+  color: #E07A5F;
 }
 
 .notification-toast {
@@ -307,7 +307,7 @@ body {
   bottom: 100px;
   left: 50%;
   transform: translateX(-50%) translateY(100px);
-  background: #4caf50;
+  background: #E07A5F;
   color: white;
   padding: 12px 24px;
   border-radius: 50px;

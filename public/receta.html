@@ -9,13 +9,28 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/receta.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <style>
+    [data-lucide] {
+      width: 18px !important;
+      height: 18px !important;
+      stroke-width: 2.5px;
+    }
+  </style>
   <link rel="stylesheet" href="css/bottom-nav.css">
+  <link rel="stylesheet" href="css/chatbot.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  <div class="floating-actions">
+    <button id="chat-boton" style="display:none;"><i data-lucide="bot"></i></button>
+    <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+      <i data-lucide="moon" class="moon-icon"></i>
+      <i data-lucide="sun" class="sun-icon"></i>
+    </button>
+  </div>
 
   <div class="receta-screen">
-    <button class="back-btn" onclick="window.location.href='home.html'">← Volver a recetas</button>
+    <button class="back-btn" onclick="window.location.href='home.html'"><i data-lucide="arrow-left"></i> Volver a recetas</button>
     <div id="receta-container">
       <div class="receta-loading">
         <div class="loading-spinner"></div>
@@ -24,11 +39,11 @@
     </div>
 
     <nav class="bottom-nav">
-      <a href="home.html" class="nav-item"><span>🏠</span><span>Inicio</span></a>
-      <a href="subir-receta.html" class="nav-item"><span>📝</span><span>Subir</span></a>
-      <a href="planificador.html" class="nav-item"><span>📅</span><span>Plan</span></a>
-      <a href="comunidad.html" class="nav-item"><span>👥</span><span>Comunidad</span></a>
-      <a href="perfil.html" class="nav-item"><span>👤</span><span>Perfil</span></a>
+      <a href="home.html" class="nav-item"><i data-lucide="home"></i><span>Inicio</span></a>
+      <a href="subir-receta.html" class="nav-item"><i data-lucide="plus-circle"></i><span>Subir</span></a>
+      <a href="planificador.html" class="nav-item"><i data-lucide="calendar"></i><span>Plan</span></a>
+      <a href="comunidad.html" class="nav-item"><i data-lucide="users"></i><span>Comunidad</span></a>
+      <a href="perfil.html" class="nav-item"><i data-lucide="user"></i><span>Perfil</span></a>
     </nav>
 
     <!-- Modal para agregar al plan semanal -->
@@ -38,8 +53,8 @@
         <!-- Paso 1: Elegir día -->
         <div id="plan-paso-1">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; font-size: 1.4rem; color: #1b5e20;">📅 Elegir día</h3>
-            <button class="close-plan-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+            <h3 style="margin: 0; font-size: 1.4rem; color: #E07A5F;"><i data-lucide="calendar"></i> Elegir día</h3>
+            <button class="close-plan-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;"><i data-lucide="x"></i></button>
           </div>
           <p style="color: #666; margin-bottom: 20px;">¿Qué día quieres cocinar esta receta?</p>
           <div class="plan-grid" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
@@ -56,17 +71,17 @@
         <!-- Paso 2: Elegir comida -->
         <div id="plan-paso-2" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <button id="btn-volver-paso-1" style="background: none; border: none; color: #4caf50; cursor: pointer; font-weight: 600;">← Volver</button>
-            <h3 style="margin: 0; font-size: 1.4rem; color: #1b5e20;">🥣 Momento</h3>
-            <button class="close-plan-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+            <button id="btn-volver-paso-1" style="background: none; border: none; color: #E07A5F; cursor: pointer; font-weight: 600; display:flex; align-items:center; gap:4px;"><i data-lucide="arrow-left" style="width:16px;"></i> Volver</button>
+            <h3 style="margin: 0; font-size: 1.4rem; color: #E07A5F;"><i data-lucide="soup"></i> Momento</h3>
+            <button class="close-plan-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;"><i data-lucide="x"></i></button>
           </div>
-          <p id="texto-dia-seleccionado" style="color: #666; margin-bottom: 20px; font-weight: 500; text-align: center; background: #f1f8e9; padding: 10px; border-radius: 12px;"></p>
+          <p id="texto-dia-seleccionado" style="color: #666; margin-bottom: 20px; font-weight: 500; text-align: center; background: #FDFBF7; padding: 10px; border-radius: 12px;"></p>
           <div class="plan-grid" style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-            <button class="btn-comida" data-comida="desayuno">🥐 Desayuno</button>
-            <button class="btn-comida" data-comida="comida">🍲 Comida</button>
-            <button class="btn-comida" data-comida="cena">🍜 Cena</button>
-            <button class="btn-comida" data-comida="merienda">🍎 Merienda</button>
-            <button class="btn-comida" data-comida="snack">🍿 Snack</button>
+            <button class="btn-comida" data-comida="desayuno"><i data-lucide="coffee"></i> Desayuno</button>
+            <button class="btn-comida" data-comida="comida"><i data-lucide="utensils"></i> Comida</button>
+            <button class="btn-comida" data-comida="cena"><i data-lucide="moon"></i> Cena</button>
+            <button class="btn-comida" data-comida="merienda"><i data-lucide="apple"></i> Merienda</button>
+            <button class="btn-comida" data-comida="snack"><i data-lucide="cookie"></i> Snack</button>
           </div>
         </div>
 
@@ -74,8 +89,26 @@
     </div>
   </div>
 
-  <script src="js/supabaseClient.js" type="module"></script>
-  <script src="js/receta.js" type="module"></script>
-  <script src="js/dark-mode.js"></script>
+    <div id="chat-window" style="display:none;">
+      <div id="chat-header">
+        <i data-lucide="bot"></i> Chef IA
+        <button id="cerrar-chat-btn" title="Minimizar"><i data-lucide="minus"></i></button>
+      </div>
+      <div id="chat-messages">
+        <div class="msg msg-bot">¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?</div>
+      </div>
+      <div id="chat-input-area">
+        <input id="chat-input" type="text" placeholder="Pregúntame una receta...">
+        <button id="enviar-chat-btn">Enviar</button>
+      </div>
+    </div>
+
+    <script src="js/supabaseClient.js" type="module"></script>
+    <script src="js/receta.js" type="module"></script>
+    <script src="js/dark-mode.js"></script>
+    <script src="js/chatbot.js"></script>
+    <script>
+      lucide.createIcons();
+    </script>
 </body>
 </html>

@@ -9,23 +9,38 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/perfil.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <style>
+    [data-lucide] {
+      width: 18px !important;
+      height: 18px !important;
+      stroke-width: 2.5px;
+    }
+  </style>
   <link rel="stylesheet" href="css/bottom-nav.css">
+  <link rel="stylesheet" href="css/chatbot.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  <div class="floating-actions">
+    <button id="chat-boton" style="display:none;"><i data-lucide="bot"></i></button>
+    <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+      <i data-lucide="moon" class="moon-icon"></i>
+      <i data-lucide="sun" class="sun-icon"></i>
+    </button>
+  </div>
 
   <div class="perfil-screen">
     <div class="perfil-header">
-      <h1>👤 Mi Perfil</h1>
+      <h1><i data-lucide="user"></i> Mi Perfil</h1>
     </div>
 
     <!-- Hero de perfil -->
     <div class="perfil-info-card">
       <div class="avatar-section">
         <div class="avatar-wrapper">
-          <img id="avatar-img" class="avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='65' text-anchor='middle' font-size='50'%3E👤%3C/text%3E%3C/svg%3E" alt="Avatar">
+          <img id="avatar-img" class="avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FDFBF7'/%3E%3Ccircle cx='50' cy='38' r='20' fill='%23E07A5F'/%3E%3Cpath d='M20 90 c0-25 15-35 30-35 s30 10 30 35' fill='%23E07A5F'/%3E%3C/svg%3E" alt="Avatar">
           <div class="avatar-overlay" id="avatar-overlay-btn" title="Cambiar foto">
-            <span>📷</span>
+            <i data-lucide="camera"></i>
           </div>
         </div>
         <input type="file" id="avatar-input" accept="image/*" style="display:none;">
@@ -36,8 +51,8 @@
           <div class="perfil-bio-display" id="display-bio"></div>
           <div class="perfil-email-display" id="display-email" style="font-size:0.85rem; color:#666; margin-top:5px;"></div>
           <div class="role-badge-container">
-            <span class="perfil-badge" id="role-badge">🆓 Free</span>
-            <span class="puntos-badge" id="puntos-badge">⭐ 0 pts</span>
+            <span class="perfil-badge" id="role-badge">Free</span>
+            <span class="puntos-badge" id="puntos-badge"><i data-lucide="star"></i> 0 pts</span>
           </div>
 
           <div class="stats-container">
@@ -56,10 +71,10 @@
           </div>
 
           <div class="perfil-acciones">
-            <button class="btn-editar-perfil" id="toggle-form-btn">✏️ Editar perfil</button>
+            <button class="btn-editar-perfil" id="toggle-form-btn"><i data-lucide="edit-3"></i> Editar perfil</button>
             <a class="btn-feedback" id="feedback-btn" title="Enviar queja o sugerencia" 
-               href="mailto:linpishycat@gmail.com?subject=Queja%20o%20Sugerencia%20-%20Foraneo%20Kitchen&body=Hola%20equipo%20de%20Foraneo%20Kitchen%2C%0A%0AMe%20gustar%C3%ADa%20informar%20lo%20siguiente%3A%0A%0A">📢</a>
-            <button class="btn-logout-main" id="cerrar-sesion-main-btn" title="Cerrar sesión">🚪</button>
+               href="mailto:linpishycat@gmail.com?subject=Queja%20o%20Sugerencia%20-%20Foraneo%20Kitchen&body=Hola%20equipo%20de%20Foraneo%20Kitchen%2C%0A%0AMe%20gustar%C3%ADa%20informar%20lo%20siguiente%3A%0A%0A"><i data-lucide="megaphone"></i></a>
+            <button class="btn-logout-main" id="cerrar-sesion-main-btn" title="Cerrar sesión"><i data-lucide="log-out"></i></button>
           </div>
         </div>
       </div>
@@ -68,52 +83,52 @@
       <div class="perfil-form-section" id="perfil-form-section">
         <div class="form-row">
           <div class="form-group">
-            <label>📛 Nombre</label>
+            <label><i data-lucide="user"></i> Nombre</label>
             <input type="text" id="perfil-nombre" disabled>
           </div>
           <div class="form-group">
-            <label>📛 Apellido</label>
+            <label><i data-lucide="user"></i> Apellido</label>
             <input type="text" id="perfil-apellido" disabled>
           </div>
         </div>
         <div class="form-group">
-          <label>👤 Username</label>
+          <label><i data-lucide="at-sign"></i> Username</label>
           <input type="text" id="perfil-username" placeholder="Tu nombre de usuario">
         </div>
         <div class="form-group">
-          <label>📧 Email</label>
+          <label><i data-lucide="mail"></i> Email</label>
           <input type="email" id="perfil-email" disabled>
         </div>
         <div class="form-group">
-          <label>📝 Biografía</label>
+          <label><i data-lucide="file-text"></i> Biografía</label>
           <textarea id="perfil-bio" rows="3" placeholder="Cuéntanos sobre ti y tu cocina..."></textarea>
         </div>
         <div class="form-group">
-          <label>🥗 Preferencias alimenticias</label>
+          <label><i data-lucide="heart"></i> Preferencias alimenticias</label>
           <div class="preferencias-tags" id="preferencias-tags">
             <!-- Cargado dinámicamente -->
           </div>
         </div>
         <div class="btn-form-row" style="margin-bottom: 20px;">
-          <button class="guardar-btn" id="guardar-perfil-btn">💾 Guardar cambios</button>
+          <button class="guardar-btn" id="guardar-perfil-btn"><i data-lucide="save"></i> Guardar cambios</button>
         </div>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
         
         <div class="password-change-section">
-          <h3 style="font-size: 1rem; margin-bottom: 15px;">🔒 Cambiar Contraseña</h3>
+          <h3 style="font-size: 1rem; margin-bottom: 15px;"><i data-lucide="lock"></i> Cambiar Contraseña</h3>
           <div class="form-group">
             <label>Contraseña Actual</label>
             <div class="password-container">
               <input type="password" id="pass-actual" placeholder="••••••••">
-              <span class="eye-toggle" data-target="pass-actual">👁️</span>
+              <span class="eye-toggle" data-target="pass-actual"><i data-lucide="eye"></i></span>
             </div>
           </div>
           <div class="form-group">
             <label>Nueva Contraseña</label>
             <div class="password-container">
               <input type="password" id="pass-nueva" placeholder="Mínimo 6 caracteres">
-              <span class="eye-toggle" data-target="pass-nueva">👁️</span>
+              <span class="eye-toggle" data-target="pass-nueva"><i data-lucide="eye"></i></span>
             </div>
           </div>
           <button class="btn-cancel-sub" id="btn-cambiar-pass" style="width: 100%; padding: 12px; border-radius: 12px; background: #f5f5f5; color: #333; font-weight: 500;">
@@ -126,25 +141,25 @@
     <!-- SECCIÓN PREMIUM -->
     <div id="premium-manage-section" class="premium-manage-card" style="display:none;">
       <div class="premium-manage-header">
-        <span class="crown">👑</span>
+        <i data-lucide="crown" class="crown"></i>
         <h2>Membresía Premium</h2>
       </div>
       <div class="premium-manage-body">
         <div id="premium-active-info">
-          <p>Estado: <strong style="color:#2e7d32;">Activo</strong></p>
+          <p>Estado: <strong style="color:#E07A5F;">Activo</strong></p>
           <p>Vence el: <span id="premium-expiry-date">--/--/--</span></p>
           <p>Costo: <strong>$30 MXN / mes</strong></p>
           <div class="premium-manage-actions">
-            <button id="btn-renew-premium" class="btn-renew">🔄 Renovar ahora</button>
-            <button id="btn-cancel-premium" class="btn-cancel-sub">❌ Cancelar membresía</button>
+            <button id="btn-renew-premium" class="btn-renew"><i data-lucide="refresh-cw"></i> Renovar ahora</button>
+            <button id="btn-cancel-premium" class="btn-cancel-sub"><i data-lucide="x-circle"></i> Cancelar membresía</button>
           </div>
           <p id="cancel-note" style="font-size:0.8rem; color:#666; margin-top:10px; display:none;">
-            ⚠️ Tu membresía se cancelará al final del periodo actual. Seguirás siendo Premium hasta la fecha indicada arriba.
+            <i data-lucide="alert-triangle"></i> Tu membresía se cancelará al final del periodo actual. Seguirás siendo Premium hasta la fecha indicada arriba.
           </p>
         </div>
         <div id="premium-inactive-info" style="display:none; text-align:center;">
           <p>Actualmente eres usuario <strong>Free</strong>.</p>
-          <button id="btn-upgrade-premium-profile" class="btn-upgrade-main">⭐ ¡Actualizar a Premium! ($30 MXN)</button>
+          <button id="btn-upgrade-premium-profile" class="btn-upgrade-main"><i data-lucide="sparkles"></i> ¡Actualizar a Premium! ($30 MXN)</button>
         </div>
       </div>
     </div>
@@ -152,7 +167,7 @@
     <!-- SECCIÓN DE RECOMPENSAS (SOLO FREE) -->
     <div id="rewards-section" class="rewards-section" style="display:none;">
       <div class="rewards-header">
-        <h2>🎁 Canje de Recompensas</h2>
+        <h2><i data-lucide="gift"></i> Canje de Recompensas</h2>
         <p>Cambia tus puntos por beneficios Premium</p>
       </div>
       <div class="rewards-container" id="rewards-container">
@@ -162,10 +177,10 @@
 
     <!-- Tabs de secciones -->
     <div class="secciones-perfil">
-      <button class="seccion-btn active" id="btn-mis-recetas">📝 Mis recetas</button>
-      <button class="seccion-btn" id="btn-favoritos">⭐ Guardados</button>
-      <button class="seccion-btn" id="btn-likes">❤️ Likes</button>
-      <button class="seccion-btn" id="btn-historial">👁️ Historial</button>
+      <button class="seccion-btn active" id="btn-mis-recetas"><i data-lucide="file-text"></i> Mis recetas</button>
+      <button class="seccion-btn" id="btn-favoritos"><i data-lucide="star"></i> Guardados</button>
+      <button class="seccion-btn" id="btn-likes"><i data-lucide="heart"></i> Likes</button>
+      <button class="seccion-btn" id="btn-historial"><i data-lucide="history"></i> Historial</button>
     </div>
 
     <!-- Grids -->
@@ -180,8 +195,8 @@
   <div id="modal-pago" class="modal-pago-overlay" style="display:none;">
     <div class="modal-pago-content">
       <div class="modal-pago-header">
-        <h3>💳 Método de Pago</h3>
-        <button id="btn-cerrar-pago" class="btn-close-modal">✕</button>
+        <h3><i data-lucide="credit-card"></i> Método de Pago</h3>
+        <button id="btn-cerrar-pago" class="btn-close-modal"><i data-lucide="x"></i></button>
       </div>
       
       <div class="modal-pago-body">
@@ -197,12 +212,12 @@
         </div>
 
         <div id="form-pago" class="form-pago">
-          <div class="secure-badge-banner" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; background: #f8fcf9; padding: 10px; border-radius: 12px; border: 1px solid #e8f5e9;">
-            <span style="font-size: 0.75rem; color: #2e7d32; font-weight: 600; display: flex; align-items: center; gap: 5px;">
-              🛡️ Pago Encriptado SSL
+          <div class="secure-badge-banner" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; background: #FDFBF7; padding: 10px; border-radius: 12px; border: 1px solid #F2CC8F;">
+            <span style="font-size: 0.75rem; color: #E07A5F; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+              <i data-lucide="shield-check"></i> Pago Encriptado SSL
             </span>
-            <span style="font-size: 0.75rem; color: #2e7d32; font-weight: 600; display: flex; align-items: center; gap: 5px;">
-              ✅ Verificado
+            <span style="font-size: 0.75rem; color: #E07A5F; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+              <i data-lucide="check-circle"></i> Verificado
             </span>
           </div>
 
@@ -239,7 +254,7 @@
 
           <button id="btn-finalizar-pago" class="btn-pay-confirm">
             <span id="pay-btn-text">Pagar $30.00 MXN</span>
-            <span id="pay-btn-spinner" style="display:none;">🔒 Procesando pago seguro...</span>
+            <span id="pay-btn-spinner" style="display:none;"><i data-lucide="lock"></i> Procesando pago seguro...</span>
           </button>
           
           <p style="text-align: center; font-size: 0.7rem; color: #999; margin-top: 15px;">
@@ -251,17 +266,35 @@
   </div>
 
   <nav class="bottom-nav">
-    <a href="home.html" class="nav-item"><span>🏠</span><span>Inicio</span></a>
-    <a href="subir-receta.html" class="nav-item"><span>📝</span><span>Subir</span></a>
-    <a href="planificador.html" class="nav-item"><span>📅</span><span>Plan</span></a>
-    <a href="comunidad.html" class="nav-item"><span>👥</span><span>Comunidad</span></a>
-    <a href="perfil.html" class="nav-item active"><span>👤</span><span>Perfil</span></a>
+    <a href="home.html" class="nav-item"><i data-lucide="home"></i><span>Inicio</span></a>
+    <a href="subir-receta.html" class="nav-item"><i data-lucide="plus-circle"></i><span>Subir</span></a>
+    <a href="planificador.html" class="nav-item"><i data-lucide="calendar"></i><span>Plan</span></a>
+    <a href="comunidad.html" class="nav-item"><i data-lucide="users"></i><span>Comunidad</span></a>
+    <a href="perfil.html" class="nav-item active"><i data-lucide="user"></i><span>Perfil</span></a>
   </nav>
 
   <div class="notification-toast" id="notif-toast"></div>
 
+    <div id="chat-window" style="display:none;">
+      <div id="chat-header">
+        <i data-lucide="bot"></i> Chef IA
+        <button id="cerrar-chat-btn" title="Minimizar"><i data-lucide="minus"></i></button>
+      </div>
+      <div id="chat-messages">
+        <div class="msg msg-bot">¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?</div>
+      </div>
+      <div id="chat-input-area">
+        <input id="chat-input" type="text" placeholder="Pregúntame una receta...">
+        <button id="enviar-chat-btn">Enviar</button>
+      </div>
+    </div>
+
   <script src="js/supabaseClient.js" type="module"></script>
   <script src="js/perfil.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>

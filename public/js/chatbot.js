@@ -1,11 +1,11 @@
 // chatbot.js — Chat IA exclusivo Premium
-(function() {
-  const chatBoton   = document.getElementById('chat-boton');
-  const chatWindow  = document.getElementById('chat-window');
-  const cerrarBtn   = document.getElementById('cerrar-chat-btn');
-  const chatMessages= document.getElementById('chat-messages');
-  const chatInput   = document.getElementById('chat-input');
-  const enviarBtn   = document.getElementById('enviar-chat-btn');
+(function () {
+  const chatBoton = document.getElementById('chat-boton');
+  const chatWindow = document.getElementById('chat-window');
+  const cerrarBtn = document.getElementById('cerrar-chat-btn');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+  const enviarBtn = document.getElementById('enviar-chat-btn');
 
   if (!chatBoton || !chatWindow) return;
 
@@ -19,35 +19,67 @@
     fetch('/api/auth/me', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
-    .then(r => r.json())
-    .then(user => {
-      const hasChat = user.es_premium || user.rol === 'premium' ||
-                      (user.preferencias || []).some(p => typeof p === 'string' && p.startsWith('PERMISO_CHAT:'));
-      if (hasChat) chatBoton.style.display = 'flex';
-    })
-    .catch(() => {});
+      .then(r => r.json())
+      .then(user => {
+        const hasChat = user.es_premium || user.rol === 'premium' ||
+          (user.preferencias || []).some(p => typeof p === 'string' && p.startsWith('PERMISO_CHAT:'));
+        if (hasChat) chatBoton.style.display = 'flex';
+      })
+      .catch(() => { });
+  }
+
+  // --- Persistencia ---
+  let historial = JSON.parse(localStorage.getItem('chatHistorial') || '[]');
+
+  function guardarChat(texto, tipo) {
+    historial.push({ texto, tipo });
+    localStorage.setItem('chatHistorial', JSON.stringify(historial));
+  }
+
+  function cargarChat() {
+    if (historial.length > 0) {
+      chatMessages.innerHTML = '';
+      historial.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'msg msg-' + m.tipo;
+        div.textContent = m.texto;
+        chatMessages.appendChild(div);
+      });
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
   }
 
   chatBoton.addEventListener('click', () => {
     chatAbierto = !chatAbierto;
     chatWindow.style.display = chatAbierto ? 'flex' : 'none';
-    chatBoton.textContent = chatAbierto ? '✖' : '🤖';
+    
+    // Cambiar icono: X para cerrar (y limpiar), Robot para abrir
+    chatBoton.innerHTML = chatAbierto ? '<i data-lucide="x"></i>' : '<i data-lucide="bot"></i>';
+    lucide.createIcons();
 
     if (chatAbierto) {
       chatInput.focus();
-      // Mensaje de bienvenida si el chat está vacío
-      if (chatMessages.children.length <= 1) {
+      // Si no hay historial, mostrar bienvenida
+      if (historial.length === 0) {
         setTimeout(() => {
-          agregarMensaje("Hola 👋, puedes escribir tus dudas o pedir ayuda sobre recetas, planificación o compras.", "bot");
+          agregarMensaje("¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?", "bot");
+          agregarMensaje("Puedes escribir tus dudas o pedir ayuda sobre recetas, planificación o compras.", "bot");
         }, 500);
       }
+    } else {
+      // Al cerrar desde el botón flotante (X), limpiamos TODO
+      chatMessages.innerHTML = '';
+      historial = [];
+      localStorage.removeItem('chatHistorial');
     }
   });
 
   cerrarBtn.addEventListener('click', () => {
+    // El botón de la cabecera (Minimizar) solo oculta, preservando la charla en memoria y storage
     chatAbierto = false;
     chatWindow.style.display = 'none';
-    chatBoton.textContent = '🤖';
+    chatBoton.innerHTML = '<i data-lucide="bot"></i>';
+    lucide.createIcons();
   });
 
   function agregarMensaje(texto, tipo) {
@@ -56,8 +88,16 @@
     div.textContent = texto;
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    // Guardar en el historial para persistencia
+    guardarChat(texto, tipo);
+    
     return div;
   }
+
+  // Cargar chat al iniciar
+  cargarChat();
+  verificarPremium();
 
   function agregarRecetas(recetas) {
     if (!recetas || recetas.length === 0) return;
@@ -73,8 +113,8 @@
       card.innerHTML =
         '<img class="chat-receta-img" src="' + imgSrc + '" alt="Receta" onerror="this.style.display=\'none\'">' +
         '<div class="chat-receta-info">' +
-          '<div class="chat-receta-titulo">' + (r.titulo || 'Sin titulo') + '</div>' +
-          '<div class="chat-receta-meta">' + (r.precio || '') + ' · ' + (r.tiempo || '') + ' · ❤️ ' + (r.likes || 0) + '</div>' +
+        '<div class="chat-receta-titulo">' + (r.titulo || 'Sin titulo') + '</div>' +
+        '<div class="chat-receta-meta">' + (r.precio || '') + ' · ' + (r.tiempo || '') + ' · ❤️ ' + (r.likes || 0) + '</div>' +
         '</div>';
 
       card.addEventListener('click', () => {

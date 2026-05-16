@@ -9,12 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     /* Estilos Premium para Landing Page */
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+      background: linear-gradient(135deg, #FDFBF7 0%, #F5EBE0 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -24,7 +25,7 @@
       position: relative;
     }
     body.dark-mode {
-      background: linear-gradient(135deg, #0f1712 0%, #1a2e1f 100%);
+      background: linear-gradient(135deg, #1A120B 0%, #3C2A21 100%);
     }
     
     /* Background animado */
@@ -35,10 +36,10 @@
       opacity: 0.6;
       animation: float 10s infinite alternate ease-in-out;
     }
-    .shape1 { width: 300px; height: 300px; background: #81c784; top: -10%; left: -10%; }
-    .shape2 { width: 400px; height: 400px; background: #4caf50; bottom: -10%; right: -10%; animation-delay: -5s; }
-    body.dark-mode .shape1 { background: #2e7d32; }
-    body.dark-mode .shape2 { background: #1b5e20; }
+    .shape1 { width: 300px; height: 300px; background: #E07A5F; top: -10%; left: -10%; }
+    .shape2 { width: 400px; height: 400px; background: #D95D39; bottom: -10%; right: -10%; animation-delay: -5s; }
+    body.dark-mode .shape1 { background: #8B4513; }
+    body.dark-mode .shape2 { background: #5D2E46; }
 
     @keyframes float {
       0% { transform: translate(0, 0) scale(1); }
@@ -62,23 +63,23 @@
       animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     body.dark-mode .screen {
-      background: rgba(20, 30, 22, 0.7);
+      background: rgba(30, 20, 15, 0.7);
       border-color: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
     }
 
     h1 {
       font-family: 'Outfit', sans-serif;
       font-size: 2.8rem;
       font-weight: 800;
-      background: linear-gradient(135deg, #2e7d32, #4caf50);
+      background: linear-gradient(135deg, #E07A5F, #D95D39);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       margin: 20px 0 10px;
       letter-spacing: -1px;
     }
     body.dark-mode h1 {
-      background: linear-gradient(135deg, #66bb6a, #a5d6a7);
+      background: linear-gradient(135deg, #F2CC8F, #E07A5F);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -118,8 +119,8 @@
       box-shadow: 0 8px 15px rgba(0,0,0,0.05);
     }
     body.dark-mode .icon-bg {
-      background: #2a3d2e;
-      box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+      background: #3C2A21;
+      box-shadow: 0 8px 15px rgba(0,0,0,0.4);
     }
 
     .feature-item span {
@@ -134,7 +135,7 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      background: linear-gradient(135deg, #4caf50, #2e7d32);
+      background: linear-gradient(135deg, #E07A5F, #D95D39);
       color: white;
       text-decoration: none;
       font-family: 'Outfit', sans-serif;
@@ -143,12 +144,12 @@
       padding: 16px 40px;
       border-radius: 50px;
       transition: all 0.3s;
-      box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+      box-shadow: 0 10px 20px rgba(224, 122, 95, 0.3);
       width: 100%;
     }
     .btn-comenzar:hover {
       transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 15px 25px rgba(76, 175, 80, 0.4);
+      box-shadow: 0 15px 25px rgba(224, 122, 95, 0.4);
     }
   </style>
 </head>
@@ -157,35 +158,41 @@
   <div class="bg-shape shape1"></div>
   <div class="bg-shape shape2"></div>
 
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+    <i data-lucide="moon" class="moon-icon"></i>
+    <i data-lucide="sun" class="sun-icon"></i>
+  </button>
   
   <div class="screen">
     <div class="content">
-      <div style="font-size: 4rem; animation: pulse 2s infinite;">👨‍🍳</div>
+      <div style="font-size: 4.5rem; color:#E07A5F; margin-bottom: 10px;"><i data-lucide="chef-hat" style="width:80px;height:80px;"></i></div>
       <h1>ForaneoKitchen</h1>
       <p class="subtitle">Recetas épicas y económicas para tu vida de estudiante</p>
       
       <div class="features">
         <div class="feature-item">
-          <div class="icon-bg">⚡</div>
+          <div class="icon-bg" style="color:#E07A5F;"><i data-lucide="zap"></i></div>
           <span>Rápido</span>
         </div>
         <div class="feature-item">
-          <div class="icon-bg">💰</div>
+          <div class="icon-bg" style="color:#D95D39;"><i data-lucide="dollar-sign"></i></div>
           <span>Barato</span>
         </div>
         <div class="feature-item">
-          <div class="icon-bg">🤤</div>
+          <div class="icon-bg" style="color:#F2CC8F;"><i data-lucide="utensils"></i></div>
           <span>Rico</span>
         </div>
       </div>
 
       <a href="login.html" class="btn-comenzar">
-        <span class="sparkle">✨</span> Entrar a la Cocina
+        Entrar a la Cocina <i data-lucide="chevron-right"></i>
       </a>
     </div>
   </div>
   
   <script src="js/dark-mode.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>

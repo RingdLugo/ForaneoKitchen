@@ -33,8 +33,23 @@ async function cargarUsuario() {
 
 async function cargarPlanSemanal() {
   if (!currentUser) return null;
+
+  // 1. Intentar cargar desde cache local PRIMERO (vital para no perder cambios recientes)
+  const cached = localStorage.getItem('user_plan_cache');
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+        console.log('⚡ Lista de compras: Usando plan desde cache local');
+        return parsed;
+      }
+    } catch (e) { }
+  }
+
+  // 2. Si no hay cache, ir al servidor
   const token = localStorage.getItem('token');
   try {
+
     const res = await fetch('/api/users/me/planner', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -170,45 +185,47 @@ async function guardarItemsEnSupabase(items) {
 function renderizarLista() {
   const container = document.getElementById('lista-contenido');
   if (!container) return;
-  
+
   if (itemsCompra.length === 0) {
-    container.innerHTML = `<div class="vacio-mensaje"><span>🛒</span><p>Tu lista está vacía</p></div>`;
+    container.innerHTML = `<div class="vacio-mensaje"><span><i data-lucide="shopping-cart"></i></span><p>Tu lista está vacía</p></div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     actualizarProgreso();
     return;
   }
-  
+
   const itemsPorCategoria = {};
   itemsCompra.forEach(item => {
     if (!itemsPorCategoria[item.categoria]) itemsPorCategoria[item.categoria] = [];
     itemsPorCategoria[item.categoria].push(item);
   });
-  
+
   const ordenCategorias = ['Abarrotes', 'Lacteos', 'Verduras', 'Frutas', 'Carnes', 'Otros'];
   let html = '';
-  
+
   ordenCategorias.forEach(cat => {
     const items = itemsPorCategoria[cat];
     if (items && items.length > 0) {
-      const icono = { Abarrotes:'🛒', Lacteos:'🥛', Verduras:'🥬', Frutas:'🍎', Carnes:'🍗', Otros:'📦' }[cat];
-      html += `<div class="categoria-grupo"><div class="categoria-titulo"><span>${icono}</span> ${cat}</div><ul class="items-lista">`;
+      const icono = { Abarrotes: 'shopping-basket', Lacteos: 'milk', Verduras: 'leaf', Frutas: 'apple', Carnes: 'beef', Otros: 'package' }[cat];
+      html += `<div class="categoria-grupo"><div class="categoria-titulo"><span><i data-lucide="${icono}"></i></span> ${cat}</div><ul class="items-lista">`;
       items.forEach(item => {
         html += `
           <li class="item-compra ${item.completado ? 'completado' : ''}" data-id="${item.id}">
             <input type="checkbox" class="item-checkbox" data-id="${item.id}" ${item.completado ? 'checked' : ''}>
             <div class="item-contenido">
               <div class="item-nombre">${escapeHTML(item.nombre)}</div>
-              ${item.cantidad ? `<div class="item-cantidad">📦 ${escapeHTML(item.cantidad)}</div>` : ''}
-              ${item.recetas && item.recetas.length > 0 ? `<div class="item-recetas">📖 ${escapeHTML(item.recetas.join(', '))}</div>` : ''}
+              ${item.cantidad ? `<div class="item-cantidad"><i data-lucide="package" style="width:12px;height:12px;"></i> ${escapeHTML(item.cantidad)}</div>` : ''}
+              ${item.recetas && item.recetas.length > 0 ? `<div class="item-recetas"><i data-lucide="book" style="width:12px;height:12px;"></i> ${escapeHTML(item.recetas.join(', '))}</div>` : ''}
             </div>
-            <button class="btn-eliminar-item" data-id="${item.id}">✖</button>
+            <button class="btn-eliminar-item" data-id="${item.id}"><i data-lucide="trash-2"></i></button>
           </li>`;
       });
       html += `</ul></div>`;
     }
   });
-  
+
   container.innerHTML = html;
-  
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
   container.querySelectorAll('.item-checkbox').forEach(cb => {
     cb.addEventListener('change', async (e) => {
       const id = parseFloat(e.target.dataset.id);
@@ -231,7 +248,7 @@ function renderizarLista() {
       actualizarProgreso();
     });
   });
-  
+
   actualizarProgreso();
 }
 
@@ -253,40 +270,40 @@ function escapeHTML(str) {
 async function exportarPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  
+
   // Filtrar solo items seleccionados (no completados)
   const itemsPendientes = itemsCompra.filter(item => !item.completado);
-  
+
   if (itemsPendientes.length === 0) {
     alert("No hay artículos pendientes para exportar.");
     return;
   }
-  
+
   doc.setFontSize(20);
-  doc.setTextColor(26, 60, 52);
+  doc.setTextColor(224, 122, 95); // #E07A5F
   doc.text("Lista de Compras - ForaneoKitchen", 20, 20);
-  
+
   doc.setFontSize(12);
   doc.setTextColor(100);
   doc.text(`Generada el: ${new Date().toLocaleDateString()}`, 20, 30);
-  
+
   let y = 45;
-  
+
   const agrupados = {};
   itemsPendientes.forEach(item => {
     const cat = item.categoria || 'Otros';
     if (!agrupados[cat]) agrupados[cat] = [];
     agrupados[cat].push(item);
   });
-  
+
   for (const [cat, items] of Object.entries(agrupados)) {
     if (y > 270) { doc.addPage(); y = 20; }
-    
+
     doc.setFontSize(14);
-    doc.setTextColor(76, 175, 80);
+    doc.setTextColor(217, 93, 57); // #D95D39
     doc.text(cat, 20, y);
     y += 8;
-    
+
     doc.setFontSize(11);
     doc.setTextColor(0);
     items.forEach(item => {
@@ -297,7 +314,7 @@ async function exportarPDF() {
     });
     y += 5;
   }
-  
+
   doc.save(`Lista_Compras_${new Date().getTime()}.pdf`);
 }
 
@@ -305,7 +322,7 @@ async function agregarItemManual() {
   const input = document.getElementById('input-item');
   const nombre = input?.value.trim();
   if (!nombre) return;
-  
+
   const { cantidad, nombre: nombreSolo } = extraerCantidad(nombre);
   itemsCompra.push({
     id: Date.now(),
@@ -315,7 +332,7 @@ async function agregarItemManual() {
     categoria: obtenerCategoria(nombreSolo),
     recetas: []
   });
-  
+
   input.value = '';
   await guardarItemsEnSupabase(itemsCompra);
   renderizarLista();
@@ -324,13 +341,13 @@ async function agregarItemManual() {
 async function init() {
   await cargarUsuario();
   if (!currentUser) { window.location.href = 'login.html'; return; }
-  
+
   itemsCompra = await cargarItemsDesdeSupabase();
-  
+
   await sincronizarInteligente();
-  
+
   renderizarLista();
-  
+
   document.getElementById('add-item-btn')?.addEventListener('click', agregarItemManual);
   document.getElementById('input-item')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') agregarItemManual();
@@ -343,3 +360,18 @@ async function init() {
 }
 
 init();
+
+// Lógica de ocultado automático de la navegación al scroll
+(function () {
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    if (window.scrollY > lastScrollY && window.scrollY > 100) {
+      nav.classList.add('nav-hidden');
+    } else {
+      nav.classList.remove('nav-hidden');
+    }
+    lastScrollY = window.scrollY;
+  });
+})();

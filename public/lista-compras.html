@@ -1,23 +1,45 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ForananeoKitchen - Lista de Compras</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/lista-compras.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <style>
+    [data-lucide] {
+      width: 18px !important;
+      height: 18px !important;
+      stroke-width: 2.5px;
+    }
+  </style>
   <link rel="stylesheet" href="css/bottom-nav.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
-  
+  <!-- Selector de Tema (Abajo Derecha) -->
+  <button id="dark-mode-toggle" class="dark-mode-toggle" style="position: fixed !important; bottom: 30px !important; right: 30px !important; z-index: 10000 !important; width: 45px !important; height: 45px !important; border-radius: 50% !important; border: none !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; background: white !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;">
+    <i data-lucide="moon" class="moon-icon" style="color: #2D2D35;"></i>
+    <i data-lucide="sun" class="sun-icon" style="color: #D95D39;"></i>
+  </button>
+
+  <!-- Botón del Chatbot (Sobre el Tema) -->
+  <button id="chat-boton-lista" class="chatbot-trigger" style="position: fixed !important; bottom: 90px !important; right: 30px !important; z-index: 10000 !important; width: 45px !important; height: 45px !important; border-radius: 50% !important; background: #D95D39 !important; color: white !important; border: none !important; cursor: pointer !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; display: flex !important; align-items: center !important; justify-content: center !important;">
+    <i data-lucide="bot" style="width: 24px; height: 24px;"></i>
+  </button>
+
   <div class="lista-screen">
     <header class="lista-header">
-      <button class="back-btn" onclick="window.location.href='planificador.html'">← Volver al planificador</button>
-      <h1>📋 Lista de Compras</h1>
+      <button class="back-btn" onclick="window.location.href='planificador.html'"><i data-lucide="arrow-left"></i>
+        Volver al planificador</button>
+      <h1><i data-lucide="shopping-list"></i> Lista de Compras</h1>
       <div class="progreso-container">
         <div class="progreso-texto" id="progreso-texto">0 de 0 completados</div>
         <div class="progreso-bar">
@@ -25,38 +47,32 @@
         </div>
       </div>
       <div class="acciones">
-        <button class="btn-exportar" id="exportar-pdf-btn">📄 Exportar PDF</button>
-        <button class="btn-sincronizar" id="sincronizar-btn">🔄 Sincronizar</button>
+        <button class="btn-exportar" id="exportar-pdf-btn"><i data-lucide="file-text"></i> Exportar PDF</button>
+
       </div>
     </header>
-    
+
     <div class="lista-contenido" id="lista-contenido">
       <div class="loading">Cargando lista...</div>
     </div>
-    
+
     <nav class="bottom-nav">
-      <a href="home.html" class="nav-item">
-        <span>🏠</span> Inicio
-      </a>
-      <a href="subir-receta.html" class="nav-item">
-        <span>📝</span> Subir
-      </a>
-      <a href="planificador.html" class="nav-item">
-        <span>📅</span> Planificador
-      </a>
-      <a href="comunidad.html" class="nav-item">
-        <span>👥</span> Comunidad
-      </a>
-      <a href="perfil.html" class="nav-item">
-        <span>👤</span> Perfil
-      </a>
+      <a href="home.html" class="nav-item"><i data-lucide="home"></i> Inicio</a>
+      <a href="subir-receta.html" class="nav-item"><i data-lucide="plus-circle"></i> Subir</a>
+      <a href="planificador.html" class="nav-item"><i data-lucide="calendar"></i> Planificador</a>
+      <a href="comunidad.html" class="nav-item"><i data-lucide="users"></i> Comunidad</a>
+      <a href="perfil.html" class="nav-item"><i data-lucide="user"></i> Perfil</a>
     </nav>
   </div>
-  
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="js/supabaseClient.js" type="module"></script>
   <script src="js/lista-compras.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
+
 </html>

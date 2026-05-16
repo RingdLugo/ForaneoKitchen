@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/login.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     .otp-inputs {
       display: flex;
@@ -29,20 +30,20 @@
       transition: border-color .2s;
     }
     .otp-inputs input:focus {
-      border-color: #4caf50;
+      border-color: #E07A5F;
       outline: none;
-      box-shadow: 0 0 0 3px rgba(76,175,80,.15);
+      box-shadow: 0 0 0 3px rgba(224,122,95,.15);
     }
     .email-hint {
       color: #888;
       font-size: .9rem;
       margin-bottom: 8px;
     }
-    .email-hint strong { color: #2e7d32; }
+    .email-hint strong { color: #D95D39; }
     .reenviar-link {
       background: none;
       border: none;
-      color: #4caf50;
+      color: #E07A5F;
       font-weight: 600;
       cursor: pointer;
       font-size: .9rem;
@@ -55,7 +56,10 @@
   </style>
 </head>
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
+  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+    <i data-lucide="moon" class="moon-icon"></i>
+    <i data-lucide="sun" class="sun-icon"></i>
+  </button>
 
   <div class="login-screen">
     <div class="login-container">
@@ -63,7 +67,7 @@
       <p class="tagline">Verifica tu cuenta</p>
 
       <div class="login-card">
-        <h2>📧 Código de verificación</h2>
+        <h2><i data-lucide="mail"></i> Código de verificación</h2>
         <p class="email-hint">Enviamos un código de 6 dígitos a<br><strong id="email-display">tu correo</strong></p>
 
         <div class="otp-inputs">
@@ -78,7 +82,7 @@
         <button id="verificar-btn">Verificar →</button>
 
         <p style="margin-top:20px">
-          <button class="reenviar-link" id="reenviar-btn" disabled>Reenviar código</button>
+          <button class="reenviar-link" id="reenviar-btn" disabled><i data-lucide="refresh-cw" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i> Reenviar código</button>
           <br><span id="countdown"></span>
         </p>
 
@@ -160,7 +164,7 @@
           localStorage.removeItem('verifyEmail');
         }
 
-        showToast('✅ ¡Cuenta verificada! Bienvenido', 'success');
+        showToast('Cuenta verificada! Bienvenido', 'success');
         setTimeout(() => { window.location.href = 'home.html'; }, 1200);
 
       } catch (err) {
@@ -204,6 +208,7 @@
         startCountdown();
       }
     });
+    lucide.createIcons();
   </script>
 </body>
 </html>

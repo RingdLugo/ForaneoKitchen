@@ -4,6 +4,38 @@
   box-sizing: border-box;
 }
 
+/* Botones Flotantes Centralizados */
+.floating-actions {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+  z-index: 9999;
+}
+
+.dark-mode-toggle {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin: 0 !important;
+}
+
+body.dark-mode .dark-mode-toggle {
+  background: #E07A5F !important;
+  color: white !important;
+}
+
 .comunidad-screen {
   max-width: 900px;
   margin: 0 auto;
@@ -18,7 +50,7 @@
 .comunidad-header h1 {
   font-family: 'Poppins', sans-serif;
   font-size: 2rem;
-  color: #2e7d32;
+  color: #D95D39;
 }
 
 .comunidad-header p {
@@ -37,7 +69,7 @@
 
 .tab-btn {
   background: white;
-  border: 2px solid #e8f5e9;
+  border: 2px solid #F4F1DE;
   padding: 10px 24px;
   border-radius: 40px;
   font-size: 0.9rem;
@@ -49,14 +81,14 @@
 }
 
 .tab-btn:hover {
-  border-color: #4caf50;
-  color: #4caf50;
+  border-color: #E07A5F;
+  color: #E07A5F;
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  background: linear-gradient(135deg, #E07A5F, #D95D39);
   color: white;
-  border-color: #2e7d32;
+  border-color: #D95D39;
 }
 
 /* Recetas */
@@ -143,7 +175,7 @@
 }
 
 .receta-precio {
-  color: #2e7d32;
+  color: #D95D39;
   font-weight: 500;
 }
 
@@ -196,8 +228,8 @@
 }
 
 .comentar-btn, .responder-btn {
-  background: #e8f5e9;
-  color: #4caf50;
+  background: #FFF1E6;
+  color: #E07A5F;
 }
 
 .responder-btn {
@@ -224,7 +256,7 @@
   display: flex;
   gap: 12px;
   transition: all 0.3s ease;
-  border-left: 4px solid #4caf50;
+  border-left: 4px solid #E07A5F;
 }
 
 .actividad-item.personal {
@@ -269,7 +301,7 @@
 
 .actividad-autor {
   font-weight: 700;
-  color: #2e7d32;
+  color: #D95D39;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -288,7 +320,7 @@
 
 .actividad-receta {
   font-size: 0.8rem;
-  color: #4caf50;
+  color: #E07A5F;
   cursor: pointer;
   font-weight: 500;
 }
@@ -337,7 +369,7 @@
 
 .modal-comentarios .modal-header h3 {
   font-size: 1.1rem;
-  color: #2e7d32;
+  color: #D95D39;
 }
 
 .modal-comentarios .close-modal,
@@ -386,7 +418,7 @@
 .avatar-placeholder {
   width: 100%;
   height: 100%;
-  background: #4caf50;
+  background: #E07A5F;
   color: white;
   display: flex;
   align-items: center;
@@ -409,7 +441,7 @@
 }
 
 .comentario-header strong {
-  color: #2e7d32;
+  color: #D95D39;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -437,7 +469,7 @@
   background: none;
   border: none;
   font-size: 0.7rem;
-  color: #4caf50;
+  color: #E07A5F;
   cursor: pointer;
   padding: 0;
   font-weight: 500;
@@ -470,7 +502,7 @@
 .nuevo-comentario-area textarea {
   flex: 1;
   padding: 12px;
-  border: 2px solid #e8f5e9;
+  border: 2px solid #F4F1DE;
   border-radius: 20px;
   font-size: 0.9rem;
   font-family: inherit;
@@ -479,12 +511,12 @@
 }
 
 .nuevo-comentario-area textarea:focus {
-  border-color: #4caf50;
+  border-color: #E07A5F;
 }
 
 .nuevo-comentario-area button {
   padding: 8px 20px;
-  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  background: linear-gradient(135deg, #E07A5F, #D95D39);
   color: white;
   border: none;
   border-radius: 30px;
@@ -521,55 +553,19 @@
   text-decoration: underline;
 }
 
-/* Bottom Nav */
-.bottom-nav {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: space-around;
-  padding: 8px 20px;
-  border-radius: 50px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  gap: 16px;
+  .nav-item:hover {
+    color: #E07A5F;
+  }
 }
 
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-decoration: none;
-  color: #999;
-  font-size: 0.7rem;
-  transition: all 0.3s ease;
-  padding: 8px 16px;
-  border-radius: 40px;
-}
-
-.nav-item span:first-child {
-  font-size: 1.2rem;
-  margin-bottom: 2px;
-}
-
-.nav-item.active {
-  background: #e8f5e9;
-  color: #4caf50;
-}
-
-.nav-item:hover {
-  color: #4caf50;
-}
+/* La navegación inferior se maneja centralizadamente en css/bottom-nav.css */
 
 .notification-toast {
   position: fixed;
   bottom: 100px;
   left: 50%;
   transform: translateX(-50%) translateY(100px);
-  background: #4caf50;
+  background: #E07A5F;
   color: white;
   padding: 12px 24px;
   border-radius: 50px;
@@ -588,8 +584,8 @@
 .loading-spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid #e8f5e9;
-  border-top-color: #4caf50;
+  border: 4px solid #F4F1DE;
+  border-top-color: #E07A5F;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 40px auto;

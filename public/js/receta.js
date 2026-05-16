@@ -2,13 +2,13 @@
 import { supabase } from './supabaseClient.js';
 
 let recetaActual = null;
-let currentUser  = null;
+let currentUser = null;
 
-const PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e8f5e9'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='%234caf50' font-size='40'%3E🍳%3C/text%3E%3C/svg%3E`;
+const PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FDFBF7'/%3E%3Cpath d='M30 70 h40 v-5 a20 20 0 0 0 -40 0 z' fill='%23E07A5F'/%3E%3C/svg%3E`;
 
 function escapeHTML(s) {
   if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function showToast(m, err = false) {
@@ -51,8 +51,8 @@ function formatFecha(f) {
   return d.toLocaleDateString('es-MX');
 }
 
-let diaPlanSeleccionado   = null;
-let comentarioPadreId     = null;
+let diaPlanSeleccionado = null;
+let comentarioPadreId = null;
 
 async function cargarUsuario() {
   const token = localStorage.getItem('token');
@@ -78,16 +78,16 @@ async function cargarUsuario() {
   let prefs = [];
   try { prefs = JSON.parse(localStorage.getItem('userPrefs') || '[]'); } catch { prefs = []; }
   currentUser = {
-    id:         userId,
+    id: userId,
     es_premium: localStorage.getItem('userPremium') === 'true',
-    rol:        localStorage.getItem('userRol') || 'free',
-    username:   localStorage.getItem('userName'),
+    rol: localStorage.getItem('userRol') || 'free',
+    username: localStorage.getItem('userName'),
     preferencias: prefs
   };
 }
 
 async function cargarReceta() {
-  const id        = new URLSearchParams(window.location.search).get('id');
+  const id = new URLSearchParams(window.location.search).get('id');
   const container = document.getElementById('receta-container');
   if (!id) { mostrarError('No se especificó la receta'); return; }
 
@@ -97,7 +97,7 @@ async function cargarReceta() {
       recetaActual = JSON.parse(cached);
       renderizarReceta(recetaActual);
       cargarComentarios(id);
-    } catch(e) {}
+    } catch (e) { }
   } else {
     container.innerHTML = `<div class="receta-loading"><div class="loading-spinner"></div><p>Cargando...</p></div>`;
   }
@@ -108,7 +108,7 @@ async function cargarReceta() {
     const response = await fetch(`/api/recipes/${id}`, { headers });
 
     if (!response.ok) {
-      if (response.status === 403) throw new Error('Esta receta es exclusiva para usuarios Premium 👑');
+      if (response.status === 403) throw new Error('Esta receta es exclusiva para usuarios Premium');
       throw new Error('Error al conectar con el servidor');
     }
 
@@ -131,16 +131,16 @@ async function toggleLike() {
   const token = localStorage.getItem('token');
   if (!token) { showToast('Inicia sesión para dar like', true); return; }
 
-  const btn     = document.getElementById('like-btn');
-  const countEl = document.getElementById('like-count');
-  const liked   = btn.dataset.liked === '1';
-  btn.disabled  = true;
+  const badge   = document.querySelector('.meta-badge.likes');
+  const countEl = document.getElementById('like-count-badge');
+  if (!badge || !countEl) return;
+
+  const liked   = badge.classList.contains('active');
   const old     = parseInt(countEl.textContent) || 0;
   
   // Optimistic UI
   countEl.textContent = liked ? Math.max(old - 1, 0) : old + 1;
-  btn.classList.toggle('liked', !liked);
-  btn.dataset.liked = liked ? '0' : '1';
+  badge.classList.toggle('active', !liked);
 
   try {
     const method = liked ? 'DELETE' : 'POST';
@@ -149,33 +149,31 @@ async function toggleLike() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Error al procesar like');
-    }
+    if (!res.ok) throw new Error('Error al procesar like');
     
     const data = await res.json();
     if (data.likes !== undefined) countEl.textContent = data.likes;
-    showToast(liked ? 'Like eliminado' : '❤️ ¡Like!');
+    showToast(liked ? 'Like eliminado' : '¡Me gusta!');
   } catch (e) {
     countEl.textContent = old;
-    btn.classList.toggle('liked', liked);
-    btn.dataset.liked = liked ? '1' : '0';
+    badge.classList.toggle('active', liked);
     showToast(e.message || 'Error al conectar con el servidor', true);
-  } finally { btn.disabled = false; }
+  }
 }
 
 async function toggleFav() {
   const token = localStorage.getItem('token');
   if (!token) { showToast('Inicia sesión para guardar', true); return; }
 
-  const btn = document.getElementById('fav-btn');
-  const fav = btn.dataset.fav === '1';
-  btn.disabled = true;
+  const badge = document.querySelector('.meta-badge.favorite');
+  if (!badge) return;
 
-  btn.textContent = fav ? '☆ Guardar' : '⭐ Guardado';
-  btn.classList.toggle('favorited', !fav);
-  btn.dataset.fav = fav ? '0' : '1';
+  const fav = badge.classList.contains('active');
+  badge.classList.toggle('active', !fav);
+  
+  // Actualizar texto si existe
+  const label = badge.querySelector('span');
+  if (label) label.textContent = fav ? 'Guardar' : 'Guardado';
 
   try {
     const method = fav ? 'DELETE' : 'POST';
@@ -184,19 +182,12 @@ async function toggleFav() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Error del servidor');
-    }
-
-    showToast(fav ? 'Eliminado de favoritos' : '⭐ Guardado en favoritos');
+    if (!res.ok) throw new Error('Error del servidor');
+    showToast(fav ? 'Eliminado de favoritos' : 'Guardado en favoritos');
   } catch (e) {
-    btn.textContent = fav ? '⭐ Guardado' : '☆ Guardar';
-    btn.classList.toggle('favorited', fav);
-    btn.dataset.fav = fav ? '1' : '0';
+    badge.classList.toggle('active', fav);
+    if (label) label.textContent = fav ? 'Guardado' : 'Guardar';
     showToast(e.message || 'Error al actualizar favoritos', true);
-  } finally {
-    btn.disabled = false;
   }
 }
 
@@ -246,38 +237,37 @@ function renderComentario(comentario, respuestas = []) {
   const inicial = uname[0].toUpperCase();
   const foto = comentario.usuario?.foto_perfil;
   const autorPremium = comentario.usuario?.es_premium || comentario.usuario?.rol === 'premium' || false;
-  const autorBadge = autorPremium ? '<span style="font-size:0.7rem">👑</span>' : '<span style="font-size:0.7rem">🆓</span>';
   const userId = localStorage.getItem('userId');
   const esPropio = userId && String(comentario.usuario_id) === String(userId);
   const puedeResponder = currentUser?.es_premium || currentUser?.rol === 'premium' || false;
 
   const avatarHTML = foto
-    ? `<img src="${foto}" alt="${escapeHTML(uname)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-    : `<div class="avatar-placeholder">${inicial}</div>`;
+    ? `<img src="${foto}" alt="${escapeHTML(uname)}" class="avatar-img">`
+    : `<div class="avatar-placeholder" data-char="${inicial}">${inicial}</div>`;
 
   const respuestasHTML = respuestas.length > 0 ? `
-    <div style="margin-top:12px;margin-left:32px;border-left:2px solid #eee;padding-left:10px;">
+    <div class="comentario-respuestas">
       ${respuestas.map(r => renderComentarioRespuesta(r)).join('')}
     </div>` : '';
 
   return `
-    <div class="comentario-item" data-id="${comentario.id}" style="display:flex;gap:12px;align-items:flex-start;">
-      <div class="comentario-avatar" style="width:40px;height:40px;flex-shrink:0;">${avatarHTML}</div>
-      <div class="comentario-contenido" style="flex:1;min-width:0;">
-        <div class="comentario-header" style="display:flex;justify-content:space-between;">
-          <strong>${escapeHTML(uname)} ${autorBadge}</strong>
-          <small>${formatFecha(comentario.fecha)}</small>
+    <div class="comentario-item" data-id="${comentario.id}">
+      <div class="comentario-avatar-wrapper">${avatarHTML}</div>
+      <div class="comentario-body">
+        <div class="comentario-bubble">
+          <div class="comentario-header">
+            <span class="comentario-user">${escapeHTML(uname)} ${autorPremium ? '<i data-lucide="crown" class="crown-icon"></i>' : ''}</span>
+            <span class="comentario-date">${formatFecha(comentario.fecha)}</span>
+          </div>
+          <p class="comentario-text">${escapeHTML(comentario.texto)}</p>
         </div>
-        <p style="font-style:${comentario.texto==='🚫 [Comentario eliminado]'?'italic':'normal'};color:${comentario.texto==='🚫 [Comentario eliminado]'?'#999':'inherit'};">
-          ${escapeHTML(comentario.texto)}
-        </p>
-        <div class="comentario-acciones" style="display:flex;gap:10px;margin-top:5px;">
+        <div class="comentario-actions">
           ${puedeResponder && comentario.texto !== '🚫 [Comentario eliminado]'
-            ? `<button style="background:none;border:none;color:#4caf50;cursor:pointer;font-size:0.85rem;" onclick="window.abrirResponder(${comentario.id}, '${escapeHTML(uname)}')">💬 Responder</button>`
-            : ''}
+      ? `<button class="action-btn reply" onclick="window.abrirResponder(${comentario.id}, '${escapeHTML(uname)}')"><i data-lucide="message-square"></i> Responder</button>`
+      : ''}
           ${esPropio && comentario.texto !== '🚫 [Comentario eliminado]'
-            ? `<button style="background:none;border:none;color:#e53935;cursor:pointer;font-size:0.85rem;" onclick="window.eliminarComentario(${comentario.id})">🗑️ Eliminar</button>`
-            : ''}
+      ? `<button class="action-btn delete" onclick="window.eliminarComentario(${comentario.id})"><i data-lucide="trash-2"></i> Eliminar</button>`
+      : ''}
         </div>
         ${respuestasHTML}
       </div>
@@ -289,38 +279,37 @@ function renderComentarioRespuesta(respuesta) {
   const inicial = uname[0].toUpperCase();
   const foto = respuesta.usuario?.foto_perfil;
   const autorPremium = respuesta.usuario?.es_premium || respuesta.usuario?.rol === 'premium' || false;
-  const autorBadge = autorPremium ? '👑' : '🆓';
   const userId = localStorage.getItem('userId');
   const esPropio = userId && String(respuesta.usuario_id) === String(userId);
 
   const avatarHTML = foto
-    ? `<img src="${foto}" alt="${escapeHTML(uname)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-    : `<div class="avatar-placeholder">${inicial}</div>`;
+    ? `<img src="${foto}" alt="${escapeHTML(uname)}" class="avatar-img-sm">`
+    : `<div class="avatar-placeholder-sm" data-char="${inicial}">${inicial}</div>`;
 
   return `
-    <div class="comentario-item respuesta" data-id="${respuesta.id}" style="margin-top:10px;display:flex;gap:10px;align-items:flex-start;">
-      <div class="comentario-avatar" style="width:30px;height:30px;flex-shrink:0;">${avatarHTML}</div>
-      <div class="comentario-contenido">
-        <div class="comentario-header">
-          <strong>${escapeHTML(uname)} <span style="font-size:0.7rem">${autorBadge}</span></strong>
-          <small>${formatFecha(respuesta.fecha)}</small>
+    <div class="comentario-item respuesta" data-id="${respuesta.id}">
+      <div class="comentario-avatar-wrapper">${avatarHTML}</div>
+      <div class="comentario-body">
+        <div class="comentario-bubble reply-bubble">
+          <div class="comentario-header">
+            <span class="comentario-user">${escapeHTML(uname)} ${autorPremium ? '<i data-lucide="crown" class="crown-icon-sm"></i>' : ''}</span>
+            <span class="comentario-date">${formatFecha(respuesta.fecha)}</span>
+          </div>
+          <p class="comentario-text">${escapeHTML(respuesta.texto)}</p>
         </div>
-        <p style="font-style:${respuesta.texto==='🚫 [Comentario eliminado]'?'italic':'normal'};color:${respuesta.texto==='🚫 [Comentario eliminado]'?'#999':'inherit'};">
-          ${escapeHTML(respuesta.texto)}
-        </p>
-        <div class="comentario-acciones" style="margin-top:5px;">
+        <div class="comentario-actions">
           ${esPropio && respuesta.texto !== '🚫 [Comentario eliminado]'
-            ? `<button style="background:none;border:none;color:#e53935;cursor:pointer;font-size:0.85rem;" onclick="window.eliminarComentario(${respuesta.id})">🗑️ Eliminar</button>`
-            : ''}
+      ? `<button class="action-btn delete" onclick="window.eliminarComentario(${respuesta.id})"><i data-lucide="trash-2"></i> Eliminar</button>`
+      : ''}
         </div>
       </div>
     </div>`;
 }
 
-window.abrirResponder = function(comentarioId, autorNombre) {
+window.abrirResponder = function (comentarioId, autorNombre) {
   if (!currentUser) { showToast('Inicia sesión para responder', true); return; }
   const esPremium = currentUser.es_premium || currentUser.rol === 'premium';
-  if (!esPremium) { showToast('⚠️ Solo usuarios Premium pueden responder comentarios.', true); return; }
+  if (!esPremium) { showToast('Solo usuarios Premium pueden responder comentarios.', true); return; }
 
   comentarioPadreId = comentarioId;
   const textarea = document.getElementById('nuevo-comentario');
@@ -328,10 +317,10 @@ window.abrirResponder = function(comentarioId, autorNombre) {
     textarea.placeholder = `Respondiendo a @${autorNombre}...`;
     textarea.focus();
   }
-  showToast(`💬 Respondiendo a @${autorNombre}`);
+  showToast(`Respondiendo a @${autorNombre}`);
 };
 
-window.enviarComentario = async function() {
+window.enviarComentario = async function () {
   const textarea = document.getElementById('nuevo-comentario');
   const texto = textarea?.value.trim();
   if (!texto) return;
@@ -361,14 +350,14 @@ window.enviarComentario = async function() {
     textarea.value = '';
     comentarioPadreId = null;
     textarea.placeholder = 'Escribe un comentario...';
-    showToast('💬 Comentario enviado');
+    showToast('Comentario enviado');
     cargarComentarios(id);
   } catch (e) {
     showToast(e.message || 'Error al enviar comentario', true);
   }
 };
 
-window.eliminarComentario = async function(id) {
+window.eliminarComentario = async function (id) {
   if (!confirm('¿Eliminar comentario?')) return;
   const token = localStorage.getItem('token');
   try {
@@ -383,7 +372,7 @@ window.eliminarComentario = async function(id) {
   } catch (e) { showToast(e.message, true); }
 };
 
-window.eliminarReceta = async function(id) {
+window.eliminarReceta = async function (id) {
   if (!confirm('¿Eliminar esta receta permanentemente?')) return;
   const token = localStorage.getItem('token');
   try {
@@ -401,11 +390,11 @@ function renderizarReceta(r) {
   const container = document.getElementById('receta-container');
   if (!container) return;
 
-  const userId    = localStorage.getItem('userId');
-  const esAutor   = userId && r.usuario_id === userId;
-  const ings      = r.ingredientes ? r.ingredientes.split(/\n|,/).map(i => i.trim()).filter(Boolean) : [];
-  const pasos     = r.pasos ? r.pasos.split(/\n/).map(p => p.trim()).filter(Boolean) : [];
-  const tagsHtml  = (r.etiquetas || []).map(t => `<span class="recipe-tag">${escapeHTML(t)}</span>`).join('');
+  const userId = localStorage.getItem('userId');
+  const esAutor = userId && r.usuario_id === userId;
+  const ings = r.ingredientes ? r.ingredientes.split(/\n|,/).map(i => i.trim()).filter(Boolean) : [];
+  const pasos = r.pasos ? r.pasos.split(/\n/).map(p => p.trim()).filter(Boolean) : [];
+  const tagsHtml = (r.etiquetas || []).map(t => `<span class="recipe-tag">${escapeHTML(t)}</span>`).join('');
 
   const checkFav = async () => {
     if (!userId) return false;
@@ -424,11 +413,11 @@ function renderizarReceta(r) {
   const videoHTML = (() => {
     if (!esPremiumUser) {
       if (r.video_youtube || r.video_url) {
-        return `<div class="video-container" style="margin:20px 0;background:#f9f9f9;border-radius:16px;padding:30px;text-align:center;border:2px dashed #4caf50;">
-          <div style="font-size:2.5rem;margin-bottom:10px;">🔒</div>
-          <p style="color:#1b5e20;font-weight:600;margin:0 0 8px;">Video exclusivo Premium</p>
+        return `<div class="video-container" style="margin:20px 0;background:#FDFBF7;border-radius:16px;padding:30px;text-align:center;border:2px dashed #E07A5F;">
+          <div style="font-size:2.5rem;margin-bottom:10px;"><i data-lucide="lock" style="width:48px;height:48px;color:#D95D39;"></i></div>
+          <p style="color:#D95D39;font-weight:600;margin:0 0 8px;">Video exclusivo Premium</p>
           <p style="color:#666;font-size:0.9rem;margin:0 0 16px;">Actualiza tu cuenta para ver el video de esta receta.</p>
-          <button onclick="window.location.href='perfil.html'" style="padding:10px 24px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;">Mejorar a Premium 👑</button>
+          <button onclick="window.location.href='perfil.html'" style="padding:10px 24px;background:#E07A5F;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Mejorar a Premium <i data-lucide="crown" style="width:18px;height:18px;"></i></button>
         </div>`;
       }
       return '';
@@ -453,36 +442,36 @@ function renderizarReceta(r) {
         <div class="receta-image-container">
           <img id="receta-img" src="${r.imagen || PLACEHOLDER}" alt="${escapeHTML(r.titulo)}"
                onerror="this.src='${PLACEHOLDER}'" style="width:100%;border-radius:24px;max-height:400px;object-fit:cover;">
-          ${r.es_premium ? '<span class="badge-premium" style="position:absolute;top:16px;left:16px;">👑 Premium</span>' : ''}
+          ${r.es_premium ? '<span class="badge-premium" style="position:absolute;top:16px;left:16px;display:flex;align-items:center;gap:6px;"><i data-lucide="crown"></i> Premium</span>' : ''}
         </div>
         ${videoHTML}
 
         <h1 style="margin:16px 0 8px;">${escapeHTML(r.titulo)}</h1>
         <p class="receta-autor" style="color:#888;margin:0 0 12px;">
-          Por <a href="perfil.html?id=${r.usuario_id}" style="color:#4caf50;font-weight:600;">
+          Por <a href="perfil.html?id=${r.usuario_id}" style="color:#E07A5F;font-weight:600;">
             ${escapeHTML(r.autor || 'Chef Foráneo')}
           </a>
         </p>
 
-        <div class="recipe-tags" style="margin-bottom:16px;">${tagsHtml}</div>
+        <div class="recipe-tags-container">
+          ${tagsHtml}
+        </div>
 
         <div class="receta-actions" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
-          <button id="like-btn" class="btn-like ${r.likedByUser ? 'liked' : ''}"
-            data-liked="${r.likedByUser ? '1' : '0'}" onclick="window.toggleLike()">
-            ❤️ <span id="like-count">${r.likes || 0}</span>
-          </button>
-          <button id="fav-btn" class="btn-fav ${r.favoriteByUser ? 'favorited' : ''}" 
-            data-fav="${r.favoriteByUser ? '1' : '0'}" onclick="window.toggleFav()">
-            ${r.favoriteByUser ? '⭐ Guardado' : '☆ Guardar'}
-          </button>
+          <div class="meta-badge likes ${r.likedByUser ? 'active' : ''}" onclick="window.toggleLike()">
+            <i data-lucide="heart"></i> <span id="like-count-badge">${r.likes || 0}</span>
+          </div>
+          <div class="meta-badge favorite ${r.favoriteByUser ? 'active' : ''}" onclick="window.toggleFav()">
+            <i data-lucide="star"></i> <span>${r.favoriteByUser ? 'Guardado' : 'Guardar'}</span>
+          </div>
           ${esAutor ? `
             <button onclick="window.location.href='subir-receta.html?edit=${r.id}'" class="btn-editar"
-              style="padding:10px 20px;background:#4caf50;color:white;border:none;border-radius:30px;cursor:pointer;font-weight:600;">
-              ✏️ Editar receta
+              style="padding:10px 20px;background:#E07A5F;color:white;border:none;border-radius:30px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+              <i data-lucide="edit-3" style="width:18px;height:18px;"></i> Editar
             </button>
             <button onclick="window.eliminarReceta(${r.id})" class="btn-eliminar"
-              style="padding:10px 20px;background:#e53935;color:white;border:none;border-radius:30px;cursor:pointer;font-weight:600;">
-              🗑️ Eliminar receta
+              style="padding:10px 20px;background:#e53935;color:white;border:none;border-radius:30px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+              <i data-lucide="trash-2" style="width:18px;height:18px;"></i> Eliminar
             </button>
           ` : ''}
         </div>
@@ -505,84 +494,86 @@ function renderizarReceta(r) {
 
       <div class="receta-body">
         <div class="seccion">
-          <h2>📝 Ingredientes</h2>
+          <h2><i data-lucide="file-text"></i> Ingredientes</h2>
           <ul class="lista-ingredientes">
-            ${ings.map(i => `<li>🥘 ${escapeHTML(i)}</li>`).join('')}
+            ${ings.map(i => `<li style="display:flex;align-items:center;gap:8px;"><i data-lucide="chevron-right" style="color:#E07A5F;"></i> ${escapeHTML(i)}</li>`).join('')}
           </ul>
         </div>
 
         <div class="seccion">
-          <h2>👨‍🍳 Preparación</h2>
+          <h2><i data-lucide="chef-hat"></i> Preparación</h2>
           <div class="pasos-lista">
-            ${pasos.map((p, idx) => `
-              <div class="paso-item">
-                <div class="paso-numero">${idx + 1}</div>
-                <div class="paso-texto">${escapeHTML(p)}</div>
-              </div>`).join('')}
+            ${pasos.map((p, idx) => {
+              // Limpiar número al inicio del texto si existe (ej: "1. ", "1- ")
+              const textoLimpio = p.replace(/^\d+[\s\.)\/-]+/, '');
+              return `
+                <div class="paso-item">
+                  <div class="paso-numero">${idx + 1}</div>
+                  <div class="paso-texto">${escapeHTML(textoLimpio)}</div>
+                </div>`;
+            }).join('')}
           </div>
         </div>
 
-        <button class="btn-plan-semanal" onclick="window.agregarAPlan()" style="margin:20px 0;">
-          📅 Agregar al planificador
+        <button class="btn-plan-semanal" onclick="window.agregarAPlan()" style="margin:20px 0;display:inline-flex;align-items:center;gap:8px;justify-content:center;">
+          <i data-lucide="calendar"></i> Agregar al planificador
         </button>
 
         <div class="seccion">
           <h2>💬 Comentarios</h2>
           ${(userId && esPremiumUser) ? `
             <div id="comentarios-lista" class="comentarios-lista">
-              <div style="text-align:center;padding:20px;">Cargando comentarios...</div>
+              <div class="comentarios-loading">Cargando comentarios...</div>
             </div>
-            <div class="nuevo-comentario-area" style="display:flex;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #eee;">
-              <textarea id="nuevo-comentario"
-                placeholder="Escribe un comentario..." rows="2"
-                style="flex:1;padding:12px;border:2px solid #e8f5e9;border-radius:16px;font-family:inherit;resize:none;outline:none;font-size:0.9rem;"></textarea>
-              <button id="enviar-comentario-btn" onclick="window.enviarComentario()"
-                style="padding:8px 20px;background:linear-gradient(135deg,#4caf50,#2e7d32);color:white;border:none;border-radius:30px;cursor:pointer;font-weight:500;white-space:nowrap;">
-                Enviar
-              </button>
+            <div class="nuevo-comentario-wrapper">
+              <div class="input-container">
+                <textarea id="nuevo-comentario"
+                  placeholder="Escribe un comentario..." rows="1"></textarea>
+                <button id="enviar-comentario-btn" class="btn-send-comment" onclick="window.enviarComentario()">
+                  <i data-lucide="send"></i>
+                </button>
+              </div>
             </div>` : userId ? `
-            <div class="premium-lock-box" style="text-align:center;padding:40px 20px;background:#f9f9f9;border-radius:24px;margin-top:16px;border:2px dashed #4caf50;">
-              <div style="font-size:3rem;margin-bottom:15px;">🔒</div>
-              <h3 style="color:#1b5e20;margin-bottom:10px;">¡Únete a la conversación!</h3>
+            <div class="premium-lock-box" style="text-align:center;padding:40px 20px;background:#FDFBF7;border-radius:24px;margin-top:16px;border:2px dashed #E07A5F;">
+              <div style="font-size:3rem;margin-bottom:15px;color:#D95D39;"><i data-lucide="lock" style="width:64px;height:64px;"></i></div>
+              <h3 style="color:#D95D39;margin-bottom:10px;">¡Únete a la conversación!</h3>
               <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">
-                Los comentarios son exclusivos para usuarios <strong>Premium</strong> 👑
+                Los comentarios son exclusivos para usuarios <strong>Premium</strong>
               </p>
               <button onclick="window.location.href='perfil.html'"
-                style="margin-top:20px;padding:10px 25px;background:#4caf50;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;">
-                Actualizar a Premium
+                style="margin-top:20px;padding:12px 30px;background:#E07A5F;color:white;border:none;border-radius:30px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+                Actualizar a Premium <i data-lucide="crown" style="width:18px;height:18px;"></i>
               </button>
             </div>` : `
             <p style="text-align:center;color:#aaa;margin-top:16px;padding:20px;background:#f5f5f5;border-radius:12px;">
-              <a href="login.html" style="color:#4caf50;font-weight:600;">Inicia sesión</a> para participar en los comentarios.
+              <a href="login.html" style="color:#E07A5F;font-weight:600;">Inicia sesión</a> para participar en los comentarios.
             </p>`}
         </div>
       </div>
     </div>
 
-    <div id="modal-plan" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center;">
-      <div style="background:white;border-radius:24px;padding:30px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto;">
+    <div id="modal-plan" class="modal-overlay">
+      <div class="modal-content">
         <div id="plan-paso-1">
-          <h3 style="margin:0 0 20px;color:#1b5e20;">📅 ¿Qué día?</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <h3 class="modal-title"><i data-lucide="calendar"></i> ¿Qué día?</h3>
+          <div class="modal-grid">
             ${['lunes','martes','miercoles','jueves','viernes','sabado','domingo'].map(d => `
-              <button class="btn-dia" data-dia="${d}"
-                style="padding:12px;border:2px solid #e8f5e9;border-radius:16px;background:white;cursor:pointer;font-weight:500;text-transform:capitalize;transition:all .2s;">
+              <button class="btn-dia" data-dia="${d}">
                 ${d.charAt(0).toUpperCase()+d.slice(1)}
               </button>`).join('')}
           </div>
-          <button class="close-plan-modal" style="margin-top:20px;width:100%;padding:12px;border:none;border-radius:16px;background:#f5f5f5;cursor:pointer;">Cancelar</button>
+          <button class="close-plan-modal btn-cancelar">Cancelar</button>
         </div>
         <div id="plan-paso-2" style="display:none;">
-          <h3 style="margin:0 0 6px;color:#1b5e20;">🍽️ ¿Qué comida?</h3>
-          <p id="texto-dia-seleccionado" style="margin:0 0 20px;color:#888;font-size:0.9rem;"></p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <h3 class="modal-title"><i data-lucide="utensils"></i> ¿Qué comida?</h3>
+          <p id="texto-dia-seleccionado" class="modal-subtitle"></p>
+          <div class="modal-grid">
             ${['desayuno','comida','cena','merienda','snack'].map(c => `
-              <button class="btn-comida" data-comida="${c}"
-                style="padding:12px;border:2px solid #e8f5e9;border-radius:16px;background:white;cursor:pointer;font-weight:500;text-transform:capitalize;transition:all .2s;">
+              <button class="btn-comida" data-comida="${c}">
                 ${c.charAt(0).toUpperCase()+c.slice(1)}
               </button>`).join('')}
           </div>
-          <button id="btn-volver-paso-1" style="margin-top:16px;width:100%;padding:12px;border:none;border-radius:16px;background:#f5f5f5;cursor:pointer;">← Volver</button>
+          <button id="btn-volver-paso-1" class="btn-volver">← Volver</button>
         </div>
       </div>
     </div>`;
@@ -591,6 +582,7 @@ function renderizarReceta(r) {
   // No es necesario llamar a checkFav() aquí ya que lo seteamos arriba en el HTML del botón
 
   setupPlanEventListeners();
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function guardarEnPlan(dia, comida) {
@@ -609,9 +601,9 @@ async function guardarEnPlan(dia, comida) {
     const planData = await resGet.json();
     const plan = planData.plan || {};
 
-    ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'].forEach(d => {
+    ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].forEach(d => {
       if (!plan[d]) plan[d] = {};
-      ['desayuno','comida','cena','merienda','snack'].forEach(c => {
+      ['desayuno', 'comida', 'cena', 'merienda', 'snack'].forEach(c => {
         if (!plan[d][c]) plan[d][c] = [];
       });
     });
@@ -626,12 +618,12 @@ async function guardarEnPlan(dia, comida) {
     }
 
     plan[dia][comida].push({
-      id:             recetaActual.id,
-      titulo:         recetaActual.titulo,
-      imagen:         recetaActual.imagen,
-      precio:         recetaActual.precio,
+      id: recetaActual.id,
+      titulo: recetaActual.titulo,
+      imagen: recetaActual.imagen,
+      precio: recetaActual.precio,
       precio_numerico: recetaActual.precio_numerico || 0,
-      tiempo:         recetaActual.tiempo
+      tiempo: recetaActual.tiempo
     });
 
     const resPost = await fetch('/api/users/me/planner', {
@@ -641,7 +633,7 @@ async function guardarEnPlan(dia, comida) {
     });
 
     if (resPost.ok) {
-      showToast(`✅ ¡Listo! Agregada al ${dia} (${comida})`);
+      showToast(`¡Listo! Agregada al ${dia} (${comida})`);
       modal.style.display = 'none';
     } else {
       throw new Error('Error al guardar');
@@ -655,7 +647,7 @@ async function guardarEnPlan(dia, comida) {
   }
 }
 
-window.agregarAPlan = function() {
+window.agregarAPlan = function () {
   if (!currentUser) { showToast('Inicia sesión para planificar comidas', true); return; }
   const modal = document.getElementById('modal-plan');
   if (modal) {
@@ -670,14 +662,14 @@ function setupPlanEventListeners() {
   if (!modal) return;
 
   modal.onclick = (e) => {
-    const btnDia    = e.target.closest('.btn-dia');
+    const btnDia = e.target.closest('.btn-dia');
     const btnComida = e.target.closest('.btn-comida');
     const btnCerrar = e.target.closest('.close-plan-modal');
     const btnVolver = e.target.closest('#btn-volver-paso-1');
 
     if (btnDia) {
       diaPlanSeleccionado = btnDia.dataset.dia;
-      const nombres = { lunes:'Lunes', martes:'Martes', miercoles:'Miércoles', jueves:'Jueves', viernes:'Viernes', sabado:'Sábado', domingo:'Domingo' };
+      const nombres = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
       document.getElementById('texto-dia-seleccionado').textContent = `Agregando al ${nombres[diaPlanSeleccionado]}`;
       document.getElementById('plan-paso-1').style.display = 'none';
       document.getElementById('plan-paso-2').style.display = 'block';
@@ -695,16 +687,16 @@ function mostrarError(msg) {
   const c = document.getElementById('receta-container');
   if (c) c.innerHTML = `
     <div class="error-message">
-      <span class="error-icon">😕</span>
+      <i data-lucide="alert-circle" style="width:48px;height:48px;color:#ff5252;"></i>
       <p>${escapeHTML(msg)}</p>
     </div>`;
 }
 
 // Exponer funciones al scope global
-window.toggleLike         = toggleLike;
-window.toggleFav          = toggleFav;
+window.toggleLike = toggleLike;
+window.toggleFav = toggleFav;
 window.eliminarComentario = window.eliminarComentario; // ya definido arriba
-window.eliminarReceta     = window.eliminarReceta;     // ya definido arriba
+window.eliminarReceta = window.eliminarReceta;     // ya definido arriba
 
 async function init() {
   await cargarUsuario();
@@ -712,3 +704,18 @@ async function init() {
   setupPlanEventListeners();
 }
 init();
+
+// Lógica de ocultado automático de la navegación al scroll
+(function () {
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    if (window.scrollY > lastScrollY && window.scrollY > 100) {
+      nav.classList.add('nav-hidden');
+    } else {
+      nav.classList.remove('nav-hidden');
+    }
+    lastScrollY = window.scrollY;
+  });
+})();

@@ -1,25 +1,44 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>ForananeoKitchen - Planificador Semanal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/planificador.css">
   <link rel="stylesheet" href="css/dark-mode.css">
+  <style>
+    [data-lucide] {
+      width: 18px !important;
+      height: 18px !important;
+      stroke-width: 2.5px;
+    }
+  </style>
   <link rel="stylesheet" href="css/bottom-nav.css">
+  <link rel="stylesheet" href="css/chatbot.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
-  <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">🌙</button>
-  
+  <div class="floating-actions">
+    <button id="chat-boton" style="display:none;"><i data-lucide="bot"></i></button>
+    <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+      <i data-lucide="moon" class="moon-icon"></i>
+      <i data-lucide="sun" class="sun-icon"></i>
+    </button>
+  </div>
+
   <div class="planificador-screen">
     <div class="planificador-header">
-      <h1>📅 Planificador Semanal</h1>
+      <h1><i data-lucide="calendar"></i> Planificador Semanal</h1>
       <p>Organiza tus comidas - Agrega recetas a cada día</p>
     </div>
-    
+
     <div class="presupuesto-section">
       <div class="presupuesto-info">
         <div class="presupuesto-label">Presupuesto Semanal</div>
@@ -40,55 +59,64 @@
         </div>
       </div>
       <div class="acciones">
-        <button class="btn btn-secondary" id="exportar-pdf-btn">📄 Exportar PDF</button>
-        <button class="btn btn-primary" id="lista-compras-btn">📋 Lista de Compras</button>
+
+        <button class="btn btn-primary" id="lista-compras-btn"><i data-lucide="shopping-cart"></i> Lista de
+          Compras</button>
       </div>
     </div>
-    
+
     <div id="dias-container" class="dias-container"></div>
   </div>
-  
+
   <!-- Modal para seleccionar recetas -->
   <div id="modal-recetas" class="modal-recetas">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>📖 Seleccionar receta</h3>
+        <h3><i data-lucide="book"></i> Seleccionar receta</h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-search">
-        <input type="text" id="modal-search-input" placeholder="🔍 Buscar receta...">
+        <div style="position:relative;">
+          <i data-lucide="search"
+            style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#999;width:18px;"></i>
+          <input type="text" id="modal-search-input" placeholder="Buscar receta..." style="padding-left:40px;">
+        </div>
       </div>
       <div id="modal-recetas-list" class="modal-recetas-list"></div>
     </div>
   </div>
-  
+
   <nav class="bottom-nav">
-    <a href="home.html" class="nav-item">
-      <span>🏠</span>
-      <span>Inicio</span>
-    </a>
-    <a href="subir-receta.html" class="nav-item">
-      <span>📝</span>
-      <span>Subir</span>
-    </a>
-    <a href="planificador.html" class="nav-item active">
-      <span>📅</span>
-      <span>Plan</span>
-    </a>
-    <a href="comunidad.html" class="nav-item">
-      <span>👥</span>
-      <span>Comunidad</span>
-    </a>
-    <a href="perfil.html" class="nav-item">
-      <span>👤</span>
-      <span>Perfil</span>
-    </a>
+    <a href="home.html" class="nav-item"><i data-lucide="home"></i><span>Inicio</span></a>
+    <a href="subir-receta.html" class="nav-item"><i data-lucide="plus-circle"></i><span>Subir</span></a>
+    <a href="planificador.html" class="nav-item active"><i data-lucide="calendar"></i><span>Plan</span></a>
+    <a href="comunidad.html" class="nav-item"><i data-lucide="users"></i><span>Comunidad</span></a>
+    <a href="perfil.html" class="nav-item"><i data-lucide="user"></i><span>Perfil</span></a>
   </nav>
-  
+
+  <div id="chat-window" style="display:none;">
+    <div id="chat-header">
+      <i data-lucide="bot"></i> Chef IA
+      <button id="cerrar-chat-btn" title="Minimizar"><i data-lucide="minus"></i></button>
+    </div>
+    <div id="chat-messages">
+      <div class="msg msg-bot">¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?</div>
+    </div>
+    <div id="chat-input-area">
+      <input id="chat-input" type="text" placeholder="Pregúntame una receta...">
+      <button id="enviar-chat-btn">Enviar</button>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="js/supabaseClient.js" type="module"></script>
   <script src="js/planificador.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
+
 </html>
