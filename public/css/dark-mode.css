@@ -100,11 +100,22 @@ body.dark-mode .recipe-price {
 }
 
 body.dark-mode .unused-class-temp-91,
-body.dark-mode .receta-precio,
 body.dark-mode .modal-receta-precio,
 body.dark-mode .info-value,
 body.dark-mode .stat-value.restante {
   color: #E07A5F !important
+}
+
+body.dark-mode .receta-precio {
+  background: rgba(46, 125, 50, 0.15) !important;
+  color: #81c784 !important;
+  border: 1px solid rgba(46, 125, 50, 0.3) !important;
+}
+
+body.dark-mode .receta-tiempo {
+  background: rgba(245, 124, 0, 0.15) !important;
+  color: #ffb74d !important;
+  border: 1px solid rgba(245, 124, 0, 0.3) !important;
 }
 
 body.dark-mode .recipe-time {
@@ -140,11 +151,13 @@ body.dark-mode .recipe-favorite {
   gap: 4px !important;
 }
 
-body.dark-mode .recipe-likes.active i {
+body.dark-mode .recipe-likes.active i,
+body.dark-mode .recipe-likes.active svg {
   fill: #ef5350 !important;
 }
 
-body.dark-mode .recipe-favorite.active i {
+body.dark-mode .recipe-favorite.active i,
+body.dark-mode .recipe-favorite.active svg {
   fill: #fff176 !important;
 }
 
@@ -496,12 +509,118 @@ body.dark-mode .seccion-btn.active {
   color: #F2CC8F !important
 }
 
-body.dark-mode .seccion-btn.active::after {
-  background: #F2CC8F !important
+body.dark-mode .seccion-btn.active::before {
+  background: #E07A5F !important
+}
+
+body.dark-mode .stat {
+  background: #1E1E24 !important;
+  border-color: #3B3B45 !important;
+}
+
+body.dark-mode .stat:hover {
+  border-color: #E07A5F !important;
+  box-shadow: 0 6px 15px rgba(224, 122, 95, 0.2) !important;
 }
 
 body.dark-mode .stat-number {
   color: #F2CC8F !important
+}
+
+body.dark-mode .stat-label {
+  color: #c9d1d9 !important
+}
+
+body.dark-mode .perfil-nombre-display {
+  color: #e6edf3 !important
+}
+
+body.dark-mode .perfil-bio-display {
+  color: #c9d1d9 !important
+}
+
+body.dark-mode .perfil-email-display {
+  color: #E07A5F !important
+}
+
+body.dark-mode .perfil-badge.free {
+  background: #34343D !important;
+  color: #c9d1d9 !important
+}
+
+body.dark-mode .puntos-badge {
+  background: rgba(224, 122, 95, 0.15) !important;
+  color: #ffb74d !important;
+  border-color: rgba(224, 122, 95, 0.25) !important;
+}
+
+body.dark-mode .btn-editar-perfil {
+  background: #34343D !important;
+  color: #E07A5F !important;
+  border-color: #E07A5F !important;
+}
+
+body.dark-mode .btn-editar-perfil:hover {
+  background: #E07A5F !important;
+  color: white !important;
+}
+
+body.dark-mode .btn-feedback {
+  background: rgba(21, 101, 192, 0.15) !important;
+  color: #64b5f6 !important;
+  border-color: rgba(21, 101, 192, 0.3) !important;
+}
+
+body.dark-mode .btn-feedback:hover {
+  background: #1565c0 !important;
+  color: white !important;
+}
+
+body.dark-mode .btn-logout-main {
+  background: rgba(198, 40, 40, 0.15) !important;
+  color: #ef5350 !important;
+  border-color: rgba(198, 40, 40, 0.3) !important;
+}
+
+body.dark-mode .btn-logout-main:hover {
+  background: #c62828 !important;
+  color: white !important;
+}
+
+body.dark-mode .premium-manage-card {
+  background: #2D2D35 !important;
+  border-color: #F2CC8F !important;
+  box-shadow: 0 4px 15px rgba(255, 179, 0, 0.1) !important;
+}
+
+body.dark-mode .premium-manage-body p {
+  color: #c9d1d9 !important;
+}
+
+body.dark-mode .btn-cancel-sub {
+  background: #1c2128 !important;
+  color: #8b949e !important;
+  border-color: #30363d !important;
+}
+
+body.dark-mode .btn-cancel-sub:hover {
+  background: #3d1515 !important;
+  color: #ef5350 !important;
+  border-color: #6e2323 !important;
+}
+
+body.dark-mode .receta-info-pie {
+  background: #2D2D35 !important;
+  border-top-color: #3B3B45 !important;
+}
+
+body.dark-mode .receta-titulo {
+  color: #F4F1DE !important;
+}
+
+body.dark-mode .receta-likes-pie {
+  background: rgba(224, 122, 95, 0.15) !important;
+  color: #ef5350 !important;
 }
 
 body.dark-mode .form-group label {
@@ -515,21 +634,6 @@ body.dark-mode .btn-cambiar-avatar {
 
 body.dark-mode .receta-grid-item {
   border: 1px solid #30363d !important
-}
-
-body.dark-mode .receta-titulo {
-  background: linear-gradient(transparent, rgba(0, 0, 0, .85)) !important
-}
-
-/* Badge premium */
-body.dark-mode .badge-premium {
-  background: linear-gradient(90deg, #b8860b, #d4a017) !important;
-  color: #fff !important
-}
-
-body.dark-mode .badge-free {
-  background: #1c2128 !important;
-  color: #c9d1d9 !important
 }
 
 /* Login */
@@ -661,71 +765,7 @@ body.dark-mode .nuevo-comentario-area button {
   color: #fff !important
 }
 
-/* Perfil */
-body.dark-mode .pref-tag {
-  background: #1c2128 !important;
-  color: #F2CC8F !important;
-  border: 1px solid #30363d !important
-}
-
-body.dark-mode .pref-tag.selected {
-  background: #E07A5F !important;
-  color: #fff !important;
-  border-color: #D95D39 !important
-}
-
-body.dark-mode .avatar-img {
-  border-color: #E07A5F !important
-}
-
-body.dark-mode .secciones-perfil {
-  border-bottom-color: #30363d !important
-}
-
-body.dark-mode .seccion-btn {
-  color: #c9d1d9 !important;
-  background: none !important
-}
-
-body.dark-mode .seccion-btn.active {
-  color: #F2CC8F !important
-}
-
-body.dark-mode .seccion-btn.active::after {
-  background: #F2CC8F !important
-}
-
-body.dark-mode .stat-number {
-  color: #F2CC8F !important
-}
-
-body.dark-mode .form-group label {
-  color: #F2CC8F !important
-}
-
-body.dark-mode .btn-cambiar-avatar {
-  background: #1c2128 !important;
-  color: #F2CC8F !important
-}
-
-body.dark-mode .receta-grid-item {
-  border: 1px solid #30363d !important
-}
-
-body.dark-mode .receta-titulo {
-  background: linear-gradient(transparent, rgba(0, 0, 0, .85)) !important
-}
-
-/* Badge premium */
-body.dark-mode .badge-premium {
-  background: linear-gradient(90deg, #b8860b, #d4a017) !important;
-  color: #fff !important
-}
-
-body.dark-mode .badge-free {
-  background: #1c2128 !important;
-  color: #c9d1d9 !important
-}
+/* Perfil - duplicados limpiados */
 
 /* Login */
 body.dark-mode .login-screen {
@@ -991,9 +1031,12 @@ body.dark-mode .reward-title {
 body.dark-mode .perfil-nombre-display,
 body.dark-mode .perfil-bio-display,
 body.dark-mode .premium-manage-body p,
-body.dark-mode .reward-benefit,
 body.dark-mode .stat-label {
   color: #8b949e !important;
+}
+
+body.dark-mode .reward-benefit {
+  color: #E6EDF3 !important;
 }
 
 body.dark-mode .btn-editar-perfil,
@@ -1094,4 +1137,124 @@ body.dark-mode .puntos-display {
 body.dark-mode .header-avatar {
   border-color: #E07A5F !important;
   background: #1E1E24 !important;
+}
+
+body.dark-mode .item-recetas {
+  color: #a9a9b2 !important;
+}
+
+/* Pantalla Receta - Contenedores premium y avisos en modo oscuro */
+body.dark-mode .premium-lock-box {
+  background: #2D2D35 !important;
+  border-color: #D95D39 !important;
+  color: #E6EDF3 !important;
+}
+
+body.dark-mode .premium-lock-box p,
+body.dark-mode .premium-lock-box h3 {
+  color: #E6EDF3 !important;
+}
+
+body.dark-mode .comment-login-prompt {
+  background: #2D2D35 !important;
+  color: #8B949E !important;
+}
+
+/* Modal de Pago - Modo Oscuro Premium */
+body.dark-mode .modal-pago-content {
+  background: #1E1E24 !important;
+  color: #E6EDF3 !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+}
+
+body.dark-mode .modal-pago-header {
+  background: linear-gradient(135deg, #2D2D35, #1E1E24) !important;
+  border-bottom: 1px solid #3B3B45 !important;
+}
+
+body.dark-mode .modal-pago-header h3 {
+  color: #F2CC8F !important;
+}
+
+body.dark-mode .btn-close-modal {
+  background: #2D2D35 !important;
+  color: #c9d1d9 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}
+
+body.dark-mode .secure-badge-banner {
+  background: #2D2D35 !important;
+  border-color: #3B3B45 !important;
+}
+
+body.dark-mode .secure-badge-banner span {
+  color: #F2CC8F !important;
+}
+
+body.dark-mode .form-pago label {
+  color: #8b949e !important;
+}
+
+body.dark-mode .form-pago input {
+  background: #2D2D35 !important;
+  border-color: #3B3B45 !important;
+  color: #E6EDF3 !important;
+}
+
+body.dark-mode .form-pago input:focus {
+  border-color: #E07A5F !important;
+  box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.2) !important;
+}
+
+body.dark-mode .tarjeta-item {
+  border-color: #3B3B45 !important;
+  background: #1E1E24 !important;
+  color: #E6EDF3 !important;
+}
+
+body.dark-mode .tarjeta-item:hover {
+  border-color: #E07A5F !important;
+  background: #2D2D35 !important;
+}
+
+body.dark-mode .tarjeta-item.seleccionada {
+  border-color: #D95D39 !important;
+  background: #3B2D26 !important;
+}
+
+body.dark-mode .modal-pago-body p {
+  color: #8b949e !important;
+}
+
+body.dark-mode .checkbox-group label {
+  color: #F2CC8F !important;
+}
+
+body.dark-mode .reward-btn:disabled {
+  background: #3B3B45 !important;
+  color: #8B949E !important;
+  cursor: not-allowed;
+}
+
+body.dark-mode .rewards-header h2 {
+  color: #F2CC8F !important;
+}
+
+body.dark-mode .rewards-header p {
+  color: #F4F1DE !important;
+}
+
+body.dark-mode .premium-lock-box .lock-icon-wrapper {
+  color: #F2CC8F !important;
+}
+
+body.dark-mode .btn-premium-upgrade {
+  background: #E07A5F !important;
+  color: white !important;
+  box-shadow: 0 4px 10px rgba(224, 122, 95, 0.2) !important;
+}
+
+body.dark-mode .btn-premium-upgrade:hover {
+  background: #D95D39 !important;
+  box-shadow: 0 6px 15px rgba(224, 122, 95, 0.4) !important;
 }

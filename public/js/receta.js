@@ -413,7 +413,7 @@ function renderizarReceta(r) {
   const videoHTML = (() => {
     if (!esPremiumUser) {
       if (r.video_youtube || r.video_url) {
-        return `<div class="video-container" style="margin:20px 0;background:#FDFBF7;border-radius:16px;padding:30px;text-align:center;border:2px dashed #E07A5F;">
+        return `<div class="video-container premium-lock-box" style="margin:20px 0;background:#FDFBF7;border-radius:16px;padding:30px;text-align:center;border:2px dashed #E07A5F;">
           <div style="font-size:2.5rem;margin-bottom:10px;"><i data-lucide="lock" style="width:48px;height:48px;color:#D95D39;"></i></div>
           <p style="color:#D95D39;font-weight:600;margin:0 0 8px;">Video exclusivo Premium</p>
           <p style="color:#666;font-size:0.9rem;margin:0 0 16px;">Actualiza tu cuenta para ver el video de esta receta.</p>
@@ -545,7 +545,7 @@ function renderizarReceta(r) {
                 Actualizar a Premium <i data-lucide="crown" style="width:18px;height:18px;"></i>
               </button>
             </div>` : `
-            <p style="text-align:center;color:#aaa;margin-top:16px;padding:20px;background:#f5f5f5;border-radius:12px;">
+            <p class="comment-login-prompt" style="text-align:center;color:#aaa;margin-top:16px;padding:20px;background:#f5f5f5;border-radius:12px;">
               <a href="login.html" style="color:#E07A5F;font-weight:600;">Inicia sesión</a> para participar en los comentarios.
             </p>`}
         </div>
@@ -620,10 +620,10 @@ async function guardarEnPlan(dia, comida) {
     plan[dia][comida].push({
       id: recetaActual.id,
       titulo: recetaActual.titulo,
-      imagen: recetaActual.imagen,
       precio: recetaActual.precio,
       precio_numerico: recetaActual.precio_numerico || 0,
-      tiempo: recetaActual.tiempo
+      tiempo: recetaActual.tiempo,
+      ingredientes: recetaActual.ingredientes || ''
     });
 
     const resPost = await fetch('/api/users/me/planner', {

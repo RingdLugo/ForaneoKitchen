@@ -450,17 +450,19 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
 
   if (isLocked) {
     container.innerHTML = `
-      <div class="premium-lock-box" style="text-align:center;padding:60px 20px;background:#FDFBF7;border-radius:24px;grid-column:1/-1;border:2px dashed #E07A5F;margin:20px 0;">
-        <div style="font-size:3rem;margin-bottom:15px;color:#D95D39;"><i data-lucide="lock" style="width:64px;height:64px;"></i></div>
-        <h3 style="color:#D95D39;margin-bottom:10px;">Contenido Premium</h3>
-        <p style="margin:0;color:#666;font-size:0.95rem;line-height:1.5;">
-          Esta sección es exclusiva para usuarios <strong>Premium</strong> <i data-lucide="crown" style="width:18px;height:18px;display:inline-block;vertical-align:middle;"></i>
+      <div class="premium-lock-box">
+        <div class="lock-icon-wrapper"><i data-lucide="lock" style="width: 48px; height: 48px;"></i></div>
+        <h3>Contenido Premium</h3>
+        <p>
+          Esta sección es exclusiva para usuarios <strong>Premium</strong> <i data-lucide="crown" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i>
         </p>
-        <button id="btn-upgrade-from-grid" onclick="window.location.href='perfil.html'" 
-          style="margin-top:20px;padding:12px 30px;background:#E07A5F;color:white;border:none;border-radius:30px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
-          Mejorar Cuenta <i data-lucide="arrow-right" style="width:18px;"></i>
+        <button id="btn-upgrade-from-grid" class="btn-premium-upgrade" onclick="abrirModalPago()">
+          Mejorar Cuenta <i data-lucide="arrow-right" style="width:16px;"></i>
         </button>
       </div>`;
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
     return;
   }
 
@@ -493,11 +495,11 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
           <div class="receta-overlay">
             <span>Ver detalles</span>
           </div>
-          <div class="receta-info-pie" style="padding:8px; background:white;">
-            <div class="receta-titulo" style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(r.titulo)}</div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-              <span style="font-size:0.75rem; color:#666; display:flex; align-items:center; gap:4px;"><i data-lucide="heart" style="width:12px;height:12px;${r.likedByUser ? 'fill:#E07A5F;color:#E07A5F;' : ''}"></i> ${r.likes || 0}</span>
-              ${r.favoriteByUser || containerId === 'favoritos-grid' ? '<i data-lucide="star" style="width:14px;height:14px;fill:#F2CC8F;color:#F2CC8F;"></i>' : ''}
+          <div class="receta-info-pie">
+            <div class="receta-titulo">${escapeHTML(r.titulo)}</div>
+            <div class="receta-meta-pie">
+              <span class="receta-likes-pie"><i data-lucide="heart" style="${r.likedByUser ? 'fill:#E07A5F;color:#E07A5F;' : ''}"></i> ${r.likes || 0}</span>
+              ${r.favoriteByUser || containerId === 'favoritos-grid' ? '<i data-lucide="star" class="receta-star-pie"></i>' : ''}
             </div>
           </div>
           ${btnEliminar}
@@ -736,6 +738,10 @@ async function abrirModalPago(esRenovacion = false) {
   modal.style.display    = 'flex';
   modal.dataset.renovar  = esRenovacion;
 
+  document.body.classList.add('no-scroll');
+  const themeToggle = document.getElementById('dark-mode-toggle');
+  if (themeToggle) themeToggle.style.setProperty('display', 'none', 'important');
+
   const numEl = document.getElementById('pago-numero');
   const expEl = document.getElementById('pago-exp');
   const cvvEl = document.getElementById('pago-cvv');
@@ -747,11 +753,17 @@ async function abrirModalPago(esRenovacion = false) {
   tarjetaSeleccionadaId = null;
   await cargarMetodosPago();
 }
+window.abrirModalPago = abrirModalPago;
 
 function cerrarModalPago() {
   const modal = document.getElementById('modal-pago');
   if (modal) modal.style.display = 'none';
+  
+  document.body.classList.remove('no-scroll');
+  const themeToggle = document.getElementById('dark-mode-toggle');
+  if (themeToggle) themeToggle.style.removeProperty('display');
 }
+window.cerrarModalPago = cerrarModalPago;
 
 async function cargarMetodosPago() {
   const seccion  = document.getElementById('metodos-guardados-seccion');

@@ -23,7 +23,7 @@
       .then(user => {
         const hasChat = user.es_premium || user.rol === 'premium' ||
           (user.preferencias || []).some(p => typeof p === 'string' && p.startsWith('PERMISO_CHAT:'));
-        if (hasChat) chatBoton.style.display = 'flex';
+        if (hasChat) chatBoton.classList.add('premium-visible');
       })
       .catch(() => { });
   }

@@ -57,7 +57,7 @@ async function cargarUsuario() {
         const b = document.getElementById('premium-badge');
         if (b) b.style.display = 'flex';
         const c = document.getElementById('chat-boton');
-        if (c) c.style.display = 'block';
+        if (c) c.classList.add('premium-visible');
       }
     }
   } catch (e) {
@@ -145,28 +145,134 @@ function renderizarRecetas(recetas) {
   container.innerHTML = recetas.map((r, i) => {
     const tagsHtml = (r.etiquetas || []).slice(0, 3).map(t => `<span class="recipe-tag">${t}</span>`).join('');
     return `
-      <div class="recipe-card" style="opacity:0; animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${i * 0.05}s;" onclick="window.location.href='receta.html?id=${r.id}'">
-        <div class="recipe-image">
+      <div class="recipe-card" style="opacity:0; animation: fadeInUp 0.4s ease-out forwards; animation-delay: ${i * 0.05}s;" data-id="${r.id}">
+        <div class="recipe-image clickable-recipe" style="cursor: pointer;">
           ${r.es_premium ? '<span class="badge-premium"><i data-lucide="crown"></i> Premium</span>' : ''}
           <img src="${r.imagen || placeholder}" alt="${r.titulo}" onerror="this.src='${placeholder}'" loading="lazy">
         </div>
         <div class="recipe-content">
-          <h3>${r.titulo}</h3>
+          <h3 class="clickable-recipe" style="cursor: pointer;">${r.titulo}</h3>
           <p class="recipe-autor">Por ${r.autor || 'Chef Foráneo'}</p>
           <div class="recipe-meta">
             <span class="recipe-time"><i data-lucide="clock"></i> ${r.tiempo || '30 min'}</span>
             <span class="recipe-price"><i data-lucide="banknote"></i> ${r.precio || '$$'}</span>
-            <span class="recipe-likes ${r.likedByUser ? 'active' : ''}"><i data-lucide="heart"></i> ${r.likes || 0}</span>
-            <span class="recipe-favorite ${r.favoriteByUser ? 'active' : ''}"><i data-lucide="star"></i></span>
+            <span class="recipe-likes ${r.likedByUser ? 'active' : ''}" data-id="${r.id}" data-likes="${r.likes || 0}" data-liked="${r.likedByUser ? '1' : '0'}">
+              <i data-lucide="heart"></i> <span class="like-count">${r.likes || 0}</span>
+            </span>
+            <span class="recipe-favorite ${r.favoriteByUser ? 'active' : ''}" data-id="${r.id}" data-fav="${r.favoriteByUser ? '1' : '0'}">
+              <i data-lucide="star"></i>
+            </span>
           </div>
           <div class="recipe-tags">${tagsHtml}</div>
-          <button class="btn-ver-mas">Ver detalles</button>
+          <button class="btn-ver-mas clickable-recipe">Ver detalles</button>
         </div>
       </div>
     `;
   }).join('');
 
   if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  // Escuchadores de eventos dinámicos para evitar redirecciones involuntarias
+  container.querySelectorAll('.recipe-card').forEach(card => {
+    const id = card.dataset.id;
+
+    // Navegación exclusiva al dar clic en imagen, título o el botón de Ver detalles
+    card.querySelectorAll('.clickable-recipe').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.location.href = `receta.html?id=${id}`;
+      });
+    });
+
+    // Botón de Like interactivo
+    const likeBtn = card.querySelector('.recipe-likes');
+    if (likeBtn) {
+      likeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleHomeLike(id, likeBtn);
+      });
+    }
+
+    // Botón de Favorito interactivo
+    const favBtn = card.querySelector('.recipe-favorite');
+    if (favBtn) {
+      favBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleHomeFav(id, favBtn);
+      });
+    }
+  });
+}
+
+async function toggleHomeLike(recipeId, btn) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    showToast('Inicia sesión para dar like', true);
+    return;
+  }
+
+  const liked = btn.dataset.liked === '1';
+  const countEl = btn.querySelector('.like-count');
+  const oldCount = parseInt(btn.dataset.likes) || 0;
+
+  // Optimistic UI
+  const newCount = liked ? Math.max(oldCount - 1, 0) : oldCount + 1;
+  countEl.textContent = newCount;
+  btn.classList.toggle('active', !liked);
+  btn.dataset.liked = liked ? '0' : '1';
+  btn.dataset.likes = newCount;
+
+  try {
+    const res = await fetch(`/api/recipes/${recipeId}/like`, {
+      method: liked ? 'DELETE' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!res.ok) throw new Error('Error al procesar me gusta');
+
+    const data = await res.json();
+    if (data.likes !== undefined) {
+      countEl.textContent = data.likes;
+      btn.dataset.likes = data.likes;
+    }
+    showToast(liked ? 'Like eliminado' : '¡Me gusta!');
+  } catch (e) {
+    // Revert optimistic UI
+    countEl.textContent = oldCount;
+    btn.classList.toggle('active', liked);
+    btn.dataset.liked = liked ? '1' : '0';
+    btn.dataset.likes = oldCount;
+    showToast(e.message || 'Error al conectar con el servidor', true);
+  }
+}
+
+async function toggleHomeFav(recipeId, btn) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    showToast('Inicia sesión para guardar', true);
+    return;
+  }
+
+  const fav = btn.dataset.fav === '1';
+
+  // Optimistic UI
+  btn.classList.toggle('active', !fav);
+  btn.dataset.fav = fav ? '0' : '1';
+
+  try {
+    const res = await fetch(`/api/recipes/${recipeId}/favorite`, {
+      method: fav ? 'DELETE' : 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!res.ok) throw new Error('Error al actualizar favoritos');
+    showToast(fav ? 'Eliminado de favoritos' : 'Guardado en favoritos');
+  } catch (e) {
+    // Revert optimistic UI
+    btn.classList.toggle('active', fav);
+    btn.dataset.fav = fav ? '1' : '0';
+    showToast(e.message || 'Error al conectar con el servidor', true);
+  }
 }
 
 async function setupFilters() {

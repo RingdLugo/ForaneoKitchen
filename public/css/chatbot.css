@@ -12,11 +12,15 @@
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
-  display: flex !important;
+  display: none !important; /* Oculto por defecto para usuarios Free */
   align-items: center;
   justify-content: center;
   margin: 0 !important;
   position: static !important;
+}
+
+#chat-boton.premium-visible {
+  display: flex !important; /* Visible solo para usuarios Premium */
 }
 
 #chat-boton:hover {

@@ -70,8 +70,6 @@ function showToast(message, type = 'error') {
 function showLoginBox() {
   loginBox.style.display = 'block';
   registroBox.style.display = 'none';
-  const guestOpt = document.getElementById('guest-option');
-  if (guestOpt) guestOpt.style.display = 'block';
   currentAction = 'login';
 }
 function showRegistroBox() {
@@ -80,8 +78,6 @@ function showRegistroBox() {
   regStep1.style.display = 'block';
   regStep2.style.display = 'none';
   regStep3.style.display = 'none';
-  const guestOpt = document.getElementById('guest-option');
-  if (guestOpt) guestOpt.style.display = 'none';
   currentAction = 'register';
 }
 

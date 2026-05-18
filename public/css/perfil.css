@@ -139,6 +139,15 @@ body {
   max-width: 400px;
 }
 
+.perfil-email-display {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .role-badge-container {
   display: flex;
   gap: 12px;
@@ -151,55 +160,77 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(90deg, #ffb300, #ffca28);
-  color: #2F2E2C;
-  font-size: 0.78rem;
+  background: linear-gradient(135deg, #ffd54f 0%, #ffb300 100%);
+  color: #1a3c34;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 5px 14px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(255, 179, 0, 0.2);
 }
 
 .perfil-badge.free {
-  background: linear-gradient(90deg, #9e9e9e, #757575);
-  color: white;
+  background: #e0e0e0;
+  color: #666;
+  box-shadow: none;
 }
 
 .puntos-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #F4F1DE;
-  color: #D95D39;
-  font-size: 0.78rem;
+  background: #fdf2f0;
+  color: #E07A5F;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 5px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(224, 122, 95, 0.15);
 }
 
 /* ESTADÍSTICAS */
 .stats-container {
-  display: flex;
-  gap: 32px;
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+  margin-bottom: 24px;
+  max-width: 400px;
 }
 
 .stat {
+  background: #FDFBF7;
+  border: 1.5px solid #F4F1DE;
+  border-radius: 16px;
+  padding: 12px 16px;
   text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: default;
+}
+
+.stat:hover {
+  transform: translateY(-2px);
+  border-color: #E07A5F;
+  box-shadow: 0 6px 15px rgba(224, 122, 95, 0.08);
 }
 
 .stat-number {
   font-family: 'Poppins', sans-serif;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #2F2E2C;
+  color: #D95D39;
   display: block;
+  line-height: 1.2;
+  margin-bottom: 2px;
 }
 
 .stat-label {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: #777;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* ACCIONES */
@@ -524,7 +555,7 @@ body {
 .reward-icon { font-size: 2.2rem; margin-bottom: 5px; }
 .reward-title { font-weight: 700; font-size: 1rem; color: #2F2E2C; }
 .reward-points { color: #E07A5F; font-weight: 700; font-size: 1.1rem; }
-.reward-benefit { font-size: 0.8rem; color: #666; min-height: 32px; }
+.reward-benefit { font-size: 0.85rem; color: #4A4A4A; min-height: 32px; font-weight: 500; }
 .reward-btn {
   width: 100%;
   padding: 10px;
@@ -536,7 +567,11 @@ body {
   cursor: pointer;
   transition: all .2s;
 }
-.reward-btn:disabled { background: #ccc; cursor: not-allowed; }
+.reward-btn:disabled {
+  background: #EAEAEA !important;
+  color: #7B7B7B !important;
+  cursor: not-allowed;
+}
 .reward-btn.active {
   background: #F4F1DE;
   color: #D95D39;
@@ -604,6 +639,57 @@ body {
 
 .receta-grid-item:hover img { transform: scale(1.05); }
 
+.receta-info-pie {
+  padding: 12px 14px;
+  background: white;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 0 0 12px 12px;
+}
+
+.receta-titulo {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2F2E2C;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.receta-meta-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.receta-likes-pie {
+  font-size: 0.75rem;
+  color: #E07A5F;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  background: #fdf2f0;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.receta-likes-pie [data-lucide="heart"] {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.receta-star-pie {
+  width: 14px !important;
+  height: 14px !important;
+  fill: #F2CC8F;
+  color: #F2CC8F;
+}
+
 .receta-overlay {
   position: absolute;
   inset: 0;
@@ -666,10 +752,14 @@ body {
   width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
-  z-index: 2000;
+  z-index: 20000 !important;
   align-items: center;
   justify-content: center;
   animation: fadeInModal 0.3s ease;
+}
+
+.no-scroll {
+  overflow: hidden !important;
 }
 
 @keyframes fadeInModal {
@@ -793,16 +883,18 @@ body {
 .form-pago input {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid #eee;
-  border-radius: 12px;
+  border: 2.5px solid #F4F1DE;
+  border-radius: 14px;
   font-family: inherit;
   font-size: 1rem;
   outline: none;
-  transition: border-color 0.3s;
+  background: #FDFBF7;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .form-pago input:focus {
   border-color: #E07A5F;
+  box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.15);
 }
 
 /* Ajustes Responsive */
@@ -826,4 +918,63 @@ body {
 @media (max-width: 480px) {
   .avatar-img { width: 90px; height: 90px; }
   .stats-container { gap: 16px; }
+}
+
+/* Premium Lock Box inside Grids */
+.premium-lock-box {
+  text-align: center;
+  padding: 60px 20px;
+  background: #FDFBF7;
+  border-radius: 24px;
+  grid-column: 1 / -1;
+  border: 2px dashed #E07A5F;
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.premium-lock-box .lock-icon-wrapper {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  color: #D95D39;
+}
+
+.premium-lock-box h3 {
+  color: #D95D39;
+  margin: 0 0 10px 0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 1.35rem;
+}
+
+.premium-lock-box p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.btn-premium-upgrade {
+  margin-top: 20px;
+  padding: 12px 30px;
+  background: #E07A5F;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(224, 122, 95, 0.15);
+}
+
+.btn-premium-upgrade:hover {
+  background: #D95D39;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(224, 122, 95, 0.3);
 }

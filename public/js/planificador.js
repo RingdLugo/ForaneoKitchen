@@ -181,6 +181,15 @@ function actualizarPresupuesto() {
     restanteElem.textContent = `$${restante}`;
     restanteElem.style.color = restante < 0 ? '#e53935' : restante < 100 ? '#F2CC8F' : '#E07A5F';
   }
+
+  // Actualizar la barra de progreso
+  const fillElem = document.getElementById('progress-bar-fill');
+  if (fillElem) {
+    let porcentaje = presupuesto > 0 ? (total / presupuesto) * 100 : 0;
+    if (porcentaje > 100) porcentaje = 100;
+    if (porcentaje < 0) porcentaje = 0;
+    fillElem.style.width = `${porcentaje}%`;
+  }
 }
 
 function mostrarNotificacion(mensaje, esError = false) {
@@ -268,6 +277,7 @@ function abrirModalRecetas(dia, comida) {
   const searchInput = document.getElementById('modal-search-input');
   if (modal) {
     modal.classList.add('active');
+    document.body.classList.add('no-scroll');
     if (searchInput) {
       searchInput.value = '';
       renderizarModalRecetas(todasLasRecetas);
@@ -279,6 +289,7 @@ function abrirModalRecetas(dia, comida) {
 function cerrarModalRecetas() {
   const modal = document.getElementById('modal-recetas');
   if (modal) modal.classList.remove('active');
+  document.body.classList.remove('no-scroll');
   diaActual = null;
   comidaActual = null;
 }
@@ -288,11 +299,15 @@ async function agregarReceta(dia, comida, receta) {
   if (!planSemanal[dia]) planSemanal[dia] = {};
   if (!planSemanal[dia][comida]) planSemanal[dia][comida] = [];
 
-  // 2. Agregar con ID único para permitir recetas ilimitadas
-  const nuevaInstancia = { ...receta, instanceId: Date.now() + Math.random() };
+  // 2. Clonar y limpiar imagen pesada en base64 para evitar QuotaExceededError en localStorage
+  const recetaLimpia = { ...receta };
+  delete recetaLimpia.imagen;
+
+  // 3. Agregar con ID único para permitir recetas ilimitadas
+  const nuevaInstancia = { ...recetaLimpia, instanceId: Date.now() + Math.random() };
   planSemanal[dia][comida].push(nuevaInstancia);
 
-  // 3. GUARDADO LOCAL INMEDIATO (Vital para persistencia al cambiar de pantalla)
+  // 4. GUARDADO LOCAL INMEDIATO (Vital para persistencia al cambiar de pantalla)
   localStorage.setItem('user_plan_cache', JSON.stringify(planSemanal));
 
   // 4. Actualizar Interfaz

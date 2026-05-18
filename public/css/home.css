@@ -396,20 +396,45 @@ body {
   background: #fdf2f0 !important;
   color: #e53935 !important;
   border-color: rgba(229, 57, 53, 0.1) !important;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-.recipe-likes.active i {
-  fill: #e53935;
+.recipe-likes:hover {
+  transform: scale(1.1);
+  background: #ffebee !important;
+}
+
+.recipe-likes.active i,
+.recipe-likes.active svg {
+  fill: #e53935 !important;
 }
 
 .recipe-favorite {
   background: #fff9c4 !important;
   color: #fbc02d !important;
   border-color: rgba(251, 192, 45, 0.1) !important;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-.recipe-favorite.active i {
-  fill: #fbc02d;
+.recipe-favorite:hover {
+  transform: scale(1.1);
+  background: #fffde7 !important;
+}
+
+.recipe-favorite.active i,
+.recipe-favorite.active svg {
+  fill: #fbc02d !important;
+}
+
+.recipe-meta .like-count {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
 }
 
 .recipe-tags {
@@ -475,9 +500,13 @@ body {
   box-shadow: 0 8px 25px rgba(255, 87, 34, 0.4);
   transition: all 0.3s ease;
   z-index: 1000;
-  display: flex;
+  display: none; /* Oculto por defecto para usuarios Free */
   align-items: center;
   justify-content: center;
+}
+
+#chat-boton.premium-visible {
+  display: flex !important; /* Visible solo para usuarios Premium */
 }
 
 #chat-boton:hover {

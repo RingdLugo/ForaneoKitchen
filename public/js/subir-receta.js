@@ -148,7 +148,7 @@ async function verificarSesion() {
       if (videoSection) {
         videoSection.innerHTML = `
           <label><i data-lucide="video"></i> Video de la receta (solo Premium <i data-lucide="crown"></i>)</label>
-          <div style="background: #FDFBF7; border: 1px solid #F2CC8F; border-radius: 12px; padding: 15px; text-align: center; margin-top: 5px;">
+          <div class="premium-lock-box" style="background: #FDFBF7; border: 1px solid #F2CC8F; border-radius: 12px; padding: 15px; text-align: center; margin-top: 5px;">
             <p style="margin: 0; color: #E07A5F; font-size: 0.9rem; font-weight: 500;">
               <i data-lucide="lock" style="width:14px;height:14px;"></i> Los videos son una función exclusiva para usuarios <strong>Premium</strong>.
             </p>

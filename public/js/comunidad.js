@@ -251,9 +251,11 @@ function renderizarRecetas(container, recetasList) {
             ${autorBadge}
           </p>
           <div class="receta-stats">
-            <span class="receta-precio"><i data-lucide="dollar-sign"></i> ${escapeHTML(r.precio || '$$')}</span>
             <span class="receta-tiempo"><i data-lucide="clock"></i> ${escapeHTML(r.tiempo || '30 min')}</span>
-            <span class="receta-likes"><i data-lucide="heart" style="${r.likedByUser ? 'fill:#E07A5F;color:#E07A5F;' : ''}"></i> ${r.likes || 0}</span>
+            <span class="receta-precio"><i data-lucide="banknote"></i> ${escapeHTML(r.precio || '$$')}</span>
+          </div>
+          <div class="recipe-tags">
+            ${(r.etiquetas || []).slice(0, 3).map(t => `<span class="recipe-tag">${escapeHTML(t)}</span>`).join('')}
           </div>
           <div class="acciones-comunidad" onclick="event.stopPropagation()">
             <button class="like-btn ${likedClass}"

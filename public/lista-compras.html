@@ -20,20 +20,19 @@
     }
   </style>
   <link rel="stylesheet" href="css/bottom-nav.css">
+  <link rel="stylesheet" href="css/chatbot.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
-  <!-- Selector de Tema (Abajo Derecha) -->
-  <button id="dark-mode-toggle" class="dark-mode-toggle" style="position: fixed !important; bottom: 30px !important; right: 30px !important; z-index: 10000 !important; width: 45px !important; height: 45px !important; border-radius: 50% !important; border: none !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; background: white !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;">
-    <i data-lucide="moon" class="moon-icon" style="color: #2D2D35;"></i>
-    <i data-lucide="sun" class="sun-icon" style="color: #D95D39;"></i>
-  </button>
-
-  <!-- Botón del Chatbot (Sobre el Tema) -->
-  <button id="chat-boton-lista" class="chatbot-trigger" style="position: fixed !important; bottom: 90px !important; right: 30px !important; z-index: 10000 !important; width: 45px !important; height: 45px !important; border-radius: 50% !important; background: #D95D39 !important; color: white !important; border: none !important; cursor: pointer !important; box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important; display: flex !important; align-items: center !important; justify-content: center !important;">
-    <i data-lucide="bot" style="width: 24px; height: 24px;"></i>
-  </button>
+  <!-- Botones Flotantes Centralizados -->
+  <div class="floating-actions">
+    <button id="chat-boton" style="display:none;"><i data-lucide="bot"></i></button>
+    <button id="dark-mode-toggle" class="dark-mode-toggle" title="Modo oscuro">
+      <i data-lucide="moon" class="moon-icon"></i>
+      <i data-lucide="sun" class="sun-icon"></i>
+    </button>
+  </div>
 
   <div class="lista-screen">
     <header class="lista-header">
@@ -65,11 +64,27 @@
     </nav>
   </div>
 
+  <!-- Ventana de Chatbot -->
+  <div id="chat-window" style="display:none;">
+    <div id="chat-header">
+      <i data-lucide="bot"></i> Chef IA
+      <button id="cerrar-chat-btn" title="Minimizar"><i data-lucide="minus"></i></button>
+    </div>
+    <div id="chat-messages">
+      <div class="msg msg-bot">¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?</div>
+    </div>
+    <div id="chat-input-area">
+      <input id="chat-input" type="text" placeholder="Pregúntame una receta...">
+      <button id="enviar-chat-btn">Enviar</button>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="js/supabaseClient.js" type="module"></script>
   <script src="js/lista-compras.js" type="module"></script>
   <script src="js/dark-mode.js"></script>
+  <script src="js/chatbot.js"></script>
   <script>
     lucide.createIcons();
   </script>

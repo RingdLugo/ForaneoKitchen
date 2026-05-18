@@ -305,11 +305,17 @@ async function exportarPDF() {
     y += 8;
 
     doc.setFontSize(11);
-    doc.setTextColor(0);
+    doc.setTextColor(50, 50, 50); // Color gris oscuro suave
     items.forEach(item => {
       if (y > 280) { doc.addPage(); y = 20; }
-      const text = `- [ ] ${item.cantidad ? item.cantidad + ' ' : ''}${item.nombre}`;
-      doc.text(text, 25, y);
+      
+      // Dibujar un checkbox cuadrado elegante y limpio
+      doc.setDrawColor(180, 180, 180); // Borde gris claro
+      doc.rect(25, y - 3.5, 3.5, 3.5);
+      
+      // Imprimir el ingrediente desplazado a la derecha
+      const text = `${item.cantidad ? item.cantidad + ' ' : ''}${item.nombre}`;
+      doc.text(text, 31, y);
       y += 7;
     });
     y += 5;
