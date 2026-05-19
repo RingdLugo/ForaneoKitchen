@@ -711,7 +711,8 @@ body {
 
 .btn-eliminar-receta-overlay, 
 .btn-eliminar-historial-overlay,
-.btn-eliminar-favorito-overlay {
+.btn-eliminar-favorito-overlay,
+.btn-eliminar-like-overlay {
   position: absolute;
   top: 8px; right: 8px;
   background: rgba(0,0,0,.6);
@@ -731,11 +732,13 @@ body {
 
 .receta-grid-item:hover .btn-eliminar-receta-overlay, 
 .receta-grid-item:hover .btn-eliminar-historial-overlay,
-.receta-grid-item:hover .btn-eliminar-favorito-overlay { display: flex; }
+.receta-grid-item:hover .btn-eliminar-favorito-overlay,
+.receta-grid-item:hover .btn-eliminar-like-overlay { display: flex; }
 
 .btn-eliminar-receta-overlay:hover, 
 .btn-eliminar-historial-overlay:hover,
-.btn-eliminar-favorito-overlay:hover { background: #e53935; transform: scale(1.1); }
+.btn-eliminar-favorito-overlay:hover,
+.btn-eliminar-like-overlay:hover { background: #e53935; transform: scale(1.1); }
 
 .vacio-mensaje {
   text-align: center;

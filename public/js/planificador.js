@@ -54,25 +54,22 @@ async function cargarPlanDesdeSupabase() {
     } catch (e) { }
   }
 
-  // 2. Si lo local está vacío, intentar cargar del servidor
-  if (!planSemanal || Object.keys(planSemanal).length === 0) {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/users/me/planner', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+  // SIEMPRE intentar cargar del servidor para mantener sincronización (por si agregaron recetas desde otra pestaña)
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/users/me/planner', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.plan && Object.keys(data.plan).length > 0) {
-          planSemanal = data.plan;
-          localStorage.setItem('user_plan_cache', JSON.stringify(planSemanal));
-          renderizarPlanificador();
-        }
+    if (response.ok) {
+      const data = await response.json();
+      if (data.plan && Object.keys(data.plan).length > 0) {
+        planSemanal = data.plan;
+        localStorage.setItem('user_plan_cache', JSON.stringify(planSemanal));
       }
-    } catch (error) {
-      console.error('Error al cargar plan del servidor:', error);
     }
+  } catch (error) {
+    console.error('Error al cargar plan del servidor:', error);
   }
 
   // 3. Garantizar estructura mínima

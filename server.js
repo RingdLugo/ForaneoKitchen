@@ -11,17 +11,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const supabase = createClient(
-  process.env.SUPABASE_URL,
+  process.env.SUPABASE_URL || 'https://gikqmtsrhgdxzxvjxcbd.supabase.co',
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
-
-// Endpoint para que el frontend obtenga las llaves públicas de forma dinámica
-app.get('/api/config', (req, res) => {
-  res.json({
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
-  });
-});
 
 const PUNTOS = {
   ver_receta: 2,
@@ -58,13 +50,32 @@ function censor(s) {
 }
 
 // Sistema de Validación de Contenido
-const PROFANITY_LIST = ['puto', 'puta', 'mierda', 'pendejo', 'pendeja', 'culero', 'cabron', 'chinga', 'verga', 'pito', 'fuck', 'shit', 'asshole', 'idiota', 'estupido'];
+const PROFANITY_LIST = [
+  'puto', 'puta', 'mierda', 'pendejo', 'pendeja', 'culero', 'cabron', 'cabrona', 'chinga', 'verga', 'pito',
+  'fuck', 'shit', 'asshole', 'idiota', 'estupido', 'estupida', 'imbecil', 'zorra', 'perra', 'maricon',
+  'joto', 'marica', 'cagada', 'cagar', 'pinche', 'bastardo', 'ramera', 'prostituta', 'coño', 'joder',
+  'gilipollas', 'pendej', 'mamada', 'mamar', 'pene', 'vagina', 'panocha', 'vergas', 'putos', 'putas',
+  'mierdas', 'pendejos', 'pendejas', 'culeros', 'cabrones', 'chingar', 'chingas', 'chingada',
+  'tonto', 'tonta', 'menso', 'mensa', 'tarado', 'tarada', 'asco', 'bobo', 'boba', 'inutil', 'basura',
+  'bitch', 'cunt', 'dick', 'cock', 'whore', 'slut', 'crap', 'bastard', 'motherfucker', 'nigger', 'nigga',
+  'asqueroso', 'asquerosa', 'vomito', 'vomitivo', 'horrible', 'apestoso', 'apesta', 'odio', 'odioso', 'maldito', 'maldita',
+  'diarrea', 'dearrea', 'cagadera', 'chorro', 'vomite', 'vomité', 'intoxicado', 'intoxicada', 'asquerosidad', 'guacala', 'wakala', 'puaj', 'enferme',
+  'lesbica', 'lesbiana', 'gay', 'homosexual', 'mamo', 'megamamo', 'kk', 'caca', 'kaka'
+];
 
 const VALIDACION = {
   isOffensive: (str) => {
     if (!str) return false;
-    const lower = str.toLowerCase();
-    return PROFANITY_LIST.some(word => lower.includes(word));
+    // Normalizar texto para evitar bypasses (ej: put@ -> puta)
+    const normalized = str.toLowerCase()
+      .replace(/@/g, 'a')
+      .replace(/0/g, 'o')
+      .replace(/1/g, 'i')
+      .replace(/3/g, 'e')
+      .replace(/5/g, 's')
+      .replace(/\$/g, 's')
+      .replace(/!/g, 'i');
+    return PROFANITY_LIST.some(word => normalized.includes(word));
   },
   isGibberish: (str) => {
     if (!str || str.length < 4) return false;
@@ -191,7 +202,7 @@ function tienePermiso(u, p) {
     if (parts.length < 2) return false;
     const exp = parts[1];
     // Ya no se permiten accesos PERMANENT. Siempre debe haber una fecha válida.
-    if (exp === 'PERMANENT') return false; 
+    if (exp === 'PERMANENT') return false;
     return new Date(exp) > new Date();
   }
   return false;
@@ -245,8 +256,8 @@ app.post('/api/auth/registro', async (req, res) => {
     .maybeSingle();
 
   if (existingUser) {
-    const errorMsg = existingUser.username === username 
-      ? 'Nombre de usuario ya existe' 
+    const errorMsg = existingUser.username === username
+      ? 'Nombre de usuario ya existe'
       : 'El correo electrónico ya está registrado';
     return res.status(400).json({ error: errorMsg });
   }
@@ -549,7 +560,8 @@ app.get('/api/recipes', optAuth, async (req, res) => {
     const prefs = req.user.preferencias.filter(p => typeof p === 'string' && !p.startsWith('PERMISO_'));
     if (prefs.length > 0) {
       // Filtrar recetas que tengan al menos una de las etiquetas del perfil
-      query = query.overlaps('etiquetas', prefs);
+      const orQuery = prefs.map(p => `etiquetas.cs.["${p}"]`).join(',');
+      query = query.or(orQuery);
     }
   }
 
@@ -706,7 +718,7 @@ app.post('/api/recipes', authMW, async (req, res) => {
     likes: 0,
     comentarios_count: 0
   };
-  
+
   // Validar si el usuario puede agregar video o marcar como premium (solo Premium)
   const isPremiumUser = req.user.es_premium || req.user.rol === 'premium' || req.user.rol === 'admin';
   if (!isPremiumUser && (videoUrl || videoYoutube || esPremium)) {
@@ -734,6 +746,17 @@ app.put('/api/recipes/:id', authMW, async (req, res) => {
     videoUrl, videoYoutube,
     esPremium, etiquetas
   } = req.body;
+
+  if (!VALIDACION.isRecipeTitleValid(titulo)) return res.status(400).json({ error: 'Título inválido o contiene lenguaje inapropiado' });
+  if (!VALIDACION.areIngredientsValid(ingredientes)) return res.status(400).json({ error: 'Ingredientes inválidos o con lenguaje inapropiado' });
+  if (!VALIDACION.areStepsValid(pasos)) return res.status(400).json({ error: 'Pasos inválidos o con lenguaje inapropiado' });
+  if (VALIDACION.isInvalid(descripcion)) return res.status(400).json({ error: 'Descripción con lenguaje inapropiado' });
+
+  if (etiquetas) {
+    for (const tag of etiquetas) {
+      if (VALIDACION.isInvalid(tag)) return res.status(400).json({ error: 'Etiqueta inapropiada: ' + tag });
+    }
+  }
 
   // 1. Verificar que la receta existe y pertenece al usuario
   const { data: recipe, error: fetchError } = await supabase
@@ -763,7 +786,7 @@ app.put('/api/recipes/:id', authMW, async (req, res) => {
   };
 
   if (imagen !== undefined) updates.imagen = imagen;
-  
+
   // Validar si el usuario puede agregar video o marcar como premium (solo Premium)
   const isPremiumUser = req.user.es_premium || req.user.rol === 'premium' || req.user.rol === 'admin';
   if (isPremiumUser) {
@@ -896,6 +919,11 @@ app.post('/api/comments/:id/replies', authMW, async (req, res) => {
   const { texto, contenido } = req.body;
   const finalContenido = texto || contenido;
   if (!finalContenido) return res.status(400).json({ error: 'Sin contenido' });
+
+  if (VALIDACION.isInvalid(finalContenido)) {
+    return res.status(400).json({ error: 'Tu comentario contiene lenguaje no permitido o parece incoherente' });
+  }
+
   const { data: padre } = await supabase.from('comentarios').select('receta_id').eq('id', req.params.id).single();
   const { data, error } = await supabase.from('comentarios').insert({
     receta_id: padre?.receta_id || null,
@@ -1075,7 +1103,7 @@ app.delete('/api/recipes/:id/favorite', authMW, async (req, res) => {
 });
 
 app.get('/api/users/me/favorites', authMW, async (req, res) => {
-  const { data: favs } = await supabase.from('favoritos').select('receta_id').eq('usuario_id', req.user.id);
+  const { data: favs } = await supabase.from('favoritos').select('receta_id').eq('usuario_id', req.user.id).order('fecha', { ascending: false });
   if (!favs?.length) return res.json([]);
 
   const esPremium = req.user.es_premium === true || req.user.rol === 'premium' || req.user.rol === 'admin';
@@ -1088,6 +1116,10 @@ app.get('/api/users/me/favorites', authMW, async (req, res) => {
   */
 
   const { data } = await query;
+
+  // Ordenar recetas para coincidir con el orden de favs (más recientes primero)
+  const orderMap = new Map(favs.map((f, idx) => [f.receta_id, idx]));
+  if (data) data.sort((a, b) => orderMap.get(a.id) - orderMap.get(b.id));
 
   // Añadir flags
   const ids = data?.map(r => r.id) || [];
@@ -1108,7 +1140,7 @@ app.get('/api/users/me/favorites', authMW, async (req, res) => {
 
 app.get('/api/users/me/likes', authMW, async (req, res) => {
   try {
-    const { data: userLikes } = await supabase.from('likes').select('receta_id').eq('usuario_id', req.user.id);
+    const { data: userLikes } = await supabase.from('likes').select('receta_id').eq('usuario_id', req.user.id).order('fecha', { ascending: false });
     if (!userLikes?.length) return res.json([]);
 
     const { data: recipes, error } = await supabase
@@ -1117,7 +1149,11 @@ app.get('/api/users/me/likes', authMW, async (req, res) => {
       .in('id', userLikes.map(l => l.receta_id));
 
     if (error) throw error;
-    
+
+    // Ordenar recetas
+    const orderMap = new Map(userLikes.map((l, idx) => [l.receta_id, idx]));
+    if (recipes) recipes.sort((a, b) => orderMap.get(a.id) - orderMap.get(b.id));
+
     const ids = recipes?.map(r => r.id) || [];
     let userFavs = new Set();
     if (ids.length > 0) {
@@ -1158,6 +1194,10 @@ app.get('/api/users/me/history', authMW, async (req, res) => {
   */
 
   const { data } = await query;
+
+  // Ordenar recetas para coincidir con historial
+  const orderMap = new Map(hist.map((h, idx) => [h.receta_id, idx]));
+  if (data) data.sort((a, b) => orderMap.get(a.id) - orderMap.get(b.id));
 
   // Añadir flags
   const ids = data?.map(r => r.id) || [];
@@ -1311,18 +1351,25 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
 function clasificarIntenciones(m) {
   const t = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[¿?¡!]/g, '');
   const traits = {
-    economica: /barat[oa]|economi|poco dinero|sin dinero|low cost/.test(t),
-    rapida: /rapid[ao]|facil|sencill[ao]|poco tiempo|pocos minutos|quick|easy/.test(t),
-    dulce: /dulce|postre|pastel|torta|galleta|helado|chocolate|azucar|dessert/.test(t),
-    familiar: /familiar|familia|para todos|muchas personas|ninos|grupo/.test(t),
-    saludable: /saludable|fitness|dieta|light|grasa|calorias|carb|proteina|vegano|vegetarian|vegan|vegetal|healthy/.test(t),
-    recomendar: /top|mejores?|populares?|recomienda|recommend|sugerir|que (cocin|prepar|hag|com)|quiero (cocinar|hacer|comer)/.test(t),
-    crear_plan: /plan.*(semana|semanal|diario|dieta|alimenticio|alimentacion|comer|menu)|armar.*(plan|menu|dieta)|crear.*(plan|menu|dieta)|hacer.*(plan|menu|dieta)|lunes|martes|miercoles|jueves|viernes|sabado|domingo/.test(t),
-    charlar: /gracias|agradezco|buenisimo|genial|ok|entendido|adios|hasta luego|chao|bye|buenos dias|buenas tardes|buenas noches|hola|que tal|como estas/.test(t),
+    economica: /barat[oa]|economi|poco dinero|sin dinero|low cost|varat[oa]|heconomic[oa]|pesos|barita/.test(t),
+    rapida: /rapid[ao]|facil|sencill[ao]|poco tiempo|pocos minutos|quick|easy|volada|apurad[oa]/.test(t),
+    dulce: /dulce|postre|pastel|torta|galleta|helado|chocolate|azucar|dessert|antojo/.test(t),
+    familiar: /familiar|familia|para todos|muchas personas|ninos|grupo|juntos/.test(t),
+    saludable: /saludable|fitness|dieta|light|grasa|calorias|carb|proteina|vegano|vegetarian|vegan|vegetal|healthy|san[oa]|liger[oa]|sanit[oa]/.test(t),
+    picoso: /picos[oa]|picante|chile|enchilos[oa]|ardor|pica|hot|spicy|fuego/.test(t),
+    recomendar: /top|mejores?|populares?|recomienda|recommend|sugerir|que (cocin|prepar|hag|com)|quiero (cocinar|hacer|comer)|que me recomiendas|sugerencia|dame algo/.test(t),
+    crear_plan: /plan.*(semana|semanal|diario|dieta|alimenticio|alimentacion|comer|menu)|armar.*(plan|menu|dieta)|crear.*(plan|menu|dieta)|hacer.*(plan|menu|dieta)|(lunes|martes|miercoles|jueves|viernes|sabado|domingo).* (desayuno|comida|cena|merienda|snack)|planifica/.test(t),
+    charlar: /gracias|agradezco|buenisimo|genial|ok|entendido|adios|hasta luego|chao|bye|buenos dias|buenas tardes|buenas noches|hola|que tal|como estas|holi|holis|k tal|q tal|ola/.test(t),
     presupuesto_especifico: /(\$|mxn|pesos?|precio|presupuesto)\s*([0-9]+)/.test(t) || /([0-9]+)\s*(peso|pesos?|mxn|\$)/.test(t),
     tiempo_especifico: /([0-9]+)\s*(min|minutos?|m)/.test(t)
   };
   return traits;
+}
+
+function extraerComida(m) {
+  const comidas = ['desayuno', 'comida', 'cena', 'merienda', 'snack'];
+  const t = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return comidas.find(c => t.includes(c));
 }
 
 // Extraer ingrediente mencionado en el mensaje
@@ -1342,7 +1389,7 @@ function extraerDia(m) {
 // Respuesta amigable según intención
 function generarRespuestaInteligente(traits, ingredientes, dia, count, mensaje) {
   const nombres = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
-  
+
   if (traits.charlar) {
     const t = mensaje.toLowerCase();
     if (/hola|buenos dias|que tal/.test(t)) return '¡Hola! Soy tu Chef IA personal. 👨‍🍳 ¿En qué puedo ayudarte hoy?';
@@ -1352,15 +1399,16 @@ function generarRespuestaInteligente(traits, ingredientes, dia, count, mensaje) 
   }
 
   if (traits.crear_plan) return `📅 He preparado tu plan para el **${nombres[dia] || dia}** con lo mejor que encontré:`;
-  
+
   let intro = '🍳 Encontré estas opciones para ti:';
   if (traits.economica && traits.rapida) intro = '💰⚡ ¡Lo mejor de ambos mundos! Recetas económicas y rápidas:';
   else if (traits.economica) intro = '💰 Aquí tienes opciones geniales para ahorrar:';
   else if (traits.rapida) intro = '⚡ Estas recetas estarán listas en un abrir y cerrar de ojos:';
-  else if (traits.saludable) intro = '🥗 Opciones nutritivas y balanceadas para tu día:';
+  else if (traits.saludable) intro = '🥗 Opciones nutritivas, sanas y balanceadas para ti:';
+  else if (traits.picoso) intro = '🌶️ ¡Cuidado que pican! Opciones ardientes:';
   else if (traits.dulce) intro = '🍰 ¡Hora del postre! Mira estas delicias:';
   else if (traits.recomendar) intro = '🌟 Estas son las favoritas de la comunidad:';
-  
+
   if (ingredientes.length > 0) {
     intro = `🥘 Con lo que tienes (**${ingredientes.join(', ')}**), te sugiero esto:`;
   }
@@ -1376,9 +1424,14 @@ app.post('/api/chatbot', authMW, async (req, res) => {
   if (!mensaje || !mensaje.trim())
     return res.json({ respuesta: '¡Hola! ¿En qué te puedo ayudar? Escribe algo como "receta rápida", "comida económica" o "receta de pollo" 😊', recetas: [] });
 
+  if (VALIDACION.isInvalid(mensaje)) {
+    return res.json({ respuesta: 'Por favor mantén un lenguaje respetuoso. Soy un Chef, no un marinero. 🧐', recetas: [] });
+  }
+
   const traits = clasificarIntenciones(mensaje);
   const ingredientes = extraerIngredientes(mensaje);
   const dia = extraerDia(mensaje);
+  const comidaFoco = extraerComida(mensaje);
 
   if (traits.charlar && ingredientes.length === 0 && !traits.presupuesto_especifico && !traits.tiempo_especifico) {
     return res.json({ respuesta: generarRespuestaInteligente(traits, [], null, 0, mensaje), recetas: [] });
@@ -1391,11 +1444,14 @@ app.post('/api/chatbot', authMW, async (req, res) => {
     if (traits.economica) query = query.lte('precio_numerico', 45);
     if (traits.rapida) query = query.lte('tiempo_numerico', 30);
     if (traits.saludable) {
-      query = query.or('etiquetas.cs.{saludable},etiquetas.cs.{fitness},etiquetas.cs.{vegetariano},titulo.ilike.%saludable%,titulo.ilike.%vegetaria%');
+      query = query.or('etiquetas.cs.["saludable"],etiquetas.cs.["fitness"],etiquetas.cs.["vegetariano"],titulo.ilike.%saludable%,titulo.ilike.%vegetaria%,titulo.ilike.%sana%,titulo.ilike.%sano%');
     }
-    if (traits.dulce) query = query.or('etiquetas.cs.{postre},titulo.ilike.%dulce%,titulo.ilike.%postre%');
-    if (traits.familiar) query = query.or('etiquetas.cs.{familiar},titulo.ilike.%familiar%');
-    
+    if (traits.picoso) {
+      query = query.or('etiquetas.cs.["picante"],etiquetas.cs.["picoso"],titulo.ilike.%picant%,titulo.ilike.%chile%,ingredientes.ilike.%chile%,ingredientes.ilike.%picante%');
+    }
+    if (traits.dulce) query = query.or('etiquetas.cs.["postre"],titulo.ilike.%dulce%,titulo.ilike.%postre%');
+    if (traits.familiar) query = query.or('etiquetas.cs.["familiar"],titulo.ilike.%familiar%');
+
     if (ingredientes.length > 0) {
       const ingredientQuery = ingredientes.map(i => `ingredientes.ilike.%${i}%,titulo.ilike.%${i}%`).join(',');
       query = query.or(ingredientQuery);
@@ -1409,7 +1465,7 @@ app.post('/api/chatbot', authMW, async (req, res) => {
       const terminos = mensaje.toLowerCase().trim().split(/\s+/)
         .filter(w => w.length > 2 && !stopWords.includes(w) && !/^\$?[0-9]+(mxn|min)?$/.test(w))
         .slice(0, 3);
-      
+
       if (terminos.length > 0) {
         const textQuery = terminos.map(t => `titulo.ilike.%${t}%,ingredientes.ilike.%${t}%`).join(',');
         query = query.or(textQuery);
@@ -1436,16 +1492,32 @@ app.post('/api/chatbot', authMW, async (req, res) => {
       }
     }
 
-    const { data: results } = await query.limit(30);
-    
-    // Si la intención es 'recomendar' y hay un número (ej: top 3), respetarlo
+    let { data: results } = await query.limit(30);
+    let isFallback = false;
+
+    if (!results || results.length === 0) {
+      const { data: fallbackResults } = await supabase.from('recetas').select('*').order('likes', { ascending: false }).limit(5);
+      results = fallbackResults || [];
+      isFallback = true;
+    }
+
+    // Si la intención es 'recomendar' y hay un número (ej: top 3, dame 3, 2 recetas), respetarlo estrictamente
     let limit = 5;
-    const topMatch = mensaje.match(/top\s*([0-9]+)/i);
-    if (topMatch) limit = Math.min(parseInt(topMatch[1]), 10);
+    const topMatch = mensaje.match(/(?:top|dame|muestra|quiero)\s*([0-9]+)/i) || mensaje.match(/([0-9]+)\s*recetas?/i);
+    if (topMatch) limit = Math.max(1, Math.min(parseInt(topMatch[1]), 10));
 
-    const final = (results || []).sort(() => 0.5 - Math.random()).slice(0, limit);
+    let final = results || [];
+    const esTopExplicito = /top|mejores/i.test(mensaje);
 
-    let resp = generarRespuestaInteligente(traits, ingredientes, dia, final.length, mensaje);
+    if (esTopExplicito) {
+      // Si pidió explícitamente "top" o "mejores", ordenar por likes desc y NO revolver aleatoriamente
+      final = final.sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, limit);
+    } else {
+      // Para búsquedas normales, revolvemos para dar variedad
+      final = final.sort(() => 0.5 - Math.random()).slice(0, limit);
+    }
+
+    let resp = generarRespuestaInteligente(traits, ingredientes, dia, isFallback ? 0 : final.length, mensaje);
 
     // Si es plan semanal, crear el plan en la base de datos
     if (traits.crear_plan && final.length > 0) {
@@ -1454,9 +1526,9 @@ app.post('/api/chatbot', authMW, async (req, res) => {
       const nP = p?.plan || {};
       if (!nP[dia]) nP[dia] = {};
 
-      // Asignar recetas a los tipos de comida disponibles
+      // Asignar recetas a los tipos de comida disponibles o al especificado
       final.forEach((rec, idx) => {
-        const tipo = tiposComida[idx % tiposComida.length];
+        const tipo = comidaFoco ? comidaFoco : tiposComida[idx % tiposComida.length];
         if (!nP[dia][tipo]) nP[dia][tipo] = [];
         // Evitar duplicados
         if (!nP[dia][tipo].some(r => r.id === rec.id)) {
@@ -1470,7 +1542,8 @@ app.post('/api/chatbot', authMW, async (req, res) => {
       );
 
       const nombres = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
-      resp = `✅ ¡Plan creado para el **${nombres[dia] || dia}**! He agregado ${final.length} receta(s) a tu planificador semanal. Puedes verlo en la sección de Planificador. 📅`;
+      const comidaNombre = comidaFoco ? ` para el ${comidaFoco}` : '';
+      resp = `✅ ¡Plan creado para el **${nombres[dia] || dia}**${comidaNombre}! He agregado ${final.length} receta(s) a tu planificador semanal. Puedes verlo en la sección de Planificador. 📅`;
     }
 
     res.json({

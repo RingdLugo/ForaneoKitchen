@@ -110,8 +110,10 @@ async function cargarPerfil() {
       if (rewardsSection) rewardsSection.style.display = 'none';
       const favBtn  = document.getElementById('btn-favoritos');
       const histBtn = document.getElementById('btn-historial');
+      const likesBtn = document.getElementById('btn-likes');
       if (favBtn)  favBtn.style.display  = 'none';
       if (histBtn) histBtn.style.display = 'none';
+      if (likesBtn) likesBtn.style.display = 'none';
     } else {
       if (!token) { window.location.href = 'login.html'; return; }
       res = await fetch(`${API_BASE}/auth/me`, {
@@ -487,6 +489,8 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
       btnEliminar = `<button class="btn-eliminar-historial-overlay" data-id="${r.id}" title="Quitar de historial"><i data-lucide="x"></i></button>`;
     } else if (containerId === 'favoritos-grid') {
       btnEliminar = `<button class="btn-eliminar-favorito-overlay" data-id="${r.id}" title="Quitar de favoritos"><i data-lucide="trash-2"></i></button>`;
+    } else if (containerId === 'likes-grid') {
+      btnEliminar = `<button class="btn-eliminar-like-overlay" data-id="${r.id}" title="Quitar like"><i data-lucide="trash-2"></i></button>`;
     }
     return `
       <div class="receta-grid-item" data-id="${r.id}">
@@ -510,9 +514,10 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
 
   container.querySelectorAll('.receta-grid-item').forEach(el => {
     el.addEventListener('click', (e) => {
-      if (e.target.classList.contains('btn-eliminar-receta-overlay')) return;
-      if (e.target.classList.contains('btn-eliminar-historial-overlay')) return;
-      if (e.target.classList.contains('btn-eliminar-favorito-overlay')) return;
+      if (e.target.closest('.btn-eliminar-receta-overlay')) return;
+      if (e.target.closest('.btn-eliminar-historial-overlay')) return;
+      if (e.target.closest('.btn-eliminar-favorito-overlay')) return;
+      if (e.target.closest('.btn-eliminar-like-overlay')) return;
       window.location.href = `receta.html?id=${el.dataset.id}`;
     });
   });
@@ -561,6 +566,23 @@ function renderGrid(containerId, recetas, misRecetas, isLocked = false) {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
           });
           if (res.ok) { showToast('Eliminado de favoritos'); cargarFavoritos(); actualizarStats(); }
+          else showToast('Error al eliminar', true);
+        } catch (error) { showToast('Error al eliminar', true); }
+      });
+    });
+  }
+
+  if (containerId === 'likes-grid') {
+    container.querySelectorAll('.btn-eliminar-like-overlay').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        try {
+          const res = await fetch(`/api/recipes/${id}/like`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (res.ok) { showToast('Eliminado de likes'); cargarLikes(); actualizarStats(); }
           else showToast('Error al eliminar', true);
         } catch (error) { showToast('Error al eliminar', true); }
       });
@@ -719,11 +741,16 @@ function cambiarSeccion(seccion) {
     if (grid) grid.style.display = isActive ? 'grid' : 'none';
   });
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetUserId = urlParams.get('id');
+  const myUserId = localStorage.getItem('userId');
+  const esPerfilAjeno = targetUserId && targetUserId !== myUserId && targetUserId !== 'null' && targetUserId !== 'undefined';
+
   // Refrescar datos al cambiar de sección para asegurar que están actualizados
   if (seccion === 'favoritos') cargarFavoritos();
   if (seccion === 'likes') cargarLikes();
   if (seccion === 'historial') cargarHistorial();
-  if (seccion === 'mis-recetas') cargarMisRecetas();
+  if (seccion === 'mis-recetas') cargarMisRecetas(esPerfilAjeno ? targetUserId : null);
 }
 
 async function cerrarSesion() {

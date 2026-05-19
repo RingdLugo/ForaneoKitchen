@@ -347,11 +347,42 @@ window.enviarComentario = async function () {
     }
 
     if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error'); }
+    
+    const nuevoComentario = await res.json();
+    nuevoComentario.usuario = {
+      username: currentUser?.username || 'Yo',
+      nombre: currentUser?.username || 'Yo',
+      foto_perfil: currentUser?.foto_perfil,
+      es_premium: currentUser?.es_premium,
+      rol: currentUser?.rol
+    };
+
+    if (comentarioPadreId) {
+      const parentItem = document.querySelector(`.comentario-item[data-id="${comentarioPadreId}"]`);
+      if (parentItem) {
+        let respuestasContainer = parentItem.querySelector('.comentario-respuestas');
+        if (!respuestasContainer) {
+          respuestasContainer = document.createElement('div');
+          respuestasContainer.className = 'comentario-respuestas';
+          parentItem.querySelector('.comentario-body').appendChild(respuestasContainer);
+        }
+        respuestasContainer.insertAdjacentHTML('beforeend', renderComentarioRespuesta(nuevoComentario));
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    } else {
+      const lista = document.getElementById('comentarios-lista');
+      if (lista) {
+        const noComments = lista.querySelector('.comentarios-vacios');
+        if (noComments) noComments.remove();
+        lista.insertAdjacentHTML('afterbegin', renderComentario(nuevoComentario, []));
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+
     textarea.value = '';
     comentarioPadreId = null;
     textarea.placeholder = 'Escribe un comentario...';
     showToast('Comentario enviado');
-    cargarComentarios(id);
   } catch (e) {
     showToast(e.message || 'Error al enviar comentario', true);
   }
@@ -367,8 +398,8 @@ window.eliminarComentario = async function (id) {
     });
     if (!res.ok) throw new Error('Error al eliminar');
     showToast('Comentario eliminado');
-    const recetaId = new URLSearchParams(window.location.search).get('id');
-    cargarComentarios(recetaId);
+    const item = document.querySelector(`.comentario-item[data-id="${id}"]`);
+    if (item) item.remove();
   } catch (e) { showToast(e.message, true); }
 };
 
@@ -633,6 +664,7 @@ async function guardarEnPlan(dia, comida) {
     });
 
     if (resPost.ok) {
+      localStorage.setItem('user_plan_cache', JSON.stringify(plan));
       showToast(`¡Listo! Agregada al ${dia} (${comida})`);
       modal.style.display = 'none';
     } else {
