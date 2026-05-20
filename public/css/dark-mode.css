@@ -161,6 +161,37 @@ body.dark-mode .recipe-favorite.active svg {
   fill: #fff176 !important;
 }
 
+body.dark-mode .meta-badge.likes {
+  background: rgba(229, 57, 53, 0.15) !important;
+  color: #ef5350 !important;
+  border: 1px solid rgba(229, 57, 53, 0.3) !important;
+}
+
+body.dark-mode .meta-badge.likes:hover {
+  background: rgba(229, 57, 53, 0.25) !important;
+}
+
+body.dark-mode .meta-badge.likes.active i,
+body.dark-mode .meta-badge.likes.active svg {
+  fill: #ef5350 !important;
+}
+
+body.dark-mode .meta-badge.favorite {
+  background: rgba(251, 192, 45, 0.15) !important;
+  color: #fff176 !important;
+  border: 1px solid rgba(251, 192, 45, 0.3) !important;
+}
+
+body.dark-mode .meta-badge.favorite:hover {
+  background: rgba(251, 192, 45, 0.25) !important;
+}
+
+body.dark-mode .meta-badge.favorite.active i,
+body.dark-mode .meta-badge.favorite.active svg {
+  fill: #fff176 !important;
+}
+
+
 body.dark-mode .unused-class-temp-99,
 body.dark-mode .receta-tiempo,
 body.dark-mode .stat-value.gasto,
@@ -641,6 +672,19 @@ body.dark-mode .btn-cambiar-avatar {
 
 body.dark-mode .receta-grid-item {
   border: 1px solid #30363d !important
+}
+
+/* Pantalla Receta: Mensaje de Error y Carga */
+body.dark-mode .error-message,
+body.dark-mode .receta-loading {
+  background: #2D2D35 !important;
+  border: 1.5px solid #3B3B45 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.dark-mode .error-message p,
+body.dark-mode .receta-loading p {
+  color: #c9d1d9 !important;
 }
 
 /* Login */
