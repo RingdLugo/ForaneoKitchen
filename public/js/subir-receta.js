@@ -141,8 +141,7 @@ async function verificarSesion() {
         optFile.style.opacity = '0.5';
       }
 
-      const premiumCheckboxContainer = document.querySelector('.checkbox-group');
-      if (premiumCheckboxContainer) premiumCheckboxContainer.style.display = 'none';
+
 
       const videoSection = document.getElementById('video-section');
       if (videoSection) {

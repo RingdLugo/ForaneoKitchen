@@ -91,10 +91,10 @@ function tienePermiso(u, p) {
   const tag = prefs.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
   
   if (tag) {
-    const parts = tag.split(':');
-    if (parts.length < 2) return false;
+    const colonIdx = tag.indexOf(':');
+    if (colonIdx === -1) return false;
     
-    const expiraStr = parts[1];
+    const expiraStr = tag.substring(colonIdx + 1);
     if (expiraStr === 'PERMANENT') return true;
     
     const expira = new Date(expiraStr);
@@ -153,14 +153,15 @@ async function cargarActividadReciente() {
   actividadContainer.innerHTML = '<div class="loading-spinner"></div>';
 
   // Solo Premium puede ver la actividad
-  const esPremium = currentUser && (
+  const tieneAcceso = currentUser && (
     currentUser.es_premium === true ||
     currentUser.es_premium === 'true' ||
     currentUser.rol === 'premium' ||
-    currentUser.rol === 'admin'
+    currentUser.rol === 'admin' ||
+    tienePermiso(currentUser, 'comunidad')
   );
 
-  if (!esPremium) {
+  if (!tieneAcceso) {
     actividadContainer.innerHTML = `
       <div class="premium-lock-box" style="text-align:center;padding:60px 20px;background:#FDFBF7;border-radius:24px;border:2px dashed #E07A5F;margin:20px 0;">
         <div style="font-size:3rem;margin-bottom:15px;color:#D95D39;"><i data-lucide="lock" style="width:64px;height:64px;"></i></div>
@@ -216,12 +217,12 @@ function renderizarRecetas(container, recetasList) {
     container.innerHTML = '<div style="text-align:center;padding:60px;color:#999">No hay recetas aún.</div>';
     return;
   }
-
-  const esPremiumActual = currentUser && (
+  const puedeComentar = currentUser && (
     currentUser.es_premium === true ||
     currentUser.es_premium === 'true' ||
     currentUser.rol === 'premium' ||
-    currentUser.rol === 'admin'
+    currentUser.rol === 'admin' ||
+    tienePermiso(currentUser, 'comentarios')
   );
   
   container.innerHTML = recetasList.map(r => {
@@ -233,8 +234,8 @@ function renderizarRecetas(container, recetasList) {
       ? '<span class="autor-badge premium"><i data-lucide="crown"></i> Premium</span>' 
       : '<span class="autor-badge free">Free</span>';
     
-
-    const comentarBtn = esPremiumActual
+ 
+    const comentarBtn = puedeComentar
       ? `<button class="comentar-btn" onclick="window.abrirComentarios(${r.id}, '${escapeHTML(r.titulo)}')"><i data-lucide="message-square"></i> Comentar</button>`
       : `<button class="comentar-btn comentar-bloqueado" onclick="window.mostrarBloqueoComentarios()" title="Solo Premium"><i data-lucide="lock"></i> Comentar</button>`;
     
@@ -483,7 +484,7 @@ function renderComentario(comentario, respuestas = []) {
   const autorPremium = comentario.usuario?.es_premium || false;
   const autorBadge = autorPremium ? '<i data-lucide="crown" style="width:14px;height:14px;display:inline-block;vertical-align:middle;"></i>' : '';
   const esPropio = currentUser && comentario.usuario?.id === currentUser.id;
-  const puedeResponder = currentUser?.es_premium || false;
+  const puedeResponder = currentUser?.es_premium || tienePermiso(currentUser, 'comentarios') || false;
   
   const avatarHTML = foto
     ? `<img src="${foto}" alt="${escapeHTML(uname)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
@@ -553,13 +554,13 @@ function abrirResponder(comentarioId, autorNombre) {
     return;
   }
   
-  if (!currentUser.es_premium) {
-    showToast('⚠️ Solo usuarios Premium pueden responder comentarios. ¡Mejora tu cuenta!', true);
+  if (!currentUser.es_premium && !tienePermiso(currentUser, 'comentarios')) {
+    showToast('⚠️ Solo usuarios Premium o con pase de comentarios pueden responder comentarios. ¡Mejora tu cuenta!', true);
     const restrictionDiv = document.createElement('div');
     restrictionDiv.className = 'restriction-message';
     restrictionDiv.innerHTML = `
-      <p><i data-lucide="lock"></i> Solo usuarios Premium pueden participar en conversaciones.</p>
-      <a href="perfil.html" class="premium-link"><i data-lucide="sparkles"></i> Mejorar a Premium</a>
+      <p><i data-lucide="lock"></i> Solo usuarios Premium o con pase de comentarios pueden participar en conversaciones.</p>
+      <a href="perfil.html" class="premium-link"><i data-lucide="sparkles"></i> Obtener pase / Premium</a>
     `;
     modalRespuesta.querySelector('.respuesta-contexto').innerHTML = '';
     modalRespuesta.querySelector('.respuesta-contexto').appendChild(restrictionDiv);
@@ -582,8 +583,8 @@ async function enviarRespuesta() {
     return;
   }
   
-  if (!currentUser?.es_premium) {
-    showToast('Solo usuarios Premium pueden responder', true);
+  if (!currentUser?.es_premium && !tienePermiso(currentUser, 'comentarios')) {
+    showToast('Solo usuarios Premium o con pase de comentarios pueden responder', true);
     modalRespuesta.classList.remove('active');
     return;
   }

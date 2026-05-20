@@ -114,6 +114,10 @@ async function cargarPerfil() {
       if (favBtn)  favBtn.style.display  = 'none';
       if (histBtn) histBtn.style.display = 'none';
       if (likesBtn) likesBtn.style.display = 'none';
+      const feedbackBtn = document.getElementById('feedback-btn');
+      const logoutBtn = document.getElementById('cerrar-sesion-main-btn');
+      if (feedbackBtn) feedbackBtn.style.display = 'none';
+      if (logoutBtn) logoutBtn.style.display = 'none';
     } else {
       if (!token) { window.location.href = 'login.html'; return; }
       res = await fetch(`${API_BASE}/auth/me`, {
@@ -152,8 +156,15 @@ async function cargarPerfil() {
   roleBadge.innerHTML = esPremium ? '<i data-lucide="crown"></i> Premium' : 'Free';
   roleBadge.classList.toggle('free', !esPremium);
 
-  puntosBadge.innerHTML = `<i data-lucide="star"></i> ${currentUser.puntos || 0} pts`;
-  localStorage.setItem('userPoints', currentUser.puntos || 0);
+  if (esPerfilAjeno) {
+    if (puntosBadge) puntosBadge.style.display = 'none';
+  } else {
+    if (puntosBadge) {
+      puntosBadge.style.display = '';
+      puntosBadge.innerHTML = `<i data-lucide="star"></i> ${currentUser.puntos || 0} pts`;
+    }
+    localStorage.setItem('userPoints', currentUser.puntos || 0);
+  }
 
   avatarImg.src = currentUser.foto_perfil || imgPlaceholder();
 
@@ -270,6 +281,22 @@ function renderPreferencias() {
   });
 }
 
+// One-time delegated listener — set up once, survives re-renders
+function initRewardsDelegation() {
+  if (!rewardsContainer) return;
+  rewardsContainer.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.reward-btn');
+    if (!btn || btn.disabled || btn.dataset.loading === 'true') return;
+
+    const rewardId     = btn.dataset.rewardId;
+    const points       = parseInt(btn.dataset.points)  || 0;
+    const days         = parseInt(btn.dataset.days)    || 0;
+    const type         = btn.dataset.type              || '';
+
+    await canjearRecompensa(rewardId, points, days, type);
+  });
+}
+
 function renderRewards() {
   if (!rewardsContainer) return;
   const puntosActuales = currentUser?.puntos || 0;
@@ -279,11 +306,23 @@ function renderRewards() {
   rewardsContainer.innerHTML = REWARDS.map(reward => {
     const canAfford = puntosActuales >= reward.points;
     let isActive = false;
-    if (reward.id === '1day' || reward.id === '7days') {
+    if (reward.id === '1day_premium' || reward.id === '5days_premium') {
       isActive = esPremium;
+    } else if (reward.type === 'videos') {
+      const tagPrefix = 'PERMISO_VIDEOS:';
+      const matchingPref = prefs.find(p => typeof p === 'string' && p.startsWith(tagPrefix));
+      if (matchingPref) {
+        const expStr = matchingPref.substring(matchingPref.indexOf(':') + 1);
+        isActive = expStr !== 'PERMANENT' && new Date(expStr) > new Date();
+      }
     } else if (reward.type && reward.type.startsWith('permiso_')) {
-      const tagPrefix = `PERMISO_${reward.type.replace('permiso_','').toUpperCase()}:`;
-      isActive = prefs.some(p => typeof p === 'string' && p.startsWith(tagPrefix));
+      const tagKey = reward.type.replace('permiso_', '').toUpperCase();
+      const tagPrefix = `PERMISO_${tagKey}:`;
+      const matchingPref = prefs.find(p => typeof p === 'string' && p.startsWith(tagPrefix));
+      if (matchingPref) {
+        const expStr = matchingPref.substring(matchingPref.indexOf(':') + 1);
+        isActive = expStr !== 'PERMANENT' && new Date(expStr) > new Date();
+      }
     }
     return `
       <div class="reward-card ${isActive ? 'active' : ''}">
@@ -302,34 +341,27 @@ function renderRewards() {
       </div>`;
   }).join('');
 
-  document.querySelectorAll('.reward-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await canjearRecompensa(
-        btn.dataset.rewardId,
-        parseInt(btn.dataset.points),
-        parseInt(btn.dataset.days) || 0,
-        btn.dataset.type
-      );
-    });
-  });
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) {
   if (!currentUser) return;
+
   const puntosActuales = currentUser.puntos || 0;
   if (puntosActuales < puntosRequeridos) {
-    showToast(`Necesitas ${puntosRequeridos} puntos. Tienes ${puntosActuales}`, true);
+    showToast(`Necesitas ${puntosRequeridos} pts. Tienes ${puntosActuales}`, true);
     return;
   }
-  if (!confirm(`¿Canjear ${rewardId} por ${puntosRequeridos} puntos?`)) return;
+
+  // Lock the button immediately — no confirm() dialog
+  const btnEl = rewardsContainer?.querySelector(`[data-reward-id="${rewardId}"]`);
+  if (btnEl) {
+    btnEl.dataset.loading = 'true';
+    btnEl.disabled = true;
+    btnEl.textContent = 'Canjeando...';
+  }
 
   try {
-    currentUser.puntos = puntosActuales - puntosRequeridos;
-    puntosBadge.textContent = `⭐ ${currentUser.puntos} pts`;
-    renderRewards();
-
     const token = localStorage.getItem('token');
     const res = await fetch('/api/users/me/redeem', {
       method: 'POST',
@@ -338,26 +370,49 @@ async function canjearRecompensa(rewardId, puntosRequeridos, diasPremium, type) 
     });
 
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Error al canjear');
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Error ${res.status}`);
     }
 
     const data = await res.json();
-    showToast('Canje exitoso');
+
+    // Patch currentUser in-memory — no full page reload
     currentUser.puntos = data.points;
-    puntosBadge.innerHTML = `<i data-lucide="star"></i> ${data.points} pts`;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-    localStorage.setItem('userPuntos',  data.points);
-    if (data.es_premium !== undefined)  localStorage.setItem('userPremium', data.es_premium);
-    if (data.rol !== undefined)         localStorage.setItem('userRol', data.rol);
+    if (data.es_premium !== undefined) {
+      currentUser.es_premium = data.es_premium;
+      currentUser.esPremium  = data.es_premium;
+    }
+    if (data.rol         !== undefined) currentUser.rol          = data.rol;
+    if (data.preferencias !== undefined) currentUser.preferencias = data.preferencias;
+
+    // Update the points badge
+    if (puntosBadge) {
+      puntosBadge.innerHTML = `<i data-lucide="star"></i> ${data.points} pts`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    localStorage.setItem('userPuntos', data.points);
+    if (data.es_premium !== undefined)   localStorage.setItem('userPremium', data.es_premium);
+    if (data.rol !== undefined)          localStorage.setItem('userRol', data.rol);
     if (data.preferencias !== undefined) localStorage.setItem('userPrefs', JSON.stringify(data.preferencias));
-    await cargarPerfil();
-  } catch (error) {
-    showToast(error.message || 'Error al procesar el canje', true);
-    currentUser.puntos = puntosActuales;
-    puntosBadge.innerHTML = `<i data-lucide="star"></i> ${puntosActuales} pts`;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-    renderRewards();
+
+    showToast('✅ ' + (data.message || 'Canje exitoso'));
+
+    // Hide rewards section if premium just activated; otherwise refresh cards
+    const esPremiumNow = currentUser.es_premium || currentUser.rol === 'premium';
+    if (esPremiumNow && (rewardId === '1day_premium' || rewardId === '5days_premium')) {
+      if (rewardsSection) rewardsSection.style.display = 'none';
+    } else {
+      renderRewards();
+    }
+
+  } catch (err) {
+    showToast(err.message || 'Error al procesar el canje', true);
+    // Restore the button so user can retry
+    if (btnEl) {
+      btnEl.dataset.loading = 'false';
+      btnEl.disabled = false;
+      btnEl.textContent = 'Canjear';
+    }
   }
 }
 
@@ -620,13 +675,18 @@ async function guardarPerfil() {
 
   const token = localStorage.getItem('token');
   try {
+    // Preserve active PERMISO_ tags — these are earned via point redemption and must not be wiped on profile save
+    const permisosActivos = (Array.isArray(currentUser.preferencias) ? currentUser.preferencias : [])
+      .filter(p => typeof p === 'string' && p.startsWith('PERMISO_'));
+    const prefsFinales = [...preferenciasSeleccionadas, ...permisosActivos];
+
     const res = await fetch('/api/auth/me', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({
         nombre, apellido, username, bio,
-        preferencias: preferenciasSeleccionadas,
-        foto_perfil: currentUser.foto_perfil // Asegurar que no se pierda la foto al guardar el resto
+        preferencias: prefsFinales,
+        foto_perfil: currentUser.foto_perfil
       })
     });
     
@@ -638,7 +698,7 @@ async function guardarPerfil() {
     currentUser.apellido = apellido;
     currentUser.username = data.username || username;
     currentUser.bio      = bio;
-    currentUser.preferencias = preferenciasSeleccionadas;
+    currentUser.preferencias = prefsFinales;
     
     displayUsername.textContent = `@${currentUser.username}`;
     displayNombre.textContent = `${nombre} ${apellido}`.trim();
@@ -948,31 +1008,42 @@ async function finalizarPago() {
 }
 
 async function cancelPremium() {
-  const expiry = document.getElementById('premium-expiry-date')?.textContent || 'tu fecha de corte';
-  const msg = `¿Estás seguro de que quieres cancelar? Seguirás con acceso Premium hasta el ${expiry}. Después volverás al plan Free.`;
-  if (!confirm(msg)) return;
-
   const btnCancel = document.getElementById('btn-cancel-premium');
-  if (btnCancel) { btnCancel.disabled = true; btnCancel.textContent = 'Cancelando...'; }
+  if (btnCancel) {
+    btnCancel.disabled = true;
+    btnCancel.textContent = 'Cancelando...';
+  }
 
   try {
     const res = await fetch('/api/auth/cancel-premium', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
     });
-    const data = await res.json();
+    
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       showToast(data.error || 'Error al cancelar membresía', true);
-      if (btnCancel) { btnCancel.disabled = false; btnCancel.textContent = '❌ Cancelar membresía'; }
+      if (btnCancel) {
+        btnCancel.disabled = false;
+        btnCancel.innerHTML = '<i data-lucide="x-circle"></i> Cancelar membresía';
+        if (window.lucide) window.lucide.createIcons();
+      }
       return;
     }
 
-    showToast('✅ ' + data.mensaje);
-    setTimeout(() => window.location.reload(), 2000);
+    showToast('✅ ' + (data.mensaje || 'Cancelación exitosa'));
+    setTimeout(() => window.location.reload(), 1500);
   } catch (err) {
     showToast('Error de conexión al cancelar', true);
-    if (btnCancel) { btnCancel.disabled = false; btnCancel.textContent = '❌ Cancelar membresía'; }
+    if (btnCancel) {
+      btnCancel.disabled = false;
+      btnCancel.innerHTML = '<i data-lucide="x-circle"></i> Cancelar membresía';
+      if (window.lucide) window.lucide.createIcons();
+    }
   }
 }
 
@@ -1115,6 +1186,7 @@ async function cambiarPassword() {
 
 async function init() {
   initEventListeners();
+  initRewardsDelegation();   // single permanent listener for all reward buttons
   await cargarPerfil();
   await cargarEtiquetas();
   cambiarSeccion('mis-recetas');

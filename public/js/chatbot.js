@@ -21,8 +21,15 @@
     })
       .then(r => r.json())
       .then(user => {
-        const hasChat = user.es_premium || user.rol === 'premium' ||
-          (user.preferencias || []).some(p => typeof p === 'string' && p.startsWith('PERMISO_CHAT:'));
+        const prefs = user.preferencias || [];
+        const hasChat = user.es_premium || user.rol === 'premium' || prefs.some(p => {
+          if (typeof p === 'string' && p.startsWith('PERMISO_CHAT:')) {
+            const exp = p.substring(p.indexOf(':') + 1);
+            if (exp === 'PERMANENT') return true;
+            return new Date(exp) > new Date();
+          }
+          return false;
+        });
         if (hasChat) chatBoton.classList.add('premium-visible');
       })
       .catch(() => { });

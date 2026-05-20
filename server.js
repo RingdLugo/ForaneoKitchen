@@ -75,7 +75,12 @@ const VALIDACION = {
       .replace(/5/g, 's')
       .replace(/\$/g, 's')
       .replace(/!/g, 'i');
-    return PROFANITY_LIST.some(word => normalized.includes(word));
+    return PROFANITY_LIST.some(word => {
+      if (word === 'kk') {
+        return /\bkk\b/i.test(normalized);
+      }
+      return normalized.includes(word);
+    });
   },
   isGibberish: (str) => {
     if (!str || str.length < 4) return false;
@@ -161,7 +166,9 @@ async function authMW(req, res, next) {
   const d = decodeToken(t);
   if (!d) return res.status(401).json({ error: 'Token inválido' });
 
-  const { data } = await supabase.from('usuarios').select('*').eq('id', d.id).maybeSingle();
+  const { data } = await supabase.from('usuarios')
+    .select('id,username,email,nombre,apellido,rol,es_premium,premium_hasta,premium_cancelado,puntos,preferencias,bio,foto_perfil')
+    .eq('id', d.id).maybeSingle();
   if (!data) return res.status(401).json({ error: 'Sesión inválida' });
 
   await checkPremiumExpiration(data);
@@ -198,10 +205,10 @@ function tienePermiso(u, p) {
   const tagPrefix = `PERMISO_${p.toUpperCase()}:`;
   const tag = prefs.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
   if (tag) {
-    const parts = tag.split(':');
-    if (parts.length < 2) return false;
-    const exp = parts[1];
-    // Ya no se permiten accesos PERMANENT. Siempre debe haber una fecha válida.
+    // Use indexOf to split only at the FIRST colon — ISO dates contain extra colons
+    const colonIdx = tag.indexOf(':');
+    if (colonIdx === -1) return false;
+    const exp = tag.substring(colonIdx + 1);
     if (exp === 'PERMANENT') return false;
     return new Date(exp) > new Date();
   }
@@ -215,8 +222,8 @@ async function sendOTP(email, otp, tipo) {
   return true;
 }
 
-async function otorgarPuntos(userId, accion, extra = '') {
-  const pts = PUNTOS[accion] || 0;
+async function otorgarPuntos(userId, accion, extra = '', customPoints = null) {
+  const pts = customPoints !== null ? customPoints : (PUNTOS[accion] || 0);
   if (pts === 0) return;
   try {
     await supabase.from('puntos_log').insert({
@@ -641,8 +648,15 @@ app.get('/api/recipes/:id', optAuth, async (req, res) => {
 
   if (recipe.es_premium) {
     const isAuthor = req.user && String(req.user.id) === String(recipe.usuario_id);
-    if (!isAuthor && !tienePermiso(req.user, 'VIDEOS'))
-      return res.status(403).json({ error: 'Esta es una receta Premium. ¡Desbloquea videos con tus puntos o hazte Premium!' });
+    // Premium recipes require full Premium membership or a canje-based temp premium (1d/5d)
+    // PERMISO_VIDEOS only unlocks the video player, NOT the full premium recipe
+    const hasPremiumAccess = req.user && (
+      req.user.es_premium === true ||
+      req.user.rol === 'premium' ||
+      req.user.rol === 'admin'
+    );
+    if (!isAuthor && !hasPremiumAccess)
+      return res.status(403).json({ error: 'Esta es una receta Premium. Canjea “1 día Premium” o hazte miembro Premium para verla.' });
   }
 
   // Añadir flags si el usuario está logueado
@@ -719,10 +733,10 @@ app.post('/api/recipes', authMW, async (req, res) => {
     comentarios_count: 0
   };
 
-  // Validar si el usuario puede agregar video o marcar como premium (solo Premium)
+  // Validar si el usuario puede agregar video (solo Premium)
   const isPremiumUser = req.user.es_premium || req.user.rol === 'premium' || req.user.rol === 'admin';
-  if (!isPremiumUser && (videoUrl || videoYoutube || esPremium)) {
-    return res.status(403).json({ error: 'Las funciones de video y recetas Premium son exclusivas para usuarios Premium 👑' });
+  if (!isPremiumUser && (videoUrl || videoYoutube)) {
+    return res.status(403).json({ error: 'Las funciones de video son exclusivas para usuarios Premium 👑' });
   }
 
   const { data, error } = await supabase.from('recetas').insert(receta).select().maybeSingle();
@@ -730,7 +744,8 @@ app.post('/api/recipes', authMW, async (req, res) => {
     console.error('❌ Error al insertar receta:', error);
     return res.status(500).json({ error: error.message });
   }
-  await otorgarPuntos(req.user.id, 'subir_receta', `Receta: ${titulo}`);
+  const ptsReward = receta.es_premium ? 30 : 15;
+  await otorgarPuntos(req.user.id, 'subir_receta', `Receta: ${titulo}`, ptsReward);
   res.json(data);
 });
 
@@ -787,17 +802,17 @@ app.put('/api/recipes/:id', authMW, async (req, res) => {
 
   if (imagen !== undefined) updates.imagen = imagen;
 
-  // Validar si el usuario puede agregar video o marcar como premium (solo Premium)
+  // Validar si el usuario puede agregar video (solo Premium)
   const isPremiumUser = req.user.es_premium || req.user.rol === 'premium' || req.user.rol === 'admin';
   if (isPremiumUser) {
     if (videoUrl !== undefined) updates.video_url = videoUrl;
     if (videoYoutube !== undefined) updates.video_youtube = videoYoutube;
-    if (esPremium !== undefined) updates.es_premium = esPremium;
   } else {
-    if (videoUrl || videoYoutube || esPremium) {
-      return res.status(403).json({ error: 'Las funciones de video y recetas Premium son exclusivas para usuarios Premium 👑' });
+    if (videoUrl || videoYoutube) {
+      return res.status(403).json({ error: 'Las funciones de video son exclusivas para usuarios Premium 👑' });
     }
   }
+  if (esPremium !== undefined) updates.es_premium = esPremium;
 
   const { data, error } = await supabase
     .from('recetas')
@@ -1289,7 +1304,7 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
   let updates = { puntos: (user.puntos || 0) - points };
   let message = `Canje exitoso: ${rewardId}`;
 
-  if (days && days > 0) {
+  if (!type && days && days > 0) {
     // Restringir recompensas a máximo 5 días
     const safeDays = Math.min(Math.max(days, 1), 5);
     const base = user.es_premium && user.premium_hasta ? new Date(user.premium_hasta) : new Date();
@@ -1298,9 +1313,7 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
     updates.rol = 'premium';
     updates.premium_hasta = base.toISOString();
     message = `¡Tienes ${safeDays} día(s) Premium!`;
-  }
-
-  if (type === 'videos') {
+  } else if (type === 'videos') {
     // Ya no es permanente, se otorga por 3 días por defecto o lo que indique reward
     const videoDays = Math.min(Math.max(days || 3, 1), 5);
     const expira = new Date(Date.now() + videoDays * 86400000).toISOString();
@@ -1310,9 +1323,7 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
     filtered.push(`PERMISO_VIDEOS:${expira}`);
     updates.preferencias = filtered;
     message = `¡Acceso a videos desbloqueado por ${videoDays} días!`;
-  }
-
-  if (type && type.startsWith('permiso_') && type !== 'permiso_videos') {
+  } else if (type && type.startsWith('permiso_') && type !== 'permiso_videos') {
     const prefs = Array.isArray(user.preferencias) ? [...user.preferencias] : [];
     const safeDays = Math.min(Math.max(days || 1, 1), 5);
     const expira = new Date(Date.now() + safeDays * 86400000).toISOString();
@@ -1333,10 +1344,11 @@ app.post('/api/users/me/redeem', authMW, async (req, res) => {
     return res.status(500).json({ error: 'Error al procesar el canje' });
   }
 
-  await supabase.from('puntos_log').insert({
+  // Fire-and-forget — do not await; respond to client immediately
+  supabase.from('puntos_log').insert({
     usuario_id: user.id, accion: 'canje', puntos: -points,
     descripcion: message, fecha: new Date().toISOString()
-  });
+  }).then(() => {}).catch(e => console.warn('puntos_log warn:', e.message));
 
   res.json({
     message,

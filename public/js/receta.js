@@ -34,9 +34,10 @@ function tienePermiso(u, p) {
   const tagPrefix = `PERMISO_${p.toUpperCase()}:`;
   const tag = prefs.find(pref => typeof pref === 'string' && pref.startsWith(tagPrefix));
   if (tag) {
-    const parts = tag.split(':');
-    if (parts.length < 2) return false;
-    const expiraStr = parts[1];
+    // Use indexOf to split only at the FIRST colon — ISO dates contain extra colons
+    const colonIdx = tag.indexOf(':');
+    if (colonIdx === -1) return false;
+    const expiraStr = tag.substring(colonIdx + 1);
     if (expiraStr === 'PERMANENT') return false;
     return new Date(expiraStr) > new Date();
   }
@@ -108,7 +109,10 @@ async function cargarReceta() {
     const response = await fetch(`/api/recipes/${id}`, { headers });
 
     if (!response.ok) {
-      if (response.status === 403) throw new Error('Esta receta es exclusiva para usuarios Premium');
+      if (response.status === 403) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Esta receta es exclusiva para usuarios Premium');
+      }
       throw new Error('Error al conectar con el servidor');
     }
 
@@ -239,7 +243,7 @@ function renderComentario(comentario, respuestas = []) {
   const autorPremium = comentario.usuario?.es_premium || comentario.usuario?.rol === 'premium' || false;
   const userId = localStorage.getItem('userId');
   const esPropio = userId && String(comentario.usuario_id) === String(userId);
-  const puedeResponder = currentUser?.es_premium || currentUser?.rol === 'premium' || false;
+  const puedeResponder = currentUser?.es_premium || currentUser?.rol === 'premium' || tienePermiso(currentUser, 'COMENTARIOS');
 
   const avatarHTML = foto
     ? `<img src="${foto}" alt="${escapeHTML(uname)}" class="avatar-img">`
@@ -308,8 +312,8 @@ function renderComentarioRespuesta(respuesta) {
 
 window.abrirResponder = function (comentarioId, autorNombre) {
   if (!currentUser) { showToast('Inicia sesión para responder', true); return; }
-  const esPremium = currentUser.es_premium || currentUser.rol === 'premium';
-  if (!esPremium) { showToast('Solo usuarios Premium pueden responder comentarios.', true); return; }
+  const tieneAcceso = currentUser.es_premium || currentUser.rol === 'premium' || tienePermiso(currentUser, 'COMENTARIOS');
+  if (!tieneAcceso) { showToast('Solo usuarios Premium o con pase de comentarios pueden responder comentarios.', true); return; }
 
   comentarioPadreId = comentarioId;
   const textarea = document.getElementById('nuevo-comentario');
@@ -441,14 +445,17 @@ function renderizarReceta(r) {
     currentUser.rol === 'admin'
   );
 
+  const puedeVerVideos = esPremiumUser || tienePermiso(currentUser, 'VIDEOS');
+  const puedeComentar = esPremiumUser || tienePermiso(currentUser, 'COMENTARIOS');
+
   const videoHTML = (() => {
-    if (!esPremiumUser) {
+    if (!puedeVerVideos) {
       if (r.video_youtube || r.video_url) {
         return `<div class="video-container premium-lock-box" style="margin:20px 0;background:#FDFBF7;border-radius:16px;padding:30px;text-align:center;border:2px dashed #E07A5F;">
-          <div style="font-size:2.5rem;margin-bottom:10px;"><i data-lucide="lock" style="width:48px;height:48px;color:#D95D39;"></i></div>
-          <p style="color:#D95D39;font-weight:600;margin:0 0 8px;">Video exclusivo Premium</p>
-          <p style="color:#666;font-size:0.9rem;margin:0 0 16px;">Actualiza tu cuenta para ver el video de esta receta.</p>
-          <button onclick="window.location.href='perfil.html'" style="padding:10px 24px;background:#E07A5F;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Mejorar a Premium <i data-lucide="crown" style="width:18px;height:18px;"></i></button>
+          <div style="font-size:2.5rem;margin-bottom:10px;"><i data-lucide="video" style="width:48px;height:48px;color:#D95D39;"></i></div>
+          <p style="color:#D95D39;font-weight:600;margin:0 0 8px;">Video exclusivo</p>
+          <p style="color:#666;font-size:0.9rem;margin:0 0 16px;">Canjea el <strong>Pase de Videos (300 pts)</strong> o hazte Premium para ver los videos de las recetas.</p>
+          <button onclick="window.location.href='perfil.html'" style="padding:10px 24px;background:#E07A5F;color:white;border:none;border-radius:20px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Canjear Pase de Videos <i data-lucide="video" style="width:18px;height:18px;"></i></button>
         </div>`;
       }
       return '';
@@ -552,7 +559,7 @@ function renderizarReceta(r) {
 
         <div class="seccion">
           <h2>💬 Comentarios</h2>
-          ${(userId && esPremiumUser) ? `
+          ${(userId && puedeComentar) ? `
             <div id="comentarios-lista" class="comentarios-lista">
               <div class="comentarios-loading">Cargando comentarios...</div>
             </div>
