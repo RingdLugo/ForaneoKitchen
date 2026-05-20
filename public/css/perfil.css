@@ -900,6 +900,21 @@ body {
   box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.15);
 }
 
+.form-pago input:-webkit-autofill,
+.form-pago input:-webkit-autofill:hover,
+.form-pago input:-webkit-autofill:focus,
+.form-pago input:-webkit-autofill:active,
+.form-pago input:autofill,
+.form-pago input:autofill:hover,
+.form-pago input:autofill:focus,
+.form-pago input:autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #FDFBF7 inset !important;
+  box-shadow: 0 0 0 1000px #FDFBF7 inset !important;
+  -webkit-text-fill-color: #2F2E2C !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+
 /* Ajustes Responsive */
 @media (max-width: 768px) {
   .avatar-section { flex-direction: column; text-align: center; gap: 20px; align-items: center; }

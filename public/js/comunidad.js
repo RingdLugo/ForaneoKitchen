@@ -20,6 +20,14 @@ const actividadContainer = document.getElementById('actividad-reciente');
 const modalComentarios = document.getElementById('modal-comentarios');
 const modalRespuesta = document.getElementById('modal-respuesta');
 
+function actualizarScrollBody() {
+  if (modalComentarios.classList.contains('active') || modalRespuesta.classList.contains('active')) {
+    document.body.classList.add('modal-open');
+  } else {
+    document.body.classList.remove('modal-open');
+  }
+}
+
 
 const PLACEHOLDER_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FDFBF7'/%3E%3Ccircle cx='50' cy='38' r='20' fill='%23E07A5F'/%3E%3Cpath d='M20 90 c0-25 15-35 30-35 s30 10 30 35' fill='%23E07A5F'/%3E%3C/svg%3E`;
 
@@ -413,6 +421,7 @@ async function abrirComentarios(recipeId, titulo) {
   const inputArea = document.querySelector('.modal-input-area');
   
   modalComentarios.classList.add('active');
+  actualizarScrollBody();
   
   if (!tienePermiso(currentUser, 'comentarios')) {
     lista.innerHTML = `
@@ -565,6 +574,7 @@ function abrirResponder(comentarioId, autorNombre) {
     modalRespuesta.querySelector('.respuesta-contexto').innerHTML = '';
     modalRespuesta.querySelector('.respuesta-contexto').appendChild(restrictionDiv);
     modalRespuesta.classList.add('active');
+    actualizarScrollBody();
     return;
   }
   
@@ -573,6 +583,7 @@ function abrirResponder(comentarioId, autorNombre) {
   contexto.innerHTML = `<strong>Respondiendo a @${escapeHTML(autorNombre)}</strong>`;
   document.getElementById('respuesta-texto').value = '';
   modalRespuesta.classList.add('active');
+  actualizarScrollBody();
 }
 
 
@@ -586,6 +597,7 @@ async function enviarRespuesta() {
   if (!currentUser?.es_premium && !tienePermiso(currentUser, 'comentarios')) {
     showToast('Solo usuarios Premium o con pase de comentarios pueden responder', true);
     modalRespuesta.classList.remove('active');
+    actualizarScrollBody();
     return;
   }
   
@@ -603,6 +615,7 @@ async function enviarRespuesta() {
     if (!res.ok) throw new Error('Error');
     showToast('Respuesta publicada');
     modalRespuesta.classList.remove('active');
+    actualizarScrollBody();
     await cargarComentarios(recetaModalId);
   } catch (error) {
     console.error('Error al responder:', error);
@@ -677,11 +690,13 @@ async function eliminarComentario(commentId, btn) {
 function cerrarModal() {
   modalComentarios.classList.remove('active');
   recetaModalId = null;
+  actualizarScrollBody();
 }
 
 function cerrarModalRespuesta() {
   modalRespuesta.classList.remove('active');
   comentarioPadreId = null;
+  actualizarScrollBody();
 }
 
 

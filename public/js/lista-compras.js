@@ -241,7 +241,7 @@ function renderizarLista() {
 
   container.querySelectorAll('.btn-eliminar-item').forEach(btn => {
     btn.addEventListener('click', async (e) => {
-      const id = parseFloat(e.target.dataset.id);
+      const id = parseFloat(e.currentTarget.dataset.id);
       itemsCompra = itemsCompra.filter(i => i.id !== id);
       await guardarItemsEnSupabase(itemsCompra);
       renderizarLista();

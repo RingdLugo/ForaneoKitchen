@@ -453,7 +453,7 @@ body.dark-mode .dark-mode-toggle {
   height: 100%;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
-  z-index: 1000;
+  z-index: 20000;
   align-items: center;
   justify-content: center;
 }
@@ -680,7 +680,7 @@ body.dark-mode .dark-mode-toggle {
   color: white;
   padding: 12px 24px;
   border-radius: 50px;
-  z-index: 2000;
+  z-index: 30000;
   font-weight: 500;
   opacity: 0;
   transition: all 0.3s ease;
@@ -778,7 +778,7 @@ body.dark-mode .dark-mode-toggle {
   font-size: 0.9rem;
   font-weight: 500;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  z-index: 9999;
+  z-index: 30000;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   opacity: 0;
   pointer-events: none;
@@ -810,4 +810,9 @@ body.dark-mode .dark-mode-toggle {
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 20px;
+}
+
+/* Bloquear scroll del fondo cuando un modal está abierto */
+body.modal-open {
+  overflow: hidden !important;
 }

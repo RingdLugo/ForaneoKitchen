@@ -399,13 +399,38 @@ app.get('/api/users/me/payment-methods', authMW, async (req, res) => {
 app.post('/api/users/me/payment-methods', authMW, async (req, res) => {
   const { numero } = req.body;
   const mask = `**** **** **** ${String(numero).slice(-4)}`;
-  const { data } = await supabase.from('metodos_pago').insert({
-    usuario_id: req.user.id,
-    tarjeta_mask: mask,
-    token_pago: 'tok_' + Math.random().toString(36).substr(2, 9),
-    fecha_registro: new Date().toISOString()
-  }).select().maybeSingle();
-  res.json(data);
+
+  try {
+    // Buscar si ya existe una tarjeta con la misma máscara para este usuario
+    const { data: existente } = await supabase
+      .from('metodos_pago')
+      .select('*')
+      .eq('usuario_id', req.user.id)
+      .eq('tarjeta_mask', mask)
+      .maybeSingle();
+
+    if (existente) {
+      // Si ya existe, devolvemos la existente para no duplicarla
+      return res.json(deepFixEncoding(existente));
+    }
+
+    const { data, error } = await supabase.from('metodos_pago').insert({
+      usuario_id: req.user.id,
+      tarjeta_mask: mask,
+      token_pago: 'tok_' + Math.random().toString(36).substr(2, 9),
+      fecha_registro: new Date().toISOString()
+    }).select().maybeSingle();
+
+    if (error) {
+      console.error('Error al insertar método de pago:', error);
+      return res.status(500).json({ error: 'Error al registrar método de pago' });
+    }
+
+    res.json(deepFixEncoding(data));
+  } catch (err) {
+    console.error('Error en el endpoint de métodos de pago:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 });
 
 // ── PERFIL ───────────────────────────────────────────────────────────────────

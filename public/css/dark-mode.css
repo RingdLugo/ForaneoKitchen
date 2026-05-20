@@ -200,10 +200,17 @@ body.dark-mode textarea:focus {
 body.dark-mode input:-webkit-autofill,
 body.dark-mode input:-webkit-autofill:hover,
 body.dark-mode input:-webkit-autofill:focus,
-body.dark-mode input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px #1E1E24 inset !important;
+body.dark-mode input:-webkit-autofill:active,
+body.dark-mode input:autofill,
+body.dark-mode input:autofill:hover,
+body.dark-mode input:autofill:focus,
+body.dark-mode input:autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #1E1E24 inset !important;
+  box-shadow: 0 0 0 1000px #1E1E24 inset !important;
   -webkit-text-fill-color: #F4F1DE !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
+
 
 body.dark-mode input:disabled,
 body.dark-mode textarea:disabled {
@@ -1205,6 +1212,21 @@ body.dark-mode .form-pago input:focus {
   border-color: #E07A5F !important;
   box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.2) !important;
 }
+
+body.dark-mode .form-pago input:-webkit-autofill,
+body.dark-mode .form-pago input:-webkit-autofill:hover,
+body.dark-mode .form-pago input:-webkit-autofill:focus,
+body.dark-mode .form-pago input:-webkit-autofill:active,
+body.dark-mode .form-pago input:autofill,
+body.dark-mode .form-pago input:autofill:hover,
+body.dark-mode .form-pago input:autofill:focus,
+body.dark-mode .form-pago input:autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #2D2D35 inset !important;
+  box-shadow: 0 0 0 1000px #2D2D35 inset !important;
+  -webkit-text-fill-color: #E6EDF3 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 
 body.dark-mode .tarjeta-item {
   border-color: #3B3B45 !important;
