@@ -514,18 +514,18 @@ function renderizarReceta(r) {
           ` : ''}
         </div>
 
-        <div class="receta-info-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
-          <div class="info-card" style="background:#f5f5f5;border-radius:16px;padding:16px;text-align:center;">
-            <div class="info-label" style="color:#888;font-size:0.75rem;text-transform:uppercase;">Costo</div>
-            <div class="info-value" style="font-weight:700;font-size:1.1rem;">${escapeHTML(r.precio || '$$')}</div>
+        <div class="receta-info-grid">
+          <div class="info-card">
+            <div class="info-label">Costo</div>
+            <div class="info-value">${escapeHTML(r.precio || '$$')}</div>
           </div>
-          <div class="info-card" style="background:#f5f5f5;border-radius:16px;padding:16px;text-align:center;">
-            <div class="info-label" style="color:#888;font-size:0.75rem;text-transform:uppercase;">Porciones</div>
-            <div class="info-value" style="font-weight:700;font-size:1.1rem;">${escapeHTML(r.porciones || '2–4')}</div>
+          <div class="info-card">
+            <div class="info-label">Porciones</div>
+            <div class="info-value">${escapeHTML(r.porciones || '2–4')}</div>
           </div>
-          <div class="info-card" style="background:#f5f5f5;border-radius:16px;padding:16px;text-align:center;">
-            <div class="info-label" style="color:#888;font-size:0.75rem;text-transform:uppercase;">Tiempo</div>
-            <div class="info-value" style="font-weight:700;font-size:1.1rem;">${escapeHTML(r.tiempo || '30 min')}</div>
+          <div class="info-card">
+            <div class="info-label">Tiempo</div>
+            <div class="info-value">${escapeHTML(r.tiempo || '30 min')}</div>
           </div>
         </div>
       </div>

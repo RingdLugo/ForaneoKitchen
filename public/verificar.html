@@ -13,15 +13,15 @@
   <style>
     .otp-inputs {
       display: flex;
-      gap: 10px;
+      gap: clamp(4px, 2vw, 10px);
       justify-content: center;
       margin: 24px 0;
     }
     .otp-inputs input {
-      width: 48px;
-      height: 56px;
+      width: clamp(32px, 11vw, 48px);
+      height: clamp(40px, 13vw, 56px);
       text-align: center;
-      font-size: 1.6rem;
+      font-size: clamp(1.1rem, 5vw, 1.6rem);
       font-weight: 700;
       border: 2px solid #d0d0d0;
       border-radius: 12px;
