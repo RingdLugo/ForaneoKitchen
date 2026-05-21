@@ -1595,4 +1595,7 @@ app.post('/api/chatbot', authMW, async (req, res) => {
 
 
 // ── Inicio ───────────────────────────────────────────────────────────────────
-app.listen(PORT, () => console.log(`🍳 ForaneoKitchen en http://localhost:${PORT}`));
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`🍳 ForaneoKitchen en http://localhost:${PORT}`));
+}
+module.exports = app;
