@@ -57,20 +57,21 @@ body.dark-mode .dark-mode-toggle {
 
 .comunidad-header h1 {
   font-family: 'Poppins', sans-serif;
-  font-size: 2.2rem;
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
   color: #D95D39;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  line-height: 1.2;
 }
 
 .comunidad-header p {
   color: #666;
   margin-top: 8px;
   font-family: 'Inter', sans-serif;
-  font-size: 1rem;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
 }
 
 /* Tabs */
@@ -735,33 +736,46 @@ body.dark-mode .dark-mode-toggle {
     flex-wrap: wrap;
   }
 
-  .bottom-nav {
-    bottom: 10px;
-    padding: 6px 12px;
+  .comentario-item.respuesta {
+    margin-left: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .comunidad-screen {
+    padding: 12px 12px 90px;
+  }
+
+  .comunidad-header {
+    margin-bottom: 20px;
+  }
+
+  .comunidad-tabs {
+    gap: 6px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .comunidad-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    padding: 7px 14px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .acciones-comunidad {
     gap: 8px;
-    width: 95%;
-  }
-
-  .nav-item {
-    padding: 4px 8px;
-  }
-
-  .nav-item span:first-child {
-    font-size: 1rem;
-  }
-
-  .nav-item span:last-child {
-    font-size: 0.55rem;
-  }
-
-  .notification-toast {
-    white-space: normal;
-    text-align: center;
-    max-width: 90%;
   }
 
   .comentario-item.respuesta {
-    margin-left: 24px;
+    margin-left: 16px;
   }
 }
 

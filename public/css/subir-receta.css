@@ -63,15 +63,16 @@ body {
 
 .header-subir h1 {
   font-family: 'Poppins', sans-serif;
-  font-size: 2rem;
+  font-size: clamp(1.4rem, 5vw, 2rem);
   font-weight: 700;
   color: #D95D39;
   margin-bottom: 8px;
+  line-height: 1.2;
 }
 
 .header-subir p {
   color: #666;
-  font-size: 0.95rem;
+  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
 }
 
 /* Restricción para Free */
@@ -674,23 +675,6 @@ body.dark-mode .checkbox-premium input {
     text-align: center;
     bottom: 100px;
   }
-  
-  .bottom-nav {
-    bottom: 10px;
-    padding: 6px 12px;
-    gap: 8px;
-    width: 95%;
-  }
-  
-  .nav-item {
-    padding: 4px 8px;
-  }
-  
-  .nav-item span:first-child {
-    font-size: 1rem;
-  }
-  
-  .nav-item span:last-child {
-    font-size: 0.55rem;
-  }
+
+  /* Navegación inferior — gestionada en bottom-nav.css */
 }

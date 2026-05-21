@@ -57,13 +57,14 @@ body.dark-mode .dark-mode-toggle {
 
 .planificador-header h1 {
   font-family: 'Poppins', sans-serif;
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 5vw, 2rem);
   font-weight: 700;
   background: linear-gradient(135deg, #E07A5F, #D95D39);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   margin-bottom: 8px;
+  line-height: 1.2;
 }
 
 .planificador-header p {
@@ -585,48 +586,7 @@ body.no-scroll {
   font-size: 0.85rem;
 }
 
-/* Bottom Nav */
-.bottom-nav {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: space-around;
-  padding: 8px 20px;
-  border-radius: 50px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  gap: 16px;
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-decoration: none;
-  color: #999;
-  font-size: 0.7rem;
-  transition: all 0.3s ease;
-  padding: 8px 16px;
-  border-radius: 40px;
-}
-
-.nav-item span:first-child {
-  font-size: 1.2rem;
-  margin-bottom: 2px;
-}
-
-.nav-item.active {
-  background: #FFF1E6;
-  color: #E07A5F;
-}
-
-.nav-item:hover {
-  color: #E07A5F;
-}
+/* Navegación inferior — gestionada centralizadamente en bottom-nav.css */
 
 /* Notificación */
 .notification {
@@ -671,14 +631,28 @@ body.no-scroll {
     flex-direction: column;
     align-items: stretch;
     padding: 20px;
+    gap: 16px;
   }
 
   .presupuesto-progress-container {
-    margin: 16px 0;
+    margin: 0;
     max-width: 100%;
   }
 
+  .presupuesto-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
   .acciones {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    flex: 1;
+    min-width: 130px;
     justify-content: center;
   }
 
@@ -688,6 +662,39 @@ body.no-scroll {
     text-align: center;
     max-width: 90%;
     font-size: 0.8rem;
+  }
+
+  .dia-nombre {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .planificador-screen {
+    padding: 16px 12px 90px;
+  }
+
+  .presupuesto-section {
+    padding: 16px;
+  }
+
+  .presupuesto-valor input {
+    font-size: 1.6rem;
+    width: 100px;
+  }
+
+  .acciones {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .planificador-header p {
+    font-size: 0.85rem;
   }
 }
 

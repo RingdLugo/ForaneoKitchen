@@ -47,14 +47,14 @@ body {
 .receta-screen {
   max-width: 900px;
   margin: 0 auto;
-  padding: 20px 20px 80px;
+  padding: clamp(12px, 3vw, 20px) clamp(12px, 3vw, 20px) 80px;
 }
 
 .back-btn {
   background: transparent;
   border: none;
   color: #E07A5F;
-  font-size: 1rem;
+  font-size: clamp(0.88rem, 2.5vw, 1rem);
   font-weight: 600;
   cursor: pointer;
   padding: 12px 0;
@@ -391,46 +391,7 @@ body {
   font-weight: 500;
 }
 
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 20px;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
-  z-index: 100;
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-decoration: none;
-  color: #666;
-  font-size: 0.75rem;
-  transition: all 0.3s ease;
-}
-
-.nav-item span:first-child {
-  font-size: 1.3rem;
-  margin-bottom: 4px;
-}
-
-.nav-item.active {
-  color: #E07A5F;
-  transform: translateY(-2px);
-}
-
-.nav-item:hover {
-  color: #E07A5F;
-}
+/* Navegación inferior — gestionada centralizadamente en bottom-nav.css */
 
 /* Grilla de información de la receta */
 .receta-info-grid {

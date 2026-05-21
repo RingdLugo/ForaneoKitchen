@@ -50,15 +50,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 32px;
+  margin-bottom: clamp(20px, 4vw, 32px);
   padding-bottom: 16px;
   border-bottom: 1px solid #dbdbdb;
+  gap: 12px;
 }
 .perfil-header h1 {
   font-family: 'Poppins', sans-serif;
-  font-size: 1.6rem;
+  font-size: clamp(1.3rem, 4vw, 1.6rem);
   font-weight: 700;
   color: #D95D39;
+  line-height: 1.2;
 }
 
 /* HERO DE PERFIL */
@@ -73,8 +75,9 @@ body {
 .avatar-section {
   display: flex;
   align-items: center;
-  gap: 48px;
+  gap: clamp(20px, 5vw, 48px);
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .avatar-wrapper {
@@ -917,25 +920,98 @@ body {
 
 /* Ajustes Responsive */
 @media (max-width: 768px) {
-  .avatar-section { flex-direction: column; text-align: center; gap: 20px; align-items: center; }
-  .stats-container { justify-content: center; gap: 24px; }
+  .perfil-screen {
+    padding: 16px 16px 120px;
+  }
+
+  .avatar-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .avatar-info {
+    text-align: center;
+    width: 100%;
+  }
+
+  .role-badge-container {
+    justify-content: center;
+  }
+
+  .stats-container {
+    max-width: 100%;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .perfil-acciones {
+    justify-content: center;
+  }
+
   .form-row { grid-template-columns: 1fr; }
-  .recetas-grid { grid-template-columns: repeat(3, 1fr); gap: 2px; }
-  .seccion-btn { padding: 12px 14px; font-size: 0.7rem; }
+
+  .recetas-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+  }
+
+  .seccion-btn {
+    padding: 12px 10px;
+    font-size: 0.68rem;
+  }
+
+  .premium-manage-actions {
+    flex-direction: column;
+  }
+
+  .btn-renew, .btn-cancel-sub, .btn-upgrade-main {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 @media (max-width: 600px) {
   .modal-pago-content {
-    width: 95%;
+    width: 100%;
     border-radius: 24px 24px 0 0;
     position: fixed;
     bottom: 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .recetas-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
   }
 }
 
 @media (max-width: 480px) {
   .avatar-img { width: 90px; height: 90px; }
-  .stats-container { gap: 16px; }
+
+  .stats-container {
+    gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .stat {
+    padding: 10px 8px;
+  }
+
+  .stat-number {
+    font-size: 1.2rem;
+  }
+
+  .recetas-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+  }
+
+  .rewards-container {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Premium Lock Box inside Grids */

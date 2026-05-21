@@ -315,78 +315,7 @@ body.dark-mode .modal-header {
   color: #ff5252;
 }
 
-/* Bottom Navigation */
-.bottom-nav {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: space-around;
-  padding: 8px 20px;
-  border-radius: 50px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  gap: 16px;
-}
-
-body.dark-mode .bottom-nav {
-  background: rgba(26, 30, 26, 0.95);
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-decoration: none;
-  color: #999;
-  font-size: 0.7rem;
-  transition: all 0.3s ease;
-  padding: 8px 16px;
-  border-radius: 40px;
-}
-
-.nav-item span:first-child {
-  font-size: 1.2rem;
-  margin-bottom: 2px;
-}
-
-.nav-item.active {
-  background: #FFF1E6;
-  color: #E07A5F;
-}
-
-body.dark-mode .nav-item.active {
-  background: #2D2321;
-  color: #E07A5F;
-}
-
-.nav-item:hover {
-  color: #E07A5F;
-}
-
-@media (max-width: 768px) {
-  .bottom-nav {
-    bottom: 10px;
-    padding: 6px 12px;
-    gap: 8px;
-    width: 95%;
-  }
-  
-  .nav-item {
-    padding: 4px 8px;
-  }
-  
-  .nav-item span:first-child {
-    font-size: 1rem;
-  }
-  
-  .nav-item span:last-child {
-    font-size: 0.55rem;
-  }
-}
+/* Navegación inferior — gestionada centralizadamente en bottom-nav.css */
 
 /* Dark Mode Toggle - Posición Fija Universal */
 .dark-mode-toggle {
