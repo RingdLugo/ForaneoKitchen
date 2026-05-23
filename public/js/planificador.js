@@ -585,6 +585,22 @@ window.eliminarReceta = eliminarReceta;
 window.abrirModalRecetas = abrirModalRecetas;
 window.cerrarModalRecetas = cerrarModalRecetas;
 
+async function refrescarDesdeChat(payload = {}) {
+  if (!payload?.sync?.plan) return;
+  await cargarPlanDesdeSupabase();
+  renderizarPlanificador();
+}
+
+window.addEventListener('fk:sync', (e) => refrescarDesdeChat(e.detail));
+window.addEventListener('storage', (e) => {
+  if (e.key !== 'fk:last-sync' || !e.newValue) return;
+  try { refrescarDesdeChat(JSON.parse(e.newValue)); } catch (_) { }
+});
+if ('BroadcastChannel' in window) {
+  const syncChannel = new BroadcastChannel('foraneo-sync');
+  syncChannel.onmessage = (e) => refrescarDesdeChat(e.data);
+}
+
 init();
 
 // Lógica de ocultado automático de la navegación al scroll

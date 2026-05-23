@@ -365,6 +365,23 @@ async function init() {
   document.getElementById('exportar-pdf-btn')?.addEventListener('click', exportarPDF);
 }
 
+async function refrescarDesdeChat(payload = {}) {
+  if (!payload?.sync?.listaCompras && !payload?.sync?.plan) return;
+  itemsCompra = await cargarItemsDesdeSupabase();
+  if (payload?.sync?.plan) await sincronizarInteligente();
+  renderizarLista();
+}
+
+window.addEventListener('fk:sync', (e) => refrescarDesdeChat(e.detail));
+window.addEventListener('storage', (e) => {
+  if (e.key !== 'fk:last-sync' || !e.newValue) return;
+  try { refrescarDesdeChat(JSON.parse(e.newValue)); } catch (_) { }
+});
+if ('BroadcastChannel' in window) {
+  const syncChannel = new BroadcastChannel('foraneo-sync');
+  syncChannel.onmessage = (e) => refrescarDesdeChat(e.data);
+}
+
 init();
 
 // Lógica de ocultado automático de la navegación al scroll

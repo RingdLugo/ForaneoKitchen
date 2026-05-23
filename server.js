@@ -1252,11 +1252,6 @@ app.get('/api/users/me/history', authMW, async (req, res) => {
     .eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(30);
   if (!hist?.length) return res.json([]);
 
-  // Solo Premium o con permiso pueden ver historial
-  if (!tienePermiso(req.user, 'HISTORIAL')) {
-    return res.status(403).json({ error: 'El historial de navegación es una función Premium 📜' });
-  }
-
   const esPremium = req.user.es_premium === true || req.user.rol === 'premium' || req.user.rol === 'admin';
   let query = supabase.from('recetas').select('*').in('id', hist.map(h => h.receta_id));
   /*
@@ -1461,7 +1456,7 @@ function extraerComida(m) {
 function extraerIngredientes(m) {
   const lista = ['pollo', 'res', 'carne', 'cerdo', 'pescado', 'salmon', 'atun', 'huevo', 'pasta', 'arroz', 'frijol', 'papa', 'verdura', 'tofu', 'camaron', 'mariscos', 'leche', 'queso', 'tomate', 'cebolla', 'ajo', 'limon'];
   const t = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return lista.filter(i => t.includes(i));
+  return lista.filter(i => new RegExp(`(^|\\W)${i}(\\W|$)`).test(t));
 }
 
 // Extraer día de la semana
@@ -1592,6 +1587,244 @@ function crearPlanSemanalDesdeRecetas(planActual, recetas, comidaFoco) {
   return { plan, agregadas };
 }
 
+function planVacio() {
+  const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+  const comidas = ['desayuno', 'comida', 'cena'];
+  return dias.reduce((acc, dia) => {
+    acc[dia] = comidas.reduce((inner, comida) => {
+      inner[comida] = [];
+      return inner;
+    }, {});
+    return acc;
+  }, {});
+}
+
+function defaultMemory() {
+  return {
+    perfil: {
+      dietas: [],
+      alergias: [],
+      objetivos: [],
+      ingredientesFavoritos: [],
+      ingredientesEvitar: [],
+      caloriasObjetivo: null,
+      horarios: {}
+    },
+    preferenciasDetectadas: [],
+    recetasRecientes: [],
+    ingredientesFrecuentes: [],
+    resumen: ''
+  };
+}
+
+async function obtenerMemoriaUsuario(userId) {
+  const { data, error } = await supabase
+    .from('chatbot_memorias')
+    .select('memoria')
+    .eq('usuario_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.memoria || defaultMemory();
+}
+
+async function guardarMemoriaUsuario(userId, memoria) {
+  const { error } = await supabase.from('chatbot_memorias').upsert(
+    { usuario_id: userId, memoria, updated_at: new Date().toISOString() },
+    { onConflict: 'usuario_id' }
+  );
+  if (error) throw error;
+}
+
+async function registrarConversacion(userId, role, mensaje, metadata = {}) {
+  await supabase.from('chatbot_conversaciones').insert({
+    usuario_id: userId,
+    role,
+    mensaje: String(mensaje || '').slice(0, 4000),
+    metadata
+  });
+}
+
+function addUnique(list, items) {
+  const current = Array.isArray(list) ? list : [];
+  const set = new Set(current.map(v => String(v).toLowerCase()));
+  items.forEach(item => {
+    const clean = String(item || '').trim();
+    if (clean && !set.has(clean.toLowerCase())) {
+      current.push(clean);
+      set.add(clean.toLowerCase());
+    }
+  });
+  return current.slice(0, 40);
+}
+
+function actualizarMemoriaDesdeMensaje(memoria, mensaje, recetas = []) {
+  const t = normalizarTextoChat(mensaje);
+  const next = memoria && typeof memoria === 'object' ? memoria : defaultMemory();
+  next.perfil = { ...defaultMemory().perfil, ...(next.perfil || {}) };
+
+  const dietas = [];
+  if (/vegano|vegana|vegan/.test(t)) dietas.push('vegano');
+  if (/vegetariano|vegetariana/.test(t)) dietas.push('vegetariano');
+  if (/keto|cetogen/.test(t)) dietas.push('keto');
+  if (/sin gluten|celiac/.test(t)) dietas.push('sin gluten');
+  if (/fitness|proteina|saludable|light/.test(t)) dietas.push('fitness');
+
+  const alergias = [];
+  const alergiaMatch = t.match(/(?:soy alergic[oa] a|alergia a|sin)\s+([a-zñ\s,]+)/);
+  if (alergiaMatch) {
+    alergiaMatch[1].split(/,| y | e /).map(x => x.trim()).filter(Boolean).forEach(x => alergias.push(x));
+  }
+
+  const objetivos = [];
+  if (/bajar de peso|perder peso|definicion|definir/.test(t)) objetivos.push('bajar peso');
+  if (/subir masa|ganar musculo|volumen/.test(t)) objetivos.push('ganar masa');
+  if (/ahorrar|economi|barat/.test(t)) objetivos.push('ahorrar');
+
+  const calMatch = t.match(/([0-9]{3,4})\s*(calorias|kcal)/);
+  if (calMatch) next.perfil.caloriasObjetivo = parseInt(calMatch[1], 10);
+
+  const ingredientes = extraerIngredientes(mensaje);
+  next.perfil.dietas = addUnique(next.perfil.dietas, dietas);
+  next.perfil.alergias = addUnique(next.perfil.alergias, alergias);
+  next.perfil.objetivos = addUnique(next.perfil.objetivos, objetivos);
+  next.perfil.ingredientesFavoritos = addUnique(next.perfil.ingredientesFavoritos, ingredientes);
+  next.ingredientesFrecuentes = addUnique(next.ingredientesFrecuentes, ingredientes);
+  next.recetasRecientes = addUnique(next.recetasRecientes, recetas.map(r => r.titulo)).slice(-20);
+
+  const cocinas = extraerCocinas(mensaje);
+  next.preferenciasDetectadas = addUnique(next.preferenciasDetectadas, [...dietas, ...objetivos, ...cocinas]);
+  next.resumen = [
+    next.perfil.dietas.length ? `Dietas: ${next.perfil.dietas.join(', ')}` : '',
+    next.perfil.alergias.length ? `Alergias: ${next.perfil.alergias.join(', ')}` : '',
+    next.perfil.objetivos.length ? `Objetivos: ${next.perfil.objetivos.join(', ')}` : '',
+    next.perfil.ingredientesFavoritos.length ? `Ingredientes frecuentes: ${next.perfil.ingredientesFavoritos.slice(0, 8).join(', ')}` : ''
+  ].filter(Boolean).join(' | ');
+  return next;
+}
+
+async function obtenerContextoUsuario(user) {
+  const [memoria, favs, hist, plan, lista, likes] = await Promise.all([
+    obtenerMemoriaUsuario(user.id),
+    supabase.from('favoritos').select('receta_id, recetas(id,titulo,etiquetas,ingredientes,precio_numerico,tiempo_numerico)').eq('usuario_id', user.id).order('fecha', { ascending: false }).limit(20),
+    supabase.from('historial').select('receta_id, recetas(id,titulo,etiquetas,ingredientes,precio_numerico,tiempo_numerico)').eq('usuario_id', user.id).order('fecha', { ascending: false }).limit(20),
+    supabase.from('planes_semanales').select('plan').eq('usuario_id', user.id).maybeSingle(),
+    supabase.from('lista_compras').select('items').eq('usuario_id', user.id).maybeSingle(),
+    supabase.from('likes').select('receta_id, recetas(id,titulo,etiquetas,ingredientes,precio_numerico,tiempo_numerico)').eq('usuario_id', user.id).order('fecha', { ascending: false }).limit(20)
+  ]);
+  return {
+    memoria,
+    favoritos: favs.data?.map(x => x.recetas).filter(Boolean) || [],
+    historial: hist.data?.map(x => x.recetas).filter(Boolean) || [],
+    likes: likes.data?.map(x => x.recetas).filter(Boolean) || [],
+    plan: plan.data?.plan || {},
+    listaCompras: lista.data?.items || []
+  };
+}
+
+function extraerIngredientesDeRecetas(recetas) {
+  const items = [];
+  recetas.forEach(receta => {
+    String(receta.ingredientes || '')
+      .split(/\n|,/)
+      .map(i => i.trim())
+      .filter(i => i.length > 2)
+      .forEach(i => items.push({
+        id: Date.now() + Math.random(),
+        nombre: i,
+        cantidad: '',
+        completado: false,
+        categoria: categorizarIngrediente(i),
+        recetas: receta.titulo ? [receta.titulo] : [],
+        receta_id: receta.id,
+        delPlanner: true
+      }));
+  });
+  const seen = new Set();
+  return items.filter(item => {
+    const key = item.nombre.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 80);
+}
+
+function categorizarIngrediente(nombre) {
+  const lower = String(nombre || '').toLowerCase();
+  if (/arroz|pasta|frijol|lenteja|harina|sal|aceite|pan|maiz|fideo/.test(lower)) return 'Abarrotes';
+  if (/leche|crema|queso|mantequilla|yogur/.test(lower)) return 'Lacteos';
+  if (/cebolla|ajo|papa|tomate|lechuga|zanahoria|brocoli|espinaca|cilantro|chile|calabaza/.test(lower)) return 'Verduras';
+  if (/manzana|platano|naranja|fresa|uva|pera|mango|pina|sandia|melon/.test(lower)) return 'Frutas';
+  if (/pollo|res|cerdo|pescado|atun|huevo|carne|salmon|camaron|tocino|jamon/.test(lower)) return 'Carnes';
+  return 'Otros';
+}
+
+async function guardarListaCompras(userId, items) {
+  const { error } = await supabase.from('lista_compras').upsert(
+    { usuario_id: userId, items, updated_at: new Date().toISOString() },
+    { onConflict: 'usuario_id' }
+  );
+  if (error) throw error;
+}
+
+function detectarAccionesChat(mensaje) {
+  const t = normalizarTextoChat(mensaje);
+  const pideResumen = /resumen|resume|que tengo|mi plan|mis favoritos|mi historial/.test(t);
+  return {
+    crearPlan: !pideResumen && /plan|menu|semana|dieta|organiza|organizar|planea|planifica/.test(t),
+    listaCompras: /lista de compras|compras|super|supermercado|ingredientes para comprar/.test(t),
+    resumen: pideResumen,
+    favoritos: /favorit|guardad/.test(t),
+    historial: /historial|reciente|ultimas vistas|visto/.test(t),
+    preferencias: /recuerda|soy alergic|alergia|mi dieta|prefiero|no me gusta|objetivo|calorias/.test(t)
+  };
+}
+
+function generarResumenContexto(ctx) {
+  const planDias = Object.keys(ctx.plan || {}).length;
+  return [
+    ctx.memoria?.resumen ? `Perfil: ${ctx.memoria.resumen}` : 'Aun no tengo muchas preferencias guardadas.',
+    `Favoritos: ${ctx.favoritos.slice(0, 5).map(r => r.titulo).join(', ') || 'sin favoritos recientes'}.`,
+    `Historial reciente: ${ctx.historial.slice(0, 5).map(r => r.titulo).join(', ') || 'sin historial reciente'}.`,
+    `Plan semanal: ${planDias ? `${planDias} dias con contenido` : 'sin plan activo'}.`,
+    `Lista de compras: ${Array.isArray(ctx.listaCompras) ? ctx.listaCompras.length : 0} items.`
+  ].join('\n');
+}
+
+function recetasDesdePlan(plan, allRecipes) {
+  const ids = new Set();
+  Object.values(plan || {}).forEach(day => {
+    Object.values(day || {}).forEach(slot => {
+      (Array.isArray(slot) ? slot : []).forEach(r => ids.add(Number(r.id)));
+    });
+  });
+  return allRecipes.filter(r => ids.has(Number(r.id)));
+}
+
+app.get('/api/chatbot/state', authMW, async (req, res) => {
+  try {
+    const ctx = await obtenerContextoUsuario(req.user);
+    const { data: conversaciones } = await supabase
+      .from('chatbot_conversaciones')
+      .select('role,mensaje,metadata,created_at')
+      .eq('usuario_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    res.json({
+      memoria: ctx.memoria,
+      favoritos: ctx.favoritos,
+      historial: ctx.historial,
+      likes: ctx.likes,
+      plan: ctx.plan,
+      listaCompras: ctx.listaCompras,
+      conversaciones: conversaciones || []
+    });
+  } catch (e) {
+    console.error('Error chatbot state:', e);
+    res.status(500).json({ error: 'No se pudo cargar el estado del asistente' });
+  }
+});
+
 function generarRespuestaInteligente(traits, ingredientes, dia, count, mensaje) {
   const nombres = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
 
@@ -1643,42 +1876,90 @@ app.post('/api/chatbot', authMW, async (req, res) => {
   }
 
   try {
+    await registrarConversacion(req.user.id, 'user', mensaje, { origen: 'chatbot' });
+    const acciones = detectarAccionesChat(mensaje);
+    const debeCrearPlan = traits.crear_plan || acciones.crearPlan;
+    const ctx = await obtenerContextoUsuario(req.user);
     const filtros = extraerFiltrosChat(mensaje);
     const { data: todas, error: recetasError } = await supabase.from('recetas').select('*').limit(500);
     if (recetasError) throw recetasError;
 
+    if (acciones.resumen && !filtros.cocinas.length && !filtros.tags.length) {
+      const resumen = generarResumenContexto(ctx);
+      await registrarConversacion(req.user.id, 'assistant', resumen, { accion: 'resumen' });
+      return res.json({
+        respuesta: resumen,
+        recetas: [...ctx.favoritos, ...ctx.historial].slice(0, 5),
+        memoria: ctx.memoria,
+        acciones: ['resumen'],
+        sync: { memoria: true }
+      });
+    }
+
     let chatResults = filtrarRecetasChat(todas || [], filtros, traits);
     let chatFallback = false;
     if (!chatResults.length) {
-      chatResults = [...(todas || [])].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      const basePersonalizada = [
+        ...ctx.favoritos,
+        ...ctx.likes,
+        ...ctx.historial,
+        ...(todas || [])
+      ].filter(Boolean);
+      chatResults = basePersonalizada.sort((a, b) => (b.likes || 0) - (a.likes || 0));
       chatFallback = true;
     }
 
-    const chatLimit = filtros.cantidad || (traits.crear_plan ? 21 : 5);
+    const chatLimit = filtros.cantidad || (debeCrearPlan ? 21 : 5);
     const chatFinal = chatResults.slice(0, chatLimit);
     let chatResp = generarRespuestaInteligente(traits, ingredientes, dia, chatFallback ? 0 : chatFinal.length, mensaje);
 
     if (filtros.cocinas.length && chatFinal.length) {
-      chatResp = `EncontrÃ© recetas de cocina ${filtros.cocinas.join(', ')} que encajan con tu pedido:`;
+      chatResp = `Encontre recetas de cocina ${filtros.cocinas.join(', ')} que encajan con tu pedido:`;
     }
     if (filtros.tags.length && !filtros.cocinas.length && chatFinal.length) {
-      chatResp = `FiltrÃ© por ${filtros.tags.join(', ')} y estas son buenas opciones:`;
+      chatResp = `Filtre por ${filtros.tags.join(', ')} y estas son buenas opciones:`;
     }
 
-    if (traits.crear_plan && chatFinal.length > 0) {
+    const sync = { memoria: true };
+    const accionesEjecutadas = [];
+
+    if (debeCrearPlan && chatFinal.length > 0) {
       const { data: p } = await supabase.from('planes_semanales').select('plan').eq('usuario_id', req.user.id).maybeSingle();
-      const { plan, agregadas } = crearPlanSemanalDesdeRecetas(p?.plan || {}, chatFinal, comidaFoco);
+      const { plan, agregadas } = crearPlanSemanalDesdeRecetas(p?.plan || planVacio(), chatFinal, comidaFoco);
       const { error: planError } = await supabase.from('planes_semanales').upsert(
         { usuario_id: req.user.id, plan, updated_at: new Date().toISOString() },
         { onConflict: 'usuario_id' }
       );
       if (planError) throw planError;
+      ctx.plan = plan;
+      sync.plan = true;
+      accionesEjecutadas.push('plan');
       const detalle = filtros.cocinas.length ? ` con recetas de cocina ${filtros.cocinas.join(', ')}` : '';
       const comidaNombre = comidaFoco ? ` para ${comidaFoco}` : '';
       chatResp = agregadas > 0
         ? `Listo. Cree un plan semanal${detalle}${comidaNombre} y agregue ${agregadas} receta(s) al planificador.`
         : `Tu plan semanal${detalle}${comidaNombre} ya tenia esas recetas. Lo revise y esta listo en el planificador.`;
     }
+
+    if (acciones.listaCompras) {
+      const recetasParaLista = recetasDesdePlan(ctx.plan, todas || []);
+      const baseLista = recetasParaLista.length ? recetasParaLista : chatFinal;
+      const items = extraerIngredientesDeRecetas(baseLista);
+      if (items.length) {
+        await guardarListaCompras(req.user.id, items);
+        ctx.listaCompras = items;
+        sync.listaCompras = true;
+        accionesEjecutadas.push('lista_compras');
+        chatResp += `\nTambien actualice tu lista de compras con ${items.length} ingrediente(s).`;
+      }
+    }
+
+    const memoriaActualizada = actualizarMemoriaDesdeMensaje(ctx.memoria, mensaje, chatFinal);
+    await guardarMemoriaUsuario(req.user.id, memoriaActualizada);
+    await registrarConversacion(req.user.id, 'assistant', chatResp, {
+      acciones: accionesEjecutadas,
+      recetas: chatFinal.map(r => r.id)
+    });
 
     return res.json({
       respuesta: chatResp,
@@ -1690,7 +1971,10 @@ app.post('/api/chatbot', authMW, async (req, res) => {
         tiempo: r.tiempo,
         likes: r.likes,
         etiquetas: r.etiquetas || []
-      }))
+      })),
+      memoria: memoriaActualizada,
+      acciones: accionesEjecutadas,
+      sync
     });
 
     let query = supabase.from('recetas').select('*');

@@ -169,6 +169,53 @@ body.dark-mode .chat-receta-titulo {
   margin-top: 2px;
 }
 
+.chat-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-self: flex-start;
+  max-width: 92%;
+}
+
+.chat-chip {
+  border: 1px solid #F2CC8F;
+  background: #fff7ec;
+  color: #7a3d2a;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.chat-chip:hover {
+  background: #F2CC8F;
+  border-color: #E07A5F;
+  transform: translateY(-1px);
+}
+
+.chat-action-note {
+  align-self: flex-start;
+  max-width: 85%;
+  color: #6f6b5f;
+  background: #fbfaf5;
+  border-left: 3px solid #81B29A;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.76rem;
+}
+
+body.dark-mode .chat-chip {
+  background: #2a2e2a;
+  color: #f4f1de;
+  border-color: #465247;
+}
+
+body.dark-mode .chat-action-note {
+  background: #202820;
+  color: #c8e6c9;
+}
+
 /* Typing indicator */
 .typing-indicator {
   display: flex;

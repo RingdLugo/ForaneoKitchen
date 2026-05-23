@@ -10,6 +10,13 @@
   if (!chatBoton || !chatWindow) return;
 
   let chatAbierto = false;
+  let currentUser = null;
+  let chatStorageKey = 'chatHistorial:anon';
+  let syncChannel = null;
+
+  if ('BroadcastChannel' in window) {
+    syncChannel = new BroadcastChannel('foraneo-sync');
+  }
 
   // Mostrar el botón solo si el usuario tiene acceso al chat
   function verificarPremium() {
@@ -21,6 +28,10 @@
     })
       .then(r => r.json())
       .then(user => {
+        currentUser = user;
+        chatStorageKey = 'chatHistorial:' + user.id;
+        historial = JSON.parse(localStorage.getItem(chatStorageKey) || '[]');
+        cargarChat();
         const prefs = user.preferencias || [];
         const hasChat = user.es_premium || user.rol === 'premium' || prefs.some(p => {
           if (typeof p === 'string' && p.startsWith('PERMISO_CHAT:')) {
@@ -36,11 +47,11 @@
   }
 
   // --- Persistencia ---
-  let historial = JSON.parse(localStorage.getItem('chatHistorial') || '[]');
+  let historial = JSON.parse(localStorage.getItem(chatStorageKey) || '[]');
 
   function guardarChat(texto, tipo) {
     historial.push({ texto, tipo });
-    localStorage.setItem('chatHistorial', JSON.stringify(historial));
+    localStorage.setItem(chatStorageKey, JSON.stringify(historial.slice(-80)));
   }
 
   function cargarChat() {
@@ -54,6 +65,32 @@
       });
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+  }
+
+  function agregarAccionesRapidas() {
+    if (document.getElementById('chat-quick-actions')) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'chat-quick-actions';
+    wrap.className = 'chat-quick-actions';
+    [
+      'Organiza mis comidas de la semana',
+      'Haz lista de compras',
+      'Solo quiero recetas coreanas',
+      'Resumen de mi plan',
+      'Recetas saludables con pollo'
+    ].forEach(texto => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chat-chip';
+      btn.textContent = texto;
+      btn.addEventListener('click', () => {
+        chatInput.value = texto;
+        enviarMensaje();
+      });
+      wrap.appendChild(btn);
+    });
+    chatMessages.appendChild(wrap);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
   chatBoton.addEventListener('click', () => {
@@ -71,13 +108,14 @@
         setTimeout(() => {
           agregarMensaje("¡Hola! Soy tu Chef IA. ¿En qué puedo ayudarte?", "bot");
           agregarMensaje("Puedes escribir tus dudas o pedir ayuda sobre recetas, planificación o compras.", "bot");
+          agregarAccionesRapidas();
         }, 500);
       }
     } else {
       // Al cerrar desde el botón flotante (X), limpiamos TODO
       chatMessages.innerHTML = '';
       historial = [];
-      localStorage.removeItem('chatHistorial');
+      localStorage.removeItem(chatStorageKey);
     }
   });
 
@@ -149,6 +187,14 @@
     if (typing) typing.remove();
   }
 
+  function emitirSincronizacion(sync) {
+    if (!sync || typeof sync !== 'object') return;
+    const payload = { sync, ts: Date.now(), userId: currentUser?.id || null };
+    localStorage.setItem('fk:last-sync', JSON.stringify(payload));
+    window.dispatchEvent(new CustomEvent('fk:sync', { detail: payload }));
+    if (syncChannel) syncChannel.postMessage(payload);
+  }
+
   async function enviarMensaje() {
     const texto = chatInput.value.trim();
     if (!texto) return;
@@ -182,6 +228,14 @@
       const data = await response.json();
       if (data.respuesta) agregarMensaje(data.respuesta, 'bot');
       if (data.recetas && data.recetas.length > 0) agregarRecetas(data.recetas);
+      if (data.sync) emitirSincronizacion(data.sync);
+      if (Array.isArray(data.acciones) && data.acciones.length > 0) {
+        const nota = document.createElement('div');
+        nota.className = 'chat-action-note';
+        nota.textContent = 'Cambios sincronizados: ' + data.acciones.join(', ');
+        chatMessages.appendChild(nota);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
 
     } catch (error) {
       ocultarTyping();
