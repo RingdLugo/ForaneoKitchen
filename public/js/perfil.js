@@ -1180,14 +1180,25 @@ function initEventListeners() {
 async function cambiarPassword() {
   const currentPassword = document.getElementById('pass-actual')?.value;
   const newPassword     = document.getElementById('pass-nueva')?.value;
+  const confirmPassword = document.getElementById('pass-confirmar')?.value;
   
-  if (!currentPassword || !newPassword) {
-    showToast('Ingresa ambas contraseñas', true);
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    showToast('Ingresa la contraseña actual, la nueva y su confirmación', true);
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    showToast('La confirmación no coincide con la nueva contraseña', true);
+    return;
+  }
+
+  if (currentPassword === newPassword) {
+    showToast('La nueva contraseña debe ser diferente a la actual', true);
     return;
   }
   
   if (newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
-    showToast('La nueva contraseña debe ser más segura: mínimo 8 caracteres, letras y números', true);
+    showToast('La nueva contraseña debe tener mínimo 8 caracteres, letras y números', true);
     return;
   }
   
@@ -1209,6 +1220,7 @@ async function cambiarPassword() {
     showToast('Contraseña actualizada correctamente');
     document.getElementById('pass-actual').value = '';
     document.getElementById('pass-nueva').value = '';
+    document.getElementById('pass-confirmar').value = '';
   } catch (err) {
     showToast(err.message, true);
   } finally {

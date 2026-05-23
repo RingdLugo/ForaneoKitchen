@@ -517,13 +517,35 @@ app.put('/api/auth/me/password', authMW, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Faltan campos' });
 
-  const { data: user } = await supabase.from('usuarios').select('password_hash').eq('id', req.user.id).single();
+  if (!VALIDACION.passwordStrength(newPassword)) {
+    return res.status(400).json({ error: 'La nueva contrasena debe tener minimo 8 caracteres, letras y numeros' });
+  }
+
+  const { data: user, error: userError } = await supabase
+    .from('usuarios')
+    .select('password_hash')
+    .eq('id', req.user.id)
+    .maybeSingle();
+  if (userError || !user?.password_hash) {
+    return res.status(500).json({ error: 'No se pudo validar la contrasena actual' });
+  }
+
   const match = await bcrypt.compare(currentPassword, user.password_hash);
-  if (!match) return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+  if (!match) return res.status(400).json({ error: 'Contrasena actual incorrecta' });
+
+  const samePassword = await bcrypt.compare(newPassword, user.password_hash);
+  if (samePassword) {
+    return res.status(400).json({ error: 'La nueva contrasena debe ser diferente a la actual' });
+  }
 
   const hash = await bcrypt.hash(newPassword, 10);
-  await supabase.from('usuarios').update({ password_hash: hash }).eq('id', req.user.id);
-  res.json({ mensaje: 'Contraseña actualizada' });
+  const { error: updateError } = await supabase
+    .from('usuarios')
+    .update({ password_hash: hash, ultimo_acceso: new Date().toISOString() })
+    .eq('id', req.user.id);
+  if (updateError) return res.status(500).json({ error: 'No se pudo actualizar la contrasena' });
+
+  res.json({ mensaje: 'Contrasena actualizada' });
 });
 
 
