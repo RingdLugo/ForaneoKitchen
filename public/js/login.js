@@ -2,7 +2,7 @@
 const API_BASE = (() => {
   const origin = window.location.origin;
   if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-    return 'http://localhost:3000/api';
+    return origin + '/api';
   }
   return origin + '/api';
 })();

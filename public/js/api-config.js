@@ -1,7 +1,7 @@
 // Detectar URL base del API
 const API_BASE = (() => {
   if (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')) {
-    return 'http://localhost:3000';
+    return window.location.origin;
   }
   return window.location.origin;
 })();

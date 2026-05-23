@@ -14,6 +14,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.6",
+    "pg": "^8.21.0",
     "web-push": "^3.6.7"
   },
   "description": "Aplicación web de recetas económicas pensada para estudiantes foráneos.\r Permite registrarse, iniciar sesión, publicar recetas con imágenes y consultar recetas compartidas por otros usuarios.",

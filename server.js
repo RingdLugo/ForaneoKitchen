@@ -10,9 +10,16 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://wryxnondbuebynrwpiik.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for backend Supabase access.');
+}
+
 const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://gikqmtsrhgdxzxvjxcbd.supabase.co',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY
 );
 
 const PUNTOS = {
@@ -60,27 +67,48 @@ const PROFANITY_LIST = [
   'bitch', 'cunt', 'dick', 'cock', 'whore', 'slut', 'crap', 'bastard', 'motherfucker', 'nigger', 'nigga',
   'asqueroso', 'asquerosa', 'vomito', 'vomitivo', 'horrible', 'apestoso', 'apesta', 'odio', 'odioso', 'maldito', 'maldita',
   'diarrea', 'dearrea', 'cagadera', 'chorro', 'vomite', 'vomité', 'intoxicado', 'intoxicada', 'asquerosidad', 'guacala', 'wakala', 'puaj', 'enferme',
-  'lesbica', 'lesbiana', 'gay', 'homosexual', 'mamo', 'megamamo', 'kk', 'caca', 'kaka'
+  'lesbica', 'lesbiana', 'gay', 'homosexual', 'mamo', 'megamamo', 'kk', 'caca', 'kaka',
+  'sex', 'sexo', 'sexual', 'porn', 'porno', 'xxx', 'nude', 'nudes', 'desnudo', 'desnuda', 'horny',
+  'orgasm', 'orgasmo', 'violar', 'violacion', 'rape', 'rapist', 'abuse', 'abuso', 'kill', 'killing',
+  'matar', 'suicide', 'suicidio', 'die', 'morir', 'hate', 'nazis', 'nazi', 'faggot', 'retard',
+  'puta madre', 'chingada madre'
 ];
+
+function normalizeModerationText(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[@4]/g, 'a')
+    .replace(/[8]/g, 'b')
+    .replace(/[({\[]/g, 'c')
+    .replace(/[3]/g, 'e')
+    .replace(/[1!|]/g, 'i')
+    .replace(/[0]/g, 'o')
+    .replace(/[$5]/g, 's')
+    .replace(/[7+]/g, 't')
+    .replace(/[^a-z0-9ñ\s]/g, '')
+    .replace(/(.)\1{2,}/g, '$1$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function containsDisguisedProfanity(str) {
+  const normalized = normalizeModerationText(str);
+  const compact = normalized.replace(/\s+/g, '');
+  return PROFANITY_LIST.some(word => {
+    const w = normalizeModerationText(word);
+    if (!w) return false;
+    if (w === 'kk') return /\bkk\b/.test(normalized);
+    const compactWord = w.replace(/\s+/g, '');
+    return normalized.includes(w) || (compactWord.length >= 5 && compact.includes(compactWord));
+  });
+}
 
 const VALIDACION = {
   isOffensive: (str) => {
     if (!str) return false;
-    // Normalizar texto para evitar bypasses (ej: put@ -> puta)
-    const normalized = str.toLowerCase()
-      .replace(/@/g, 'a')
-      .replace(/0/g, 'o')
-      .replace(/1/g, 'i')
-      .replace(/3/g, 'e')
-      .replace(/5/g, 's')
-      .replace(/\$/g, 's')
-      .replace(/!/g, 'i');
-    return PROFANITY_LIST.some(word => {
-      if (word === 'kk') {
-        return /\bkk\b/i.test(normalized);
-      }
-      return normalized.includes(word);
-    });
+    return containsDisguisedProfanity(str);
   },
   isGibberish: (str) => {
     if (!str || str.length < 4) return false;
@@ -1216,6 +1244,10 @@ app.get('/api/users/me/likes', authMW, async (req, res) => {
 
 // ── HISTORIAL ────────────────────────────────────────────────────────────────
 app.get('/api/users/me/history', authMW, async (req, res) => {
+  if (!tienePermiso(req.user, 'HISTORIAL')) {
+    return res.status(403).json({ error: 'El historial de navegaciÃ³n es una funciÃ³n Premium ðŸ“œ' });
+  }
+
   const { data: hist } = await supabase.from('historial').select('receta_id')
     .eq('usuario_id', req.user.id).order('fecha', { ascending: false }).limit(30);
   if (!hist?.length) return res.json([]);
@@ -1262,11 +1294,27 @@ app.get('/api/users/me/history', authMW, async (req, res) => {
 });
 
 app.post('/api/users/me/history', authMW, async (req, res) => {
-  await supabase.from('historial').upsert(
-    { receta_id: req.body.recipeId, usuario_id: req.user.id, fecha: new Date().toISOString() },
-    { onConflict: 'receta_id,usuario_id' }
-  );
-  await otorgarPuntos(req.user.id, 'ver_receta', `Vista receta ${req.body.recipeId}`);
+  const recipeId = parseInt(req.body.recipeId, 10);
+  if (!Number.isInteger(recipeId) || recipeId <= 0) {
+    return res.status(400).json({ error: 'Receta invÃ¡lida' });
+  }
+
+  const { data: recipe } = await supabase.from('recetas').select('id').eq('id', recipeId).maybeSingle();
+  if (!recipe) return res.status(404).json({ error: 'Receta no encontrada' });
+
+  await supabase.from('historial')
+    .delete()
+    .eq('receta_id', recipeId)
+    .eq('usuario_id', req.user.id);
+
+  const { error } = await supabase.from('historial').insert({
+    receta_id: recipeId,
+    usuario_id: req.user.id,
+    fecha: new Date().toISOString()
+  });
+  if (error) return res.status(500).json({ error: error.message });
+
+  await otorgarPuntos(req.user.id, 'ver_receta', `Vista receta ${recipeId}`);
   res.json({ ok: true });
 });
 
@@ -1424,6 +1472,126 @@ function extraerDia(m) {
 }
 
 // Respuesta amigable según intención
+function normalizarTextoChat(m) {
+  return String(m || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function extraerCocinas(m) {
+  const t = normalizarTextoChat(m);
+  const cocinas = [
+    { key: 'coreana', terms: ['coreana', 'coreano', 'korean', 'korea'] },
+    { key: 'china', terms: ['china', 'chino', 'chinese'] },
+    { key: 'mexicana', terms: ['mexicana', 'mexicano', 'mexican'] },
+    { key: 'italiana', terms: ['italiana', 'italiano', 'italian'] },
+    { key: 'japonesa', terms: ['japonesa', 'japones', 'japanese'] },
+    { key: 'vegano', terms: ['vegana', 'vegano', 'vegan'] },
+    { key: 'vegetariano', terms: ['vegetariana', 'vegetariano', 'vegetarian'] }
+  ];
+  return cocinas.filter(c => c.terms.some(term => t.includes(term))).map(c => c.key);
+}
+
+function extraerFiltrosChat(m) {
+  const t = normalizarTextoChat(m);
+  const stopWords = new Set([
+    'receta', 'recetas', 'comida', 'comidas', 'platillo', 'platillos', 'cocinar', 'preparar', 'hacer',
+    'dame', 'busco', 'quiero', 'necesito', 'ver', 'solo', 'solamente', 'unicamente', 'para', 'con',
+    'sin', 'que', 'por', 'favor', 'algo', 'tal', 'cosa', 'plan', 'semanal', 'semana', 'menu',
+    'desayuno', 'cena', 'merienda', 'snack', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes',
+    'sabado', 'domingo', 'top', 'mejores', 'muestra', 'recomienda'
+  ]);
+  const cocinas = extraerCocinas(m);
+  const ingredientes = extraerIngredientes(m);
+  const tags = [...cocinas];
+  if (/postre|dulce|dessert/.test(t)) tags.push('postre');
+  if (/picante|picos|spicy|chile/.test(t)) tags.push('picante');
+  if (/rapida|rapido|facil|quick|easy/.test(t)) tags.push('rapida');
+  if (/economica|economico|barata|barato|budget/.test(t)) tags.push('economica');
+  if (/saludable|fitness|sana|sano|healthy|light/.test(t)) tags.push('fitness');
+
+  const palabras = t.split(/\s+/)
+    .map(w => w.replace(/[^a-z0-9ñ]/g, ''))
+    .filter(w => w.length > 2 && !stopWords.has(w) && !/^[0-9]+$/.test(w))
+    .slice(0, 6);
+
+  const tiempo = t.match(/([0-9]+)\s*(min|minutos?|m)\b/);
+  const precio = t.match(/(?:\$|mxn|pesos?|precio|presupuesto)\s*([0-9]+)/) || t.match(/([0-9]+)\s*(?:peso|pesos|mxn|\$)\b/);
+  const cantidad = t.match(/(?:top|dame|muestra|quiero|agrega|crear|crea)\s*([0-9]+)/) || t.match(/([0-9]+)\s*recetas?/);
+
+  return {
+    cocinas,
+    ingredientes,
+    tags: [...new Set(tags)],
+    palabras,
+    tiempoMax: tiempo ? parseInt(tiempo[1], 10) : null,
+    precioMax: precio ? parseInt(precio[1], 10) : null,
+    cantidad: cantidad ? Math.max(1, Math.min(parseInt(cantidad[1], 10), 21)) : null,
+    excluirPremium: /gratis|free|sin premium/.test(t)
+  };
+}
+
+function recetaIncluye(receta, termino) {
+  const texto = normalizarTextoChat([
+    receta.titulo,
+    receta.descripcion,
+    receta.ingredientes,
+    receta.pasos,
+    Array.isArray(receta.etiquetas) ? receta.etiquetas.join(' ') : ''
+  ].filter(Boolean).join(' '));
+  return texto.includes(normalizarTextoChat(termino));
+}
+
+function filtrarRecetasChat(recetas, filtros, traits) {
+  let result = [...(recetas || [])];
+  if (filtros.precioMax) result = result.filter(r => Number(r.precio_numerico || 0) <= filtros.precioMax);
+  if (filtros.tiempoMax) result = result.filter(r => Number(r.tiempo_numerico || 0) <= filtros.tiempoMax);
+  if (traits.economica) result = result.filter(r => Number(r.precio_numerico || 0) <= 120);
+  if (traits.rapida) result = result.filter(r => Number(r.tiempo_numerico || 0) <= 30);
+  if (filtros.excluirPremium) result = result.filter(r => !r.es_premium);
+
+  if (filtros.cocinas.length) {
+    result = result.filter(r => filtros.cocinas.some(term => recetaIncluye(r, term)));
+  }
+
+  const flexibleTerms = [...filtros.ingredientes, ...filtros.tags.filter(t => !filtros.cocinas.includes(t))];
+  if (flexibleTerms.length && !filtros.cocinas.length) {
+    result = result.filter(r => flexibleTerms.some(term => recetaIncluye(r, term)));
+  } else if (!filtros.cocinas.length && filtros.palabras.length) {
+    result = result.filter(r => filtros.palabras.some(term => recetaIncluye(r, term)));
+  }
+
+  return result.map(r => {
+    let score = 0;
+    [...filtros.cocinas, ...flexibleTerms, ...filtros.palabras].forEach(term => { if (recetaIncluye(r, term)) score += 5; });
+    score += Math.min(Number(r.likes || 0), 20);
+    if (traits.rapida) score += Math.max(0, 60 - Number(r.tiempo_numerico || 60)) / 10;
+    if (traits.economica) score += Math.max(0, 200 - Number(r.precio_numerico || 200)) / 20;
+    return { ...r, _score: score };
+  }).sort((a, b) => b._score - a._score);
+}
+
+function crearPlanSemanalDesdeRecetas(planActual, recetas, comidaFoco) {
+  const dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+  const comidas = comidaFoco ? [comidaFoco] : ['desayuno', 'comida', 'cena'];
+  const plan = planActual && typeof planActual === 'object' ? planActual : {};
+  let idx = 0;
+  let agregadas = 0;
+
+  dias.forEach(dia => {
+    if (!plan[dia]) plan[dia] = {};
+    comidas.forEach(comida => {
+      if (!plan[dia][comida]) plan[dia][comida] = [];
+      const rec = recetas[idx % recetas.length];
+      idx += 1;
+      if (rec && !plan[dia][comida].some(r => Number(r.id) === Number(rec.id))) {
+        plan[dia][comida].push({ id: rec.id, titulo: rec.titulo, imagen: rec.imagen, precio: rec.precio, tiempo: rec.tiempo });
+        agregadas += 1;
+      }
+    });
+  });
+
+  return { plan, agregadas };
+}
+
 function generarRespuestaInteligente(traits, ingredientes, dia, count, mensaje) {
   const nombres = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
 
@@ -1475,6 +1643,56 @@ app.post('/api/chatbot', authMW, async (req, res) => {
   }
 
   try {
+    const filtros = extraerFiltrosChat(mensaje);
+    const { data: todas, error: recetasError } = await supabase.from('recetas').select('*').limit(500);
+    if (recetasError) throw recetasError;
+
+    let chatResults = filtrarRecetasChat(todas || [], filtros, traits);
+    let chatFallback = false;
+    if (!chatResults.length) {
+      chatResults = [...(todas || [])].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      chatFallback = true;
+    }
+
+    const chatLimit = filtros.cantidad || (traits.crear_plan ? 21 : 5);
+    const chatFinal = chatResults.slice(0, chatLimit);
+    let chatResp = generarRespuestaInteligente(traits, ingredientes, dia, chatFallback ? 0 : chatFinal.length, mensaje);
+
+    if (filtros.cocinas.length && chatFinal.length) {
+      chatResp = `EncontrÃ© recetas de cocina ${filtros.cocinas.join(', ')} que encajan con tu pedido:`;
+    }
+    if (filtros.tags.length && !filtros.cocinas.length && chatFinal.length) {
+      chatResp = `FiltrÃ© por ${filtros.tags.join(', ')} y estas son buenas opciones:`;
+    }
+
+    if (traits.crear_plan && chatFinal.length > 0) {
+      const { data: p } = await supabase.from('planes_semanales').select('plan').eq('usuario_id', req.user.id).maybeSingle();
+      const { plan, agregadas } = crearPlanSemanalDesdeRecetas(p?.plan || {}, chatFinal, comidaFoco);
+      const { error: planError } = await supabase.from('planes_semanales').upsert(
+        { usuario_id: req.user.id, plan, updated_at: new Date().toISOString() },
+        { onConflict: 'usuario_id' }
+      );
+      if (planError) throw planError;
+      const detalle = filtros.cocinas.length ? ` con recetas de cocina ${filtros.cocinas.join(', ')}` : '';
+      const comidaNombre = comidaFoco ? ` para ${comidaFoco}` : '';
+      chatResp = agregadas > 0
+        ? `Listo. Cree un plan semanal${detalle}${comidaNombre} y agregue ${agregadas} receta(s) al planificador.`
+        : `Tu plan semanal${detalle}${comidaNombre} ya tenia esas recetas. Lo revise y esta listo en el planificador.`;
+    }
+
+    return res.json({
+      respuesta: chatResp,
+      recetas: chatFinal.map(r => ({
+        id: r.id,
+        titulo: r.titulo,
+        imagen: r.imagen,
+        precio: r.precio,
+        tiempo: r.tiempo,
+        likes: r.likes,
+        etiquetas: r.etiquetas || []
+      }))
+    });
+
     let query = supabase.from('recetas').select('*');
 
     // Combinar filtros según los rasgos detectados
