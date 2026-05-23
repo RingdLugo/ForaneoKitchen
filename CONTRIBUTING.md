@@ -17,7 +17,7 @@ Agradecemos el apoyo y acompañamiento de nuestro catedrático **Austria** duran
   GitHub: https://github.com/MF-Estefania
 
 ### Backend
-- Ingrid Alison Lugo  
+- Alison Lugo  
   GitHub: https://github.com/RingdLugo
 
 ### Documentación del proyecto
