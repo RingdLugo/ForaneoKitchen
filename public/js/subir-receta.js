@@ -245,6 +245,13 @@ addTagBtn?.addEventListener('click', () => {
   customTagInput.value = '';
 });
 
+customTagInput?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addTagBtn?.click();
+  }
+});
+
 function renderCustomTags() {
   selectedCustomTagsDiv.innerHTML = customTags.map(tag => `
     <span class="recipe-tag" style="background:#F4F1DE; color:#E07A5F; padding:5px 12px; border-radius:20px; font-size:0.8rem; display:flex; align-items:center; gap:8px; border: 1px solid #F2CC8F;">

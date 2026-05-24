@@ -99,7 +99,13 @@ function containsDisguisedProfanity(str) {
   return PROFANITY_LIST.some(word => {
     const w = normalizeModerationText(word);
     if (!w) return false;
-    if (w === 'kk') return /\bkk\b/.test(normalized);
+    
+    // Evitar falsos positivos (ej. "economica" contiene "cono", "computadora" contiene "puta")
+    const requiresBoundary = ['kk', 'cono', 'puta', 'puto', 'pito', 'asco', 'sex', 'sexo', 'gay', 'die', 'dick'];
+    if (requiresBoundary.includes(w)) {
+      return new RegExp(`\\b${w}\\b`).test(normalized);
+    }
+    
     const compactWord = w.replace(/\s+/g, '');
     return normalized.includes(w) || (compactWord.length >= 5 && compact.includes(compactWord));
   });
