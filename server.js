@@ -6,6 +6,7 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -253,7 +254,86 @@ function genOTP() { return Math.floor(100000 + Math.random() * 900000).toString(
 
 async function sendOTP(email, otp, tipo) {
   console.log(`\n📧 [${tipo.toUpperCase()}] OTP para ${email}\n👉 CÓDIGO: ${otp}\n`);
-  return true;
+
+  // Si no hay configuración SMTP, quedarnos en modo "console" (útil en desarrollo)
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log('SMTP no configurado. OTP enviado solo a la consola.');
+    return true;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: (process.env.SMTP_SECURE === 'true'), // true para 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+
+    const from = process.env.FROM_EMAIL || process.env.SMTP_USER;
+    const subject = `ForáneoKitchen — ${tipo.toUpperCase()} Código de verificación`;
+    const appUrl = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/+$/, '');
+    const verifyUrl = `${appUrl}/verificar.html`;
+    const text = `Tu código de verificación en ForáneoKitchen es: ${otp}\n\nVisita ${verifyUrl} y pega el código para completar la verificación.`;
+
+    const logoUrl = `${appUrl}/images/logo-forananeo.png`;
+    const html = `
+    <!doctype html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>ForáneoKitchen - Código de verificación</title>
+    </head>
+    <body style="background-color:#f4f5f7;margin:0;padding:24px;font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.06);">
+              <tr style="background:linear-gradient(90deg,#ff8a65,#ff6b6b);">
+                <td style="padding:20px;text-align:center;color:#fff;">
+                  <img src="${logoUrl}" alt="ForáneoKitchen" style="height:40px;display:block;margin:0 auto 8px;" />
+                  <h1 style="margin:0;font-size:20px;font-weight:600;">Código de verificación</h1>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:28px 32px;color:#333;">
+                  <p style="margin:0 0 12px;font-size:15px;">Hola,</p>
+                  <p style="margin:0 0 18px;color:#555;font-size:14px;">Usa el siguiente código para completar la verificación de tu cuenta en <strong>ForáneoKitchen</strong>. El código expira en 10 minutos.</p>
+
+                  <div style="margin:18px 0;text-align:center;">
+                    <div style="display:inline-block;padding:18px 26px;border-radius:8px;background:#f7f7fb;border:1px dashed #e2e6ef;font-size:28px;letter-spacing:4px;font-weight:700;color:#111;">${otp}</div>
+                  </div>
+
+                  <p style="margin:18px 0 24px;color:#666;font-size:13px;">O bien, visita el siguiente enlace y pega el código:</p>
+                  <p style="margin:0 0 22px;"><a href="${verifyUrl}" style="display:inline-block;padding:10px 18px;background:#ff6b6b;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Verificar mi cuenta</a></p>
+
+                  <hr style="border:none;border-top:1px solid #eee;margin:18px 0" />
+                  <p style="margin:0;font-size:12px;color:#999">Si no solicitaste este código, puedes ignorar este correo. No compartas este código con nadie.</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="background:#fbfbfe;padding:12px 20px;text-align:center;color:#888;font-size:12px;">ForáneoKitchen • Hecho con ❤️</td>
+              </tr>
+            </table>
+            <p style="color:#999;font-size:12px;margin-top:12px;">Si el botón no funciona, copia y pega este enlace en tu navegador: ${verifyUrl}</p>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    `;
+
+    await transporter.sendMail({ from, to: email, subject, text, html });
+    console.log('OTP enviado por SMTP a', email);
+    return true;
+  } catch (e) {
+    console.error('Error enviando OTP por SMTP:', e.message || e);
+    // No bloquear el flujo por un fallo en envío; en producción podrías devolver false o reintentar
+    return true;
+  }
 }
 
 async function otorgarPuntos(userId, accion, extra = '', customPoints = null) {
@@ -365,6 +445,26 @@ app.post('/api/auth/login', async (req, res) => {
 
   await supabase.from('usuarios').update({ ultimo_acceso: new Date().toISOString() }).eq('id', u.id);
   res.json({ token: makeToken(u), user: u });
+});
+
+// Endpoint de prueba para enviar un OTP a un correo (protegido por TEST_SEND_SECRET)
+app.post('/api/_test-send-otp', async (req, res) => {
+  try {
+    const { email, secret } = req.body || {};
+    if (!email) return res.status(400).json({ error: 'Falta el campo email' });
+
+    const required = process.env.TEST_SEND_SECRET;
+    if (required && secret !== required) return res.status(401).json({ error: 'Secreto inválido' });
+
+    const otp = genOTP();
+    const sent = await sendOTP(email, otp, 'test');
+
+    // En modo de prueba devolvemos confirmación; nunca expongas el OTP en producción
+    return res.json({ ok: !!sent, message: sent ? 'Correo (o consola) enviado' : 'Fallo en el envío' });
+  } catch (e) {
+    console.error('Test send OTP error:', e);
+    return res.status(500).json({ error: 'Error interno' });
+  }
 });
 
 // ── SUSCRIPCIÓN — con guardia anti doble pago ─────────────────────────────────
